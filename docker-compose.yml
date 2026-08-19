@@ -1,0 +1,17 @@
+version: "3.9"
+
+services:
+  nexo:
+    build: .
+    container_name: nexo_api
+    restart: unless-stopped
+    env_file:
+      - .env
+    ports:
+      - "127.0.0.1:8000:8000"   # só aceita conexões locais (Nginx faz o proxy)
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s

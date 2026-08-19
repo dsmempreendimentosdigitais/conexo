@@ -1,0 +1,19 @@
+# CONEXO — .gitignore
+.env
+.env.local
+.env.development
+.env.production
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+
+# Node / Frontend
+node_modules/
+dist/
+.DS_Store
+*.log
+

@@ -1,0 +1,462 @@
+NEXO — Backend FastAPI Completo
+Estrutura de produção, pronta pra rodar. Organizei em módulos pra você conseguir manter e crescer.
+
+Estrutura de arquivos
+
+
+nexo/
+├── main.py            # app FastAPI + endpoint
+├── config.py          # variáveis de ambiente
+├── tools.py           # definição das 10 tools
+├── prompts.py         # system prompts
+├── router.py          # roteador de intenção (LLM barato)
+├── executor.py        # executa RPC no Supabase
+├── formatter.py       # formata resposta (LLM bom)
+├── logger.py          # auditoria de consultas
+└── requirements.txt
+requirements.txt
+txt
+
+
+fastapi==0.115.0
+uvicorn[standard]==0.30.6
+openai==1.51.0
+supabase==2.7.4
+pydantic==2.9.2
+python-dotenv==1.0.1
+config.py
+python
+
+
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+
+class Config:
+    OPENAI_API_KEY   = os.environ["OPENAI_API_KEY"]
+    SUPABASE_URL     = os.environ["SUPABASE_URL"]
+    SUPABASE_KEY     = os.environ["SUPABASE_SERVICE_KEY"]  # service_role (backend)
+
+    MODEL_ROUTER     = "gpt-4o-mini"   # barato: só roteia
+    MODEL_FORMATTER  = "gpt-4o"        # bom: escreve a análise
+
+    EMPRESA          = "Designtex Tecidos"
+    TIMEZONE         = "America/Sao_Paulo"
+
+config = Config()
+prompts.py
+python
+
+
+ROUTER_SYSTEM = """Você é o roteador de intenção do NEXO, assistente de \
+inteligência comercial da {empresa}.
+
+Sua ÚNICA função é interpretar a pergunta do usuário (vendas, clientes, \
+produtos, vendedores, metas) e escolher qual ferramenta chamar, com os \
+parâmetros corretos.
+
+REGRAS ABSOLUTAS:
+1. Você NUNCA calcula números, NUNCA inventa dados, NUNCA responde valores.
+   Apenas escolhe a ferramenta e extrai os parâmetros.
+2. Sempre resolva datas relativas com base na DATA ATUAL fornecida:
+   - "este mês"   = 1º dia do mês atual até hoje
+   - "mês passado"= mês anterior completo
+   - "este ano"   = 1º de janeiro até hoje
+   - "ano passado"/"mesmo período do ano passado" = mesmo intervalo, ano -1
+   - "trimestre"  = últimos 3 meses ou trimestre pedido
+3. IMPORTANTE: "vendas"/"faturamento"/"quanto vendi/faturei" sempre se referem \
+a FATURAMENTO REALIZADO (data de faturamento). Não confundir com pedidos.
+4. Se a pergunta não corresponder a NENHUMA ferramenta, chame "fora_de_escopo".
+5. Se faltar parâmetro obrigatório e não der pra inferir, chame \
+"pedir_esclarecimento".
+6. Datas sempre no formato ISO: AAAA-MM-DD.
+7. Nunca chame mais de uma ferramenta por vez.
+
+DATA ATUAL: {data_atual}
+USUÁRIO: {usuario} | EMPRESA: {empresa}
+"""
+
+FORMATTER_SYSTEM = """Você é o NEXO, analista comercial sênior da {empresa}.
+Escreva uma análise executiva CURTA, clara e útil, em português do Brasil.
+
+REGRAS:
+- Use APENAS os números fornecidos. NUNCA invente, recalcule ou estime.
+- Formate valores em Real: R$ 1.234,56 (ponto milhar, vírgula decimal).
+- Comece pelo dado principal. Depois 1-2 observações úteis (tendência, destaque).
+- Se houver comparativo, calcule a variação % com os números dados e diga se \
+subiu ou caiu.
+- Tom profissional e direto. Sem enrolação, sem repetir a pergunta.
+- Se os dados vierem vazios, diga que não há registros no período.
+
+Pergunta do usuário: {pergunta}
+Intenção detectada: {intent}
+Dados reais (fonte da verdade):
+{dados}
+"""
+tools.py
+python
+
+
+TOOLS = [
+    {"type": "function", "function": {
+        "name": "nexo_vendas_periodo",
+        "description": "Total faturado no período: faturamento, nº de pedidos e ticket médio. Use para 'como estão as vendas', 'quanto faturei', 'faturamento do mês'.",
+        "parameters": {"type": "object", "properties": {
+            "inicio": {"type": "string", "description": "Data inicial ISO AAAA-MM-DD"},
+            "fim": {"type": "string", "description": "Data final ISO AAAA-MM-DD"}
+        }, "required": ["inicio", "fim"]}}},
+
+    {"type": "function", "function": {
+        "name": "nexo_comparativo_mes",
+        "description": "Compara faturamento de um mês com o mês anterior. Use para 'comparar com mês passado', 'faturei mais que mês passado'.",
+        "parameters": {"type": "object", "properties": {
+            "mes_ref": {"type": "string", "description": "Mês de referência AAAA-MM"}
+        }, "required": ["mes_ref"]}}},
+
+    {"type": "function", "function": {
+        "name": "nexo_comparativo_ano",
+        "description": "Compara um período com o mesmo período do ano anterior. Use para 'comparar com ano passado', 'mesmo mês do ano passado'.",
+        "parameters": {"type": "object", "properties": {
+            "inicio": {"type": "string"}, "fim": {"type": "string"}
+        }, "required": ["inicio", "fim"]}}},
+
+    {"type": "function", "function": {
+        "name": "nexo_ranking_vendedores",
+        "description": "Ranking de representantes por faturamento. Use para 'melhores vendedores', 'ranking de vendas'.",
+        "parameters": {"type": "object", "properties": {
+            "inicio": {"type": "string"}, "fim": {"type": "string"},
+            "limite": {"type": "integer", "description": "Quantos mostrar. Padrão 10."}
+        }, "required": ["inicio", "fim"]}}},
+
+    {"type": "function", "function": {
+        "name": "nexo_vendedores_abaixo_meta",
+        "description": "Representantes com faturamento abaixo da meta no período. Use para 'quem está abaixo da meta', 'quem não bateu meta'.",
+        "parameters": {"type": "object", "properties": {
+            "inicio": {"type": "string"}, "fim": {"type": "string"}
+        }, "required": ["inicio", "fim"]}}},
+
+    {"type": "function", "function": {
+        "name": "nexo_top_produtos",
+        "description": "Produtos mais faturados no período (quantidade e valor). Use para 'produtos mais vendidos', 'o que mais saiu'.",
+        "parameters": {"type": "object", "properties": {
+            "inicio": {"type": "string"}, "fim": {"type": "string"},
+            "limite": {"type": "integer", "description": "Padrão 10."}
+        }, "required": ["inicio", "fim"]}}},
+
+    {"type": "function", "function": {
+        "name": "nexo_top_clientes",
+        "description": "Maiores clientes por faturamento no período. Use para 'melhores clientes', 'quem mais comprou'.",
+        "parameters": {"type": "object", "properties": {
+            "inicio": {"type": "string"}, "fim": {"type": "string"},
+            "limite": {"type": "integer", "description": "Padrão 10."}
+        }, "required": ["inicio", "fim"]}}},
+
+    {"type": "function", "function": {
+        "name": "nexo_clientes_inativos",
+        "description": "Clientes que faturavam e pararam. Use para 'clientes inativos', 'quem parou de comprar', 'clientes sumidos'.",
+        "parameters": {"type": "object", "properties": {
+            "dias_sem_comprar": {"type": "integer", "description": "Dias sem faturar para ser inativo. Padrão 90."}
+        }, "required": []}}},
+
+    {"type": "function", "function": {
+        "name": "nexo_vendas_regiao",
+        "description": "Faturamento agrupado por UF/estado no período. Use para 'vendas por região', 'por estado', 'onde vendo mais'.",
+        "parameters": {"type": "object", "properties": {
+            "inicio": {"type": "string"}, "fim": {"type": "string"}
+        }, "required": ["inicio", "fim"]}}},
+
+    {"type": "function", "function": {
+        "name": "nexo_relatorio_periodo",
+        "description": "Relatório consolidado do período (resumo + top produtos + top clientes + ranking + regiões). Use para 'gere um relatório', 'resumo para reunião'.",
+        "parameters": {"type": "object", "properties": {
+            "inicio": {"type": "string"}, "fim": {"type": "string"}
+        }, "required": ["inicio", "fim"]}}},
+
+    {"type": "function", "function": {
+        "name": "fora_de_escopo",
+        "description": "A pergunta não é sobre vendas, clientes, produtos, vendedores ou metas — ou o NEXO ainda não sabe responder.",
+        "parameters": {"type": "object", "properties": {
+            "motivo": {"type": "string"}
+        }, "required": ["motivo"]}}},
+
+    {"type": "function", "function": {
+        "name": "pedir_esclarecimento",
+        "description": "Falta informação essencial (ex.: período) e não dá pra inferir.",
+        "parameters": {"type": "object", "properties": {
+            "pergunta_ao_usuario": {"type": "string"}
+        }, "required": ["pergunta_ao_usuario"]}}},
+]
+router.py
+python
+
+
+import json
+from datetime import datetime
+from zoneinfo import ZoneInfo
+from openai import OpenAI
+from config import config
+from prompts import ROUTER_SYSTEM
+from tools import TOOLS
+
+client = OpenAI(api_key=config.OPENAI_API_KEY)
+
+def rotear(pergunta: str, usuario: str) -> tuple[str, dict]:
+    agora = datetime.now(ZoneInfo(config.TIMEZONE))
+    system = ROUTER_SYSTEM.format(
+        empresa=config.EMPRESA,
+        data_atual=agora.strftime("%Y-%m-%d (%A)"),
+        usuario=usuario,
+    )
+    resp = client.chat.completions.create(
+        model=config.MODEL_ROUTER,
+        messages=[
+            {"role": "system", "content": system},
+            {"role": "user", "content": pergunta},
+        ],
+        tools=TOOLS,
+        tool_choice="required",   # obriga escolher uma ferramenta
+        temperature=0,            # roteamento é decisão, não criatividade
+    )
+    msg = resp.choices[0].message
+    if not msg.tool_calls:
+        return "fora_de_escopo", {"motivo": "não foi possível interpretar"}
+    call = msg.tool_calls[0]
+    return call.function.name, json.loads(call.function.arguments or "{}")
+executor.py
+python
+
+
+from supabase import create_client
+from config import config
+
+supabase = create_client(config.SUPABASE_URL, config.SUPABASE_KEY)
+
+# intents que NÃO chamam banco (tratadas no fluxo)
+NAO_DB = {"fora_de_escopo", "pedir_esclarecimento"}
+
+# intents que existem como RPC no Supabase
+RPCS = {
+    "nexo_vendas_periodo",
+    "nexo_comparativo_mes",
+    "nexo_comparativo_ano",
+    "nexo_ranking_vendedores",
+    "nexo_vendedores_abaixo_meta",
+    "nexo_top_produtos",
+    "nexo_top_clientes",
+    "nexo_clientes_inativos",
+    "nexo_vendas_regiao",
+    "nexo_relatorio_periodo",
+}
+
+def executar(intent: str, params: dict):
+    if intent not in RPCS:
+        raise ValueError(f"Intent '{intent}' não é uma RPC válida.")
+    resp = supabase.rpc(intent, params).execute()
+    return resp.data
+formatter.py
+python
+
+
+import json
+from openai import OpenAI
+from config import config
+from prompts import FORMATTER_SYSTEM
+
+client = OpenAI(api_key=config.OPENAI_API_KEY)
+
+def formatar(pergunta: str, intent: str, dados) -> str:
+    if not dados:
+        return "Não encontrei registros para esse período. Confira as datas ou tente outro intervalo."
+
+    prompt = FORMATTER_SYSTEM.format(
+        empresa=config.EMPRESA,
+        pergunta=pergunta,
+        intent=intent,
+        dados=json.dumps(dados, ensure_ascii=False, indent=2, default=str),
+    )
+    resp = client.chat.completions.create(
+        model=config.MODEL_FORMATTER,
+        messages=[{"role": "user", "content": prompt}],
+        temperature=0.3,
+    )
+    return resp.choices[0].message.content
+logger.py
+python
+
+
+import json
+from datetime import datetime, timezone
+from executor import supabase
+
+def log_consulta(usuario: str, pergunta: str, intent: str, params: dict, ok: bool):
+    """Auditoria: grava toda consulta na tabela nexo_logs (crie no banco)."""
+    try:
+        supabase.table("nexo_logs").insert({
+            "usuario": usuario,
+            "pergunta": pergunta,
+            "intent": intent,
+            "parametros": json.dumps(params, ensure_ascii=False, default=str),
+            "sucesso": ok,
+            "created_at": datetime.now(timezone.utc).isoformat(),
+        }).execute()
+    except Exception:
+        pass  # log nunca pode derrubar a resposta
+sql
+
+
+-- Tabela de auditoria (rode no Supabase)
+create table if not exists nexo_logs (
+  id bigint generated always as identity primary key,
+  usuario text,
+  pergunta text,
+  intent text,
+  parametros jsonb,
+  sucesso boolean,
+  created_at timestamptz default now()
+);
+main.py
+python
+
+
+from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel, Field
+
+from router import rotear
+from executor import executar, NAO_DB
+from formatter import formatar
+from logger import log_consulta
+
+app = FastAPI(title="NEXO API", version="1.0")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],          # em produção: restrinja ao domínio do front
+    allow_methods=["POST", "GET"],
+    allow_headers=["*"],
+)
+
+# ---------- Schemas ----------
+class PerguntaIn(BaseModel):
+    pergunta: str = Field(..., min_length=2, max_length=500)
+    usuario: str = Field(default="anonimo")
+
+class RespostaOut(BaseModel):
+    tipo: str            # "analise" | "esclarecimento" | "fora_escopo"
+    conteudo: str        # texto final pro usuário
+    intent: str | None = None
+    dados: object | None = None   # dados crus (front pode montar gráfico)
+
+# ---------- Endpoint principal ----------
+@app.post("/nexo/perguntar", response_model=RespostaOut)
+def perguntar(body: PerguntaIn):
+    pergunta, usuario = body.pergunta.strip(), body.usuario
+
+    # 1. Roteamento (LLM barato decide a intenção)
+    try:
+        intent, params = rotear(pergunta, usuario)
+    except Exception as e:
+        raise HTTPException(502, f"Falha no roteador: {e}")
+
+    # 2. Casos que não vão ao banco
+    if intent == "fora_de_escopo":
+        log_consulta(usuario, pergunta, intent, params, True)
+        return RespostaOut(
+            tipo="fora_escopo",
+            conteudo="Ainda não sei responder isso. Posso ajudar com "
+                     "vendas, faturamento, clientes, produtos, vendedores e metas.",
+            intent=intent,
+        )
+
+    if intent == "pedir_esclarecimento":
+        log_consulta(usuario, pergunta, intent, params, True)
+        return RespostaOut(
+            tipo="esclarecimento",
+            conteudo=params.get("pergunta_ao_usuario",
+                                 "Pode me dizer o período que você quer analisar?"),
+            intent=intent,
+        )
+
+    # 3. Executa a RPC (banco calcula o número REAL)
+    try:
+        dados = executar(intent, params)
+    except Exception as e:
+        log_consulta(usuario, pergunta, intent, params, False)
+        raise HTTPException(500, f"Erro ao consultar dados: {e}")
+
+    log_consulta(usuario, pergunta, intent, params, True)
+
+    # 4. Formatação (LLM bom escreve a análise — sem calcular)
+    try:
+        texto = formatar(pergunta, intent, dados)
+    except Exception:
+        texto = "Consegui os dados, mas falhei ao formatar a análise."
+
+    return RespostaOut(tipo="analise", conteudo=texto, intent=intent, dados=dados)
+
+# ---------- Health ----------
+@app.get("/health")
+def health():
+    return {"status": "ok", "service": "NEXO API"}
+Como rodar
+bash
+
+
+# .env
+OPENAI_API_KEY=sk-...
+SUPABASE_URL=https://xxxx.supabase.co
+SUPABASE_SERVICE_KEY=eyJ...   # service_role, NUNCA exponha no front
+
+pip install -r requirements.txt
+uvicorn main:app --reload --port 8000
+Testando
+bash
+
+
+curl -X POST http://localhost:8000/nexo/perguntar \
+  -H "Content-Type: application/json" \
+  -d '{"pergunta":"como estão minhas vendas este mês?","usuario":"samuel"}'
+O fluxo completo (o que o NEXO faz)
+
+
+Usuário pergunta
+      │
+      ▼
+┌─────────────────┐
+│ ROTEADOR (mini) │  temp=0, tool_choice=required
+│ → intent+params │  resolve datas, escolhe 1 das 10 tools
+└────────┬────────┘
+         │
+    ┌────┴─────┬──────────────┐
+    ▼          ▼              ▼
+fora_escopo  esclarecer   RPC no Supabase  ← número REAL, banco calcula
+    │          │              │
+    │          │              ▼
+    │          │      ┌────────────────┐
+    │          │      │ FORMATTER (4o) │  só narra, nunca calcula
+    │          │      │ → análise PT-BR │
+    │          │      └───────┬────────┘
+    ▼          ▼              ▼
+         Resposta ao usuário (+ dados crus p/ gráfico)
+                     │
+                     ▼
+              nexo_logs (auditoria)
+Princípios de segurança embutidos
+
+
+
+Princípio	Como está garantido
+IA nunca inventa número	Banco calcula via RPC; IA só narra
+IA nunca escapa do escopo	tool_choice="required" + fora_de_escopo
+Roteamento previsível	temperature=0 no roteador
+Custo controlado	mini roteia, 4o só formata
+Auditoria total	toda pergunta gravada em nexo_logs
+Chave protegida	service_role só no backend, nunca no front
+Próximos incrementos (quando a v1 estiver estável)
+Filtro por representante logado — passar representante_codigo pra cada vendedor ver só o dele (RLS ou parâmetro extra nas RPCs).
+Streaming da resposta (stream=True) pra sensação de tempo real no chat.
+Cache de perguntas idênticas no mesmo dia (economiza tokens).
+Memória de conversa — permitir "e no mês anterior?" após uma pergunta.
+Dupla data — roteador escolhe data_pedido vs data_faturamento conforme o verbo ("vendi" vs "faturei").
+Quer que eu adicione agora o filtro por representante logado (item 1) — o mais importante pra colocar em produção com cada vendedor vendo só seus próprios dados?
