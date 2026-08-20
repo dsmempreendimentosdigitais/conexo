@@ -41,6 +41,14 @@ def executar(intent: str, params: dict, ctx: dict | None = None):
         from mercado.motor import analisar_mercado
         return analisar_mercado(params, ctx or {})
 
+    # Consulta geral dinêmica (Text-to-SQL)
+    if intent == "conexo_consulta_geral":
+        if ctx and ctx.get("perfil") != "gestor":
+            raise ValueError("Apenas gestores podem realizar consultas personalizadas no banco de dados.")
+        sql = params.get("sql")
+        resp = supabase.rpc("conexo_executar_leitura", {"query_str": sql}).execute()
+        return resp.data
+
     if intent not in RPCS:
         raise ValueError(f"Intent '{intent}' não é uma RPC válida.")
 

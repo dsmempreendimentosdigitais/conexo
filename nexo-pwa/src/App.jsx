@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { login, logout, getSession } from "./auth";
+import supabase, { login, logout, getSession } from "./auth";
 import { cadastrar } from "./api";
 import Chat from "./components/Chat";
 
@@ -19,12 +19,20 @@ export default function App() {
   const [cnpj,  setCnpj]      = useState("");
   const [setor, setSetor]     = useState("");
 
-  // Recupera sessão existente ao carregar
+  // Recupera sessão existente e ouve mudanças de autenticação (como refresh de token)
   useEffect(() => {
     getSession().then((s) => {
       setSession(s);
       setLoading(false);
     });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
   }, []);
 
   async function handleLogin(e) {

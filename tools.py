@@ -108,6 +108,21 @@ TOOLS = [
         }, "required": ["assunto"]}}},
 
     {"type": "function", "function": {
+        "name": "conexo_consulta_geral",
+        "description": (
+            "Use esta ferramenta para responder perguntas personalizadas ou detalhadas que não "
+            "se encaixam nas outras ferramentas pré-definidas. Exemplos: listar números de pedidos, "
+            "detalhes de transações de ontem, ou agrupamentos específicos de vendas por cliente. "
+            "Escreva uma consulta SQL PostgreSQL de leitura (SELECT) válida sobre as tabelas: "
+            "- pedidos_totvs (id, data_pedido, data_faturamento, valor_total, quantidade_total, representante_codigo, representante_nome, cliente_nome, status, items_json) "
+            "- representantes (codigo, nome, meta) "
+            "Sempre filtre pela data se aplicável, e limite o resultado em no máximo 50 linhas."
+        ),
+        "parameters": {"type": "object", "properties": {
+            "sql": {"type": "string", "description": "Consulta SQL PostgreSQL (SELECT) válida"}
+        }, "required": ["sql"]}}},
+
+    {"type": "function", "function": {
         "name": "fora_de_escopo",
         "description": "A pergunta não é sobre vendas, clientes, produtos, vendedores, metas ou mercado.",
         "parameters": {"type": "object", "properties": {

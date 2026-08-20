@@ -45,12 +45,13 @@ export default function Chat({ token, email, onLogout }) {
       if (!texto || loading) return;
       setInput("");
 
-      const msgUser = { role: "user", conteudo: texto, ts: Date.now() };
+      const now = Date.now();
+      const msgUser = { role: "user", conteudo: texto, ts: now };
       setMsgs((m) => [...m, msgUser]);
       setLoading(true);
 
       // Cria bolha de streaming vazia para o CONEXO
-      const idxConexo = Date.now();
+      const idxConexo = now + 1;
       setMsgs((m) => [
         ...m,
         { role: "conexo", conteudo: "", intent: null, dados: null, ts: idxConexo },

@@ -385,17 +385,32 @@ BEGIN
 END;
 $$;
 
--- -------------------------------------------------------
--- 9. Provisionar primeiro tenant (Designtex / conexo.dev)
--- -------------------------------------------------------
-INSERT INTO tenants (cnpj, nome, perfil_mercado) VALUES (
-  'vendas.designtex.com.br',
-  'Designtex Tecidos',
-  '{
-    "setor": "indústria têxtil",
-    "nicho": "tecidos de algodão e malha",
-    "insumos_chave": ["algodão", "poliéster", "fio têxtil"],
-    "regiao_atuacao": "Brasil"
-  }'::jsonb
 ) ON CONFLICT (cnpj) DO UPDATE SET nome = EXCLUDED.nome, perfil_mercado = EXCLUDED.perfil_mercado;
+
+
+-- -------------------------------------------------------
+-- 10. Função para execução de consultas de leitura dinâmicas (Text-to-SQL)
+-- -------------------------------------------------------
+CREATE OR REPLACE FUNCTION conexo_executar_leitura(query_str text)
+RETURNS json LANGUAGE plpgsql SECURITY DEFINER AS $$
+DECLARE
+  ret json;
+BEGIN
+  -- Bloqueio estrito de qualquer alteração de escrita por segurança
+  IF LOWER(query_str) LIKE '%insert%' OR 
+     LOWER(query_str) LIKE '%update%' OR 
+     LOWER(query_str) LIKE '%delete%' OR 
+     LOWER(query_str) LIKE '%drop%' OR 
+     LOWER(query_str) LIKE '%alter%' OR 
+     LOWER(query_str) LIKE '%truncate%' OR
+     LOWER(query_str) LIKE '%create%' OR
+     LOWER(query_str) LIKE '%grant%' THEN
+    RAISE EXCEPTION 'Apenas consultas de leitura (SELECT) são permitidas.';
+  END IF;
+  
+  EXECUTE 'SELECT json_agg(t) FROM (' || query_str || ') t' INTO ret;
+  RETURN COALESCE(ret, '[]'::json);
+END;
+$$;
+
 
