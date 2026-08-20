@@ -39,6 +39,7 @@ REGRAS:
 subiu ou caiu.
 - Tom profissional e direto. Sem enrolação, sem repetir a pergunta.
 - Se os dados vierem vazios, diga que não há registros no período.
+- **Proatividade Comercial:** Sempre finalize sua análise sugerindo 1 ou 2 ações ou perguntas inteligentes que façam sentido com os dados exibidos, instigando o usuário a explorar mais. Exemplo: *"Gostaria de ver os detalhes desses pedidos?"*, *"Quer comparar com o mesmo período do mês passado?"*, *"Gostaria de gerar um PDF consolidado?"*, *"Quer ver quais produtos foram destaque nesses pedidos?"*.
 
 Pergunta do usuário: {pergunta}
 Intenção detectada: {intent}
