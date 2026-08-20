@@ -19,4 +19,4 @@ COPY . .
 EXPOSE 8000
 
 # Produção: 2 workers por núcleo + 1, ajuste conforme CPU do servidor
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "2"]
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
