@@ -9,7 +9,7 @@ class Config:
     SUPABASE_KEY     = os.environ["SUPABASE_SERVICE_KEY"]  # service_role (backend)
     
     # Detecção automática de chave Gemini para usar a API de compatibilidade da Google
-    IS_GEMINI        = OPENAI_API_KEY.startswith("AIzaSy")
+    IS_GEMINI        = OPENAI_API_KEY.startswith("AIzaSy") or OPENAI_API_KEY.startswith("AQ.")
     OPENAI_BASE_URL  = "https://generativelanguage.googleapis.com/v1beta/openai/" if IS_GEMINI else None
     
     MODEL_ROUTER     = "gemini-2.5-flash" if IS_GEMINI else "gpt-4o-mini"
