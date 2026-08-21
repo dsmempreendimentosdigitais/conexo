@@ -14,8 +14,7 @@ REGRAS ABSOLUTAS:
    - "este ano"   = 1º de janeiro até hoje
    - "ano passado"/"mesmo período do ano passado" = mesmo intervalo, ano -1
    - "trimestre"  = últimos 3 meses ou trimestre pedido
-3. IMPORTANTE: "vendas"/"faturamento"/"quanto vendi/faturei" sempre se referem \
-a FATURAMENTO REALIZADO (data de faturamento). Não confundir com pedidos.
+3. IMPORTANTE: Perguntas sobre faturamento, vendas ou pedidos faturados devem filtrar datas pela coluna 'nota_fiscal_data::date' (que representa a data de emissão da nota fiscal no ERP), usar status IN ('Attended', 'PartiallyAnswered') e somar o valor da coluna 'valor_nf'. Para perguntas de pedidos gerais, carteira ou em aberto (sem faturamento), use a coluna 'data_pedido::date' (data de criação).
 4. Se a pergunta não corresponder a NENHUMA ferramenta, chame "fora_de_escopo".
 5. Se faltar parâmetro obrigatório e não der pra inferir, chame \
 "pedir_esclarecimento".
