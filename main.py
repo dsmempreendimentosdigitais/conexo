@@ -35,7 +35,7 @@ app.add_middleware(
 # Registra o router de onboarding (admin-only)
 app.include_router(onboarding_router)
 
-client_oa = OpenAI(api_key=config.OPENAI_API_KEY, base_url=config.OPENAI_BASE_URL)
+client_oa = OpenAI(api_key=config.OPENAI_API_KEY, base_url=config.OPENAI_BASE_URL, max_retries=1)
 
 
 # ─────────────────────────────────────────────────
@@ -123,7 +123,16 @@ def perguntar_stream(body: PerguntaIn, ctx: dict = Depends(get_contexto)):
     usuario   = ctx["email"]
     historico = [t.model_dump() for t in body.historico]
 
-    intent, params = rotear(pergunta, usuario, historico)
+    try:
+        intent, params = rotear(pergunta, usuario, historico)
+    except Exception as e:
+        error_msg = "⚠️ Ops! O assistente está temporariamente sobrecarregado (limite de requisições do Gemini atingido). Por favor, aguarde alguns segundos e envie novamente."
+        if "quota" in str(e).lower() or "limit" in str(e).lower() or "429" in str(e):
+            error_msg = "⚠️ Limite de requisições (Rate Limit 429) excedido no Gemini. Por favor, aguarde 15 a 30 segundos e envie a mensagem novamente."
+        def erro_roteamento():
+            yield f"data: {json.dumps({'tipo':'texto','delta':error_msg})}\n\n"
+            yield f"data: {json.dumps({'tipo':'fim'})}\n\n"
+        return StreamingResponse(erro_roteamento(), media_type="text/event-stream")
 
     if intent in ("fora_de_escopo", "pedir_esclarecimento"):
         texto = params.get("pergunta_ao_usuario") or (
@@ -134,8 +143,15 @@ def perguntar_stream(body: PerguntaIn, ctx: dict = Depends(get_contexto)):
             yield f"data: {json.dumps({'tipo':'fim'})}\n\n"
         return StreamingResponse(simples(), media_type="text/event-stream")
 
-    dados = executar(intent, params, ctx)
-    log_consulta(usuario, pergunta, intent, params, True)
+    try:
+        dados = executar(intent, params, ctx)
+        log_consulta(usuario, pergunta, intent, params, True)
+    except Exception as e:
+        error_msg = f"⚠️ Erro ao consultar os dados no banco de dados: {e}"
+        def erro_execucao():
+            yield f"data: {json.dumps({'tipo':'texto','delta':error_msg})}\n\n"
+            yield f"data: {json.dumps({'tipo':'fim'})}\n\n"
+        return StreamingResponse(erro_execucao(), media_type="text/event-stream")
 
     def gerar():
         yield f"data: {json.dumps({'tipo':'dados','intent':intent,'dados':dados}, default=str)}\n\n"
@@ -146,7 +162,10 @@ def perguntar_stream(body: PerguntaIn, ctx: dict = Depends(get_contexto)):
             return
 
         if intent == "conexo_inteligencia_mercado" and isinstance(dados, dict):
-            texto = formatar(pergunta, intent, dados)
+            try:
+                texto = formatar(pergunta, intent, dados)
+            except Exception as e:
+                texto = f"⚠️ Erro ao estruturar relatório de mercado: {e}"
             yield f"data: {json.dumps({'tipo':'texto','delta':texto})}\n\n"
             yield f"data: {json.dumps({'tipo':'fim'})}\n\n"
             return
@@ -155,16 +174,23 @@ def perguntar_stream(body: PerguntaIn, ctx: dict = Depends(get_contexto)):
             empresa=config.EMPRESA, pergunta=pergunta, intent=intent,
             dados=json.dumps(dados, ensure_ascii=False, default=str),
         )
-        stream = client_oa.chat.completions.create(
-            model=config.MODEL_FORMATTER,
-            messages=[{"role": "user", "content": prompt}],
-            temperature=0.3,
-            stream=True,
-        )
-        for chunk in stream:
-            delta = chunk.choices[0].delta.content
-            if delta:
-                yield f"data: {json.dumps({'tipo':'texto','delta':delta})}\n\n"
+        try:
+            stream = client_oa.chat.completions.create(
+                model=config.MODEL_FORMATTER,
+                messages=[{"role": "user", "content": prompt}],
+                temperature=0.3,
+                stream=True,
+            )
+            for chunk in stream:
+                delta = chunk.choices[0].delta.content
+                if delta:
+                    yield f"data: {json.dumps({'tipo':'texto','delta':delta})}\n\n"
+        except Exception as e:
+            error_msg = "\n\n⚠️ Erro ao formatar a análise de resposta (Gemini temporariamente indisponível). Por favor, tente novamente em instantes."
+            if "quota" in str(e).lower() or "limit" in str(e).lower() or "429" in str(e):
+                error_msg = "\n\n⚠️ Limite de requisições excedido ao formatar a análise. Por favor, aguarde de 15 a 30 segundos e envie a mensagem novamente."
+            yield f"data: {json.dumps({'tipo':'texto','delta':error_msg})}\n\n"
+            
         yield f"data: {json.dumps({'tipo':'fim'})}\n\n"
 
     return StreamingResponse(gerar(), media_type="text/event-stream")

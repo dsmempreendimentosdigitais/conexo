@@ -6,7 +6,7 @@ from config import config
 from prompts import ROUTER_SYSTEM
 from tools import TOOLS
 
-client = OpenAI(api_key=config.OPENAI_API_KEY, base_url=config.OPENAI_BASE_URL)
+client = OpenAI(api_key=config.OPENAI_API_KEY, base_url=config.OPENAI_BASE_URL, max_retries=1)
 
 def rotear(pergunta: str, usuario: str, historico: list | None = None) -> tuple[str, dict]:
     """
