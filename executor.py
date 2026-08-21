@@ -45,7 +45,9 @@ def executar(intent: str, params: dict, ctx: dict | None = None):
     if intent == "conexo_consulta_geral":
         if ctx and ctx.get("perfil") != "gestor":
             raise ValueError("Apenas gestores podem realizar consultas personalizadas no banco de dados.")
-        sql = params.get("sql")
+        sql = params.get("sql", "")
+        if sql:
+            sql = sql.strip().rstrip(";")
         resp = supabase.rpc("conexo_executar_leitura", {"query_str": sql}).execute()
         return resp.data
 
