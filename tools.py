@@ -114,7 +114,7 @@ TOOLS = [
             "se encaixam nas outras ferramentas pré-definidas. Exemplos: listar números de pedidos, "
             "detalhes de transações de ontem, ou agrupamentos específicos de vendas por cliente. "
             "Escreva uma consulta SQL PostgreSQL de leitura (SELECT) válida sobre as tabelas: "
-            "- pedidos_totvs (id, totvs_order_code, totvs_order_id, data_pedido, data_faturamento, valor_total, quantidade_total, representante_codigo, representante_nome, cliente_nome, status, items_json) "
+            "- pedidos_totvs (id, totvs_order_code, totvs_order_id, data_pedido, data_faturamento, valor_total, valor_nf, quantidade_total, representante_codigo, representante_nome, cliente_nome, status, items_json) "
             "- representantes (codigo, nome, meta) "
             "ATENÇÃO IMPORTANTE PARA A CONSULTA SQL:\n"
             "1. Sempre use a coluna 'totvs_order_code' para se referir ao código/número legível do pedido (ex: 35828, 35806) em vez de 'id'.\n"
