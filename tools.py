@@ -118,9 +118,8 @@ TOOLS = [
             "- representantes (codigo, nome, meta) "
             "ATENÇÃO IMPORTANTE PARA A CONSULTA SQL:\n"
             "1. Sempre use a coluna 'totvs_order_code' para se referir ao código/número legível do pedido (ex: 35828, 35806) em vez de 'id'.\n"
-            "2. As colunas de data ('data_faturamento', 'data_pedido') são do tipo timestamp. Sempre use o cast '::date' ao comparar com strings de data, "
-            "por exemplo: 'data_faturamento::date = ''2026-08-19''' em vez de 'data_faturamento = ''2026-08-19''', caso contrário o banco não filtrará corretamente os horários.\n"
-            "3. Se o usuário perguntar por 'pedidos faturados' de uma data (ex: 'pedidos faturados ontem') para bater com o portal, ele normalmente se refere a pedidos CRIADOS naquela data (data_pedido::date = 'DATA') e que possuem faturamento (status IN ('Attended', 'PartiallyAnswered')). Filtre por 'data_pedido::date' e use a coluna 'valor_nf' para somar o valor faturado.\n"
+            "2. As colunas de data ('data_faturamento', 'data_pedido') são do tipo timestamp. Sempre use o cast '::date' ao comparar com strings de data (ex: 'data_pedido::date = ''2026-08-19''').\n"
+            "3. REGRA CRÍTICA DE DATAS: Sempre que o usuário filtrar por qualquer data (ex: 'ontem', 'dia 19', 'no dia 19', 'esta semana', etc.), você DEVE usar a coluna 'data_pedido::date' para filtrar a data do pedido, pois o portal de vendas deles filtra exclusivamente pela data de criação. Nunca use 'data_faturamento' para filtrar datas a menos que seja pedido explicitamente 'faturados de fato na data X'. Para pedidos faturados/parciais, use a condição 'status IN (''Attended'', ''PartiallyAnswered'')' e some a coluna 'valor_nf' como o valor faturado.\n"
             "4. Sempre ordene os resultados de forma recente e limite a consulta a no máximo 50 linhas."
         ),
         "parameters": {"type": "object", "properties": {
