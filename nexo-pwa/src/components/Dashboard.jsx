@@ -129,7 +129,9 @@ function Fontes({ fontes }) {
 export default function Dashboard({ intent, dados }) {
   if (!dados) return null;
 
-  switch (intent) {
+  const cleanIntent = intent ? String(intent).replace("conexo_", "nexo_") : "";
+
+  switch (cleanIntent) {
     case "nexo_vendas_periodo":
       return <KpiCards dados={dados} />;
 
@@ -151,6 +153,29 @@ export default function Dashboard({ intent, dados }) {
 
     case "nexo_relatorio_periodo":
       return <RelatorioCompleto dados={dados} />;
+
+    case "nexo_consulta_geral": {
+      if (!Array.isArray(dados) || dados.length === 0) return null;
+      const firstRow = dados[0];
+      const keys = Object.keys(firstRow);
+      
+      const numericCandidates = ["valor_nf", "valor_total", "faturamento", "valor", "total", "metros", "quantidade", "quantidade_total"];
+      let valKey = keys.find(k => numericCandidates.includes(k.toLowerCase()));
+      if (!valKey) {
+        valKey = keys.find(k => typeof firstRow[k] === "number");
+      }
+      
+      const textCandidates = ["totvs_order_code", "cliente_nome", "cliente", "representante_nome", "vendedor", "nome", "uf", "produto", "artigo", "cor"];
+      let nameKey = keys.find(k => textCandidates.includes(k.toLowerCase()));
+      if (!nameKey) {
+        nameKey = keys.find(k => typeof firstRow[k] === "string" && !k.toLowerCase().includes("data") && !k.toLowerCase().includes("created"));
+      }
+      
+      if (valKey && nameKey) {
+        return <BarrasIntent dados={dados} nameKey={nameKey} valKey={valKey} title="Visualização dos dados" />;
+      }
+      return null;
+    }
 
     case "nexo_inteligencia_mercado":
       return typeof dados === "object" && dados.fontes
