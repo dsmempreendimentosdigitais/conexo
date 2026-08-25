@@ -13,19 +13,29 @@ const brl = (v) =>
 
 const COLORS = ["#38bdf8", "#818cf8", "#34d399", "#fb923c", "#f472b6"];
 
-// ── KPI simples para nexo_vendas_periodo ────────────────────
+// ── KPI simples ──────────────────────────────────────────────
 function KpiCards({ dados }) {
   const d = Array.isArray(dados) ? dados[0] : dados;
   if (!d) return null;
 
+  // Suporta tanto conexo_vendas_periodo (faturamento, ticket_medio)
+  // quanto conexo_relatorio_periodo (faturado_valor, carteira_valor, faturado_metragem)
+  const faturado  = d.faturado_valor  ?? d.faturamento ?? d.total ?? 0;
+  const carteira  = d.carteira_valor  ?? null;
+  const metragem  = d.faturado_metragem ?? d.metragem ?? null;
+  const pedidos   = d.total_pedidos   ?? d.pedidos ?? 0;
+  const ticket    = d.ticket_medio    ?? d.ticket ?? (faturado && pedidos ? faturado / pedidos : 0);
+
   const items = [
-    { label: "Faturamento", value: brl(d.faturamento ?? d.total ?? 0) },
-    { label: "Pedidos",     value: Number(d.total_pedidos ?? d.pedidos ?? 0).toLocaleString("pt-BR") },
-    { label: "Ticket médio",value: brl(d.ticket_medio ?? d.ticket ?? 0) },
-  ];
+    { label: "Faturado",      value: brl(faturado) },
+    carteira != null && { label: "Carteira em aberto", value: brl(carteira) },
+    metragem != null && { label: "Metros faturados",   value: `${Number(metragem).toLocaleString("pt-BR")} m` },
+    !metragem && { label: "Ticket médio",    value: brl(ticket) },
+    { label: "Pedidos",       value: Number(pedidos).toLocaleString("pt-BR") },
+  ].filter(Boolean);
 
   return (
-    <div className="kpi-grid">
+    <div className="kpi-grid" style={{ gridTemplateColumns: `repeat(${Math.min(items.length, 3)}, 1fr)` }}>
       {items.map((k) => (
         <div className="kpi-card" key={k.label}>
           <div className="kpi-label">{k.label}</div>
@@ -235,37 +245,54 @@ function RelatorioCompleto({ dados }) {
   if (!dados || typeof dados !== "object") return null;
 
   function baixarPDF() {
-    const printCSS = `
-      <style>
-        @media print {
-          body { background: white !important; color: black !important; font-family: Arial, sans-serif; }
-          .no-print { display: none !important; }
-          .kpi-grid { display: flex; gap: 16px; flex-wrap: wrap; }
-          .kpi-card { border: 1px solid #ccc; padding: 12px 20px; border-radius: 8px; min-width: 120px; }
-          .kpi-label { font-size: 11px; color: #555; }
-          .kpi-value { font-size: 18px; font-weight: bold; color: #111; }
-          .chart-title { font-size: 14px; font-weight: bold; margin: 16px 0 8px; color: #333; }
-          table { width: 100%; border-collapse: collapse; font-size: 12px; }
-          th { text-align: left; padding: 4px 8px; border-bottom: 2px solid #333; color: #333; }
-          td { padding: 4px 8px; border-bottom: 1px solid #ccc; }
-          h1 { font-size: 20px; margin-bottom: 4px; }
-          p { color: #555; font-size: 12px; margin-bottom: 16px; }
-        }
-      </style>
-    `;
     const conteudo = document.getElementById("relatorio-pdf-content");
-    const janela = window.open("", "_blank", "width=900,height=700");
-    janela.document.write(`
-      <html><head><title>Relatório CONEXO</title>${printCSS}</head>
-      <body>
-        <h1>Relatório CONEXO</h1>
-        <p>Gerado em ${new Date().toLocaleDateString("pt-BR", { day: "2-digit", month: "long", year: "numeric" })}</p>
-        ${conteudo ? conteudo.innerHTML : ""}
-      </body></html>
-    `);
-    janela.document.close();
-    janela.focus();
-    setTimeout(() => { janela.print(); janela.close(); }, 500);
+    if (!conteudo) return;
+
+    const dataHoje = new Date().toLocaleDateString("pt-BR", { day: "2-digit", month: "long", year: "numeric" });
+
+    // Remove iframe anterior se existir
+    const anterior = document.getElementById("conexo-print-frame");
+    if (anterior) anterior.remove();
+
+    const iframe = document.createElement("iframe");
+    iframe.id = "conexo-print-frame";
+    iframe.style.cssText = "position:fixed;top:-9999px;left:-9999px;width:900px;height:1px;border:none;visibility:hidden;";
+    document.body.appendChild(iframe);
+
+    const doc = iframe.contentDocument || iframe.contentWindow.document;
+    doc.open();
+    doc.write(`<!DOCTYPE html><html lang="pt-BR"><head>
+      <meta charset="UTF-8"/>
+      <title>Relatório CONEXO — ${dataHoje}</title>
+      <style>
+        body { font-family: Arial, sans-serif; color: #1a1a2e; background: white; padding: 24px; font-size: 13px; }
+        h1 { font-size: 22px; color: #0f172a; margin-bottom: 4px; }
+        .subtitulo { color: #64748b; font-size: 12px; margin-bottom: 20px; }
+        .kpi-grid { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
+        .kpi-card { border: 1px solid #cbd5e1; padding: 12px 18px; border-radius: 8px; min-width: 130px; }
+        .kpi-label { font-size: 10px; color: #64748b; text-transform: uppercase; letter-spacing: .5px; margin-bottom: 4px; }
+        .kpi-value { font-size: 20px; font-weight: 700; color: #0f172a; }
+        .section-title { font-size: 13px; font-weight: 700; color: #334155; margin: 20px 0 8px; border-bottom: 2px solid #e2e8f0; padding-bottom: 4px; }
+        table { width: 100%; border-collapse: collapse; margin-bottom: 8px; }
+        th { text-align: left; padding: 6px 8px; background: #f1f5f9; color: #334155; font-size: 11px; text-transform: uppercase; letter-spacing: .4px; }
+        td { padding: 5px 8px; border-bottom: 1px solid #e2e8f0; color: #1e293b; }
+        tr:hover td { background: #f8fafc; }
+        .footer { margin-top: 32px; font-size: 10px; color: #94a3b8; border-top: 1px solid #e2e8f0; padding-top: 8px; }
+        @page { margin: 1.5cm; }
+      </style>
+    </head><body>
+      <h1>📊 Relatório CONEXO</h1>
+      <div class="subtitulo">Gerado em ${dataHoje} — Designtex Tecidos</div>
+      ${conteudo.innerHTML}
+      <div class="footer">Gerado automaticamente pelo CONEXO — Inteligência Comercial</div>
+    </body></html>`);
+    doc.close();
+
+    iframe.onload = () => {
+      iframe.contentWindow.focus();
+      iframe.contentWindow.print();
+      setTimeout(() => iframe.remove(), 2000);
+    };
   }
 
   return (
