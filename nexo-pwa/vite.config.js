@@ -7,7 +7,7 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: "autoUpdate",
-      includeAssets: ["favicon.ico", "icon-192.png", "icon-512.png"],
+      includeAssets: ["favicon.ico", "logo_icone.png"],
       manifest: {
         name: "CONEXO - Inteligência Comercial",
         short_name: "CONEXO",
@@ -17,9 +17,9 @@ export default defineConfig({
         display: "standalone",
         start_url: "/",
         icons: [
-          { src: "/icon-192.png", sizes: "192x192", type: "image/png" },
-          { src: "/icon-512.png", sizes: "512x512", type: "image/png" },
-          { src: "/icon-512.png", sizes: "512x512", type: "image/png", purpose: "maskable" },
+          { src: "/logo_icone.png", sizes: "192x192", type: "image/png" },
+          { src: "/logo_icone.png", sizes: "512x512", type: "image/png" },
+          { src: "/logo_icone.png", sizes: "512x512", type: "image/png", purpose: "maskable" },
         ],
       },
       workbox: {

@@ -76,7 +76,11 @@ TOOLS = [
 
     {"type": "function", "function": {
         "name": "conexo_relatorio_periodo",
-        "description": "Relatório consolidado do período. Use para 'gere um relatório', 'resumo para reunião'.",
+        "description": (
+            "Relatório ou PDF consolidado do período com resumo de faturamento, top clientes, top produtos, ranking de vendedores e vendas por região. "
+            "Use para: 'gere um relatório', 'resumo para reunião', 'gere um pdf', 'pdf do faturamento', 'exportar em pdf', "
+            "'pdf de julho', 'relatório de agosto', 'me dê o pdf', 'quero um pdf', 'exportar dados', 'relatório completo'."
+        ),
         "parameters": {"type": "object", "properties": {
             "inicio": {"type": "string"}, "fim": {"type": "string"}
         }, "required": ["inicio", "fim"]}}},

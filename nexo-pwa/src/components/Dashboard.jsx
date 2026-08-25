@@ -193,16 +193,115 @@ function BarrasIntent({ dados, nameKey, valKey, title }) {
   return <Barras dados={lista} nameKey={nameKey} valKey={valKey} title={title} />;
 }
 
-// Relatório consolidado — múltiplos blocos
+// Tabela simples para exibir lista de linhas no relatório PDF
+function TabelaSimples({ dados, titulo }) {
+  if (!Array.isArray(dados) || dados.length === 0) return null;
+  const colunas = Object.keys(dados[0]);
+  const fmt = (v) => {
+    if (typeof v === "number") return Number(v) > 100 ? brl(v) : v.toLocaleString("pt-BR");
+    return String(v ?? "—");
+  };
+  return (
+    <div className="pdf-tabela" style={{ marginTop: 8 }}>
+      {titulo && <div className="chart-title">{titulo}</div>}
+      <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12, color: "#cbd5e1" }}>
+        <thead>
+          <tr>
+            {colunas.map((c) => (
+              <th key={c} style={{ textAlign: "left", padding: "4px 8px", borderBottom: "1px solid #334155", color: "#94a3b8", fontWeight: 600 }}>
+                {c.replace(/_/g, " ").toUpperCase()}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {dados.slice(0, 20).map((row, i) => (
+            <tr key={i} style={{ background: i % 2 === 0 ? "transparent" : "#1e293b" }}>
+              {colunas.map((c) => (
+                <td key={c} style={{ padding: "4px 8px", borderBottom: "1px solid #1e293b" }}>
+                  {fmt(row[c])}
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+// Relatório consolidado — múltiplos blocos com botão de PDF
 function RelatorioCompleto({ dados }) {
   if (!dados || typeof dados !== "object") return null;
+
+  function baixarPDF() {
+    const printCSS = `
+      <style>
+        @media print {
+          body { background: white !important; color: black !important; font-family: Arial, sans-serif; }
+          .no-print { display: none !important; }
+          .kpi-grid { display: flex; gap: 16px; flex-wrap: wrap; }
+          .kpi-card { border: 1px solid #ccc; padding: 12px 20px; border-radius: 8px; min-width: 120px; }
+          .kpi-label { font-size: 11px; color: #555; }
+          .kpi-value { font-size: 18px; font-weight: bold; color: #111; }
+          .chart-title { font-size: 14px; font-weight: bold; margin: 16px 0 8px; color: #333; }
+          table { width: 100%; border-collapse: collapse; font-size: 12px; }
+          th { text-align: left; padding: 4px 8px; border-bottom: 2px solid #333; color: #333; }
+          td { padding: 4px 8px; border-bottom: 1px solid #ccc; }
+          h1 { font-size: 20px; margin-bottom: 4px; }
+          p { color: #555; font-size: 12px; margin-bottom: 16px; }
+        }
+      </style>
+    `;
+    const conteudo = document.getElementById("relatorio-pdf-content");
+    const janela = window.open("", "_blank", "width=900,height=700");
+    janela.document.write(`
+      <html><head><title>Relatório CONEXO</title>${printCSS}</head>
+      <body>
+        <h1>Relatório CONEXO</h1>
+        <p>Gerado em ${new Date().toLocaleDateString("pt-BR", { day: "2-digit", month: "long", year: "numeric" })}</p>
+        ${conteudo ? conteudo.innerHTML : ""}
+      </body></html>
+    `);
+    janela.document.close();
+    janela.focus();
+    setTimeout(() => { janela.print(); janela.close(); }, 500);
+  }
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 12, marginTop: 12 }}>
-      {dados.resumo && <KpiCards dados={dados.resumo} />}
-      {dados.top_clientes   && <Barras dados={dados.top_clientes}   nameKey="cliente"  valKey="faturamento" title="Top clientes"    />}
-      {dados.top_produtos   && <Barras dados={dados.top_produtos}   nameKey="produto"  valKey="faturamento" title="Top produtos"    />}
-      {dados.ranking_vendedores && <Barras dados={dados.ranking_vendedores} nameKey="vendedor" valKey="faturamento" title="Ranking vendedores" />}
-      {dados.por_regiao     && <Barras dados={dados.por_regiao}     nameKey="uf"       valKey="faturamento" title="Por estado"      />}
+      <button
+        onClick={baixarPDF}
+        className="no-print"
+        style={{
+          alignSelf: "flex-start",
+          background: "#38bdf8",
+          color: "#0f172a",
+          border: "none",
+          borderRadius: 8,
+          padding: "8px 18px",
+          fontWeight: 700,
+          fontSize: 14,
+          cursor: "pointer",
+          display: "flex",
+          alignItems: "center",
+          gap: 6,
+        }}
+      >
+        📄 Baixar PDF
+      </button>
+      <div id="relatorio-pdf-content">
+        {dados.resumo && <KpiCards dados={dados.resumo} />}
+        {dados.top_clientes      && <TabelaSimples dados={dados.top_clientes}      titulo="Top Clientes" />}
+        {dados.top_produtos      && <TabelaSimples dados={dados.top_produtos}      titulo="Top Produtos" />}
+        {dados.ranking_vendedores && <TabelaSimples dados={dados.ranking_vendedores} titulo="Ranking Vendedores" />}
+        {dados.por_regiao        && <TabelaSimples dados={dados.por_regiao}        titulo="Por Estado (UF)" />}
+        {/* Gráficos visuais abaixo das tabelas */}
+        {dados.top_clientes      && <Barras dados={dados.top_clientes}      nameKey="cliente"  valKey="faturamento" title="Top clientes"    />}
+        {dados.top_produtos      && <Barras dados={dados.top_produtos}      nameKey="produto"  valKey="faturamento" title="Top produtos"    />}
+        {dados.ranking_vendedores && <Barras dados={dados.ranking_vendedores} nameKey="vendedor" valKey="faturamento" title="Ranking vendedores" />}
+        {dados.por_regiao        && <Barras dados={dados.por_regiao}        nameKey="uf"       valKey="faturamento" title="Por estado"      />}
+      </div>
     </div>
   );
 }
