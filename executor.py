@@ -62,6 +62,27 @@ def executar(intent: str, params: dict, ctx: dict | None = None):
         resp = supabase.rpc("conexo_executar_leitura", {"query_str": sql}).execute()
         return resp.data
 
+    # Consulta de Programação PCP (Produção de Tecidos)
+    if intent == "conexo_consulta_programacao":
+        produto = params.get("produto", "").strip()
+        cor = params.get("cor", "").strip()
+        
+        where_clauses = []
+        if produto:
+            terms = [t for t in produto.lower().split() if len(t) > 2]
+            for term in terms:
+                where_clauses.append(f"(LOWER(nome_tecido) LIKE '%{term}%' OR cod_tecido = '{term}')")
+        if cor:
+            terms = [t for t in cor.lower().split() if len(t) > 1]
+            for term in terms:
+                where_clauses.append(f"(LOWER(nome_cor) LIKE '%{term}%' OR cod_cor = '{term}')")
+                
+        where_sql = " AND ".join(where_clauses) if where_clauses else "1=1"
+        sql = f"SELECT op, cod_tecido, nome_tecido, cod_cor, nome_cor, quantidade_solicitada, quantidade_disponivel, previsao_faturamento, tipo FROM programacoes WHERE {where_sql} ORDER BY quantidade_solicitada DESC LIMIT 30"
+        
+        resp = supabase.rpc("conexo_executar_leitura", {"query_str": sql}).execute()
+        return resp.data
+
     # Consulta geral dinêmica (Text-to-SQL)
     if intent == "conexo_consulta_geral":
         if ctx and ctx.get("perfil") != "gestor":

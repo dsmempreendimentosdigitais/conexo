@@ -1,4 +1,4 @@
-﻿# CONTEXTO DE NEGÓCIO — DESIGNTEX TECIDOS
+# CONTEXTO DE NEGÓCIO — DESIGNTEX TECIDOS
 # Documento de inteligência interna do CONEXO
 # Gerado automaticamente por varredura do Supabase em 2026-08-26
 
@@ -19,6 +19,20 @@
 | PartiallyAnswered | Parcialmente faturado | parcial, entregue parcialmente | 99 | R$ 2,9 mi |
 | Blocked | Bloqueado | bloqueado, retido, em bloqueio, travado | 19 | R$ 11,1 mil |
 | InComposition | Em composição | em composição, sendo montado | 3 | R$ 0 |
+
+## TABELA DE PROGRAMAÇÃO PCP (programacoes)
+
+Uso: Consultas de tecidos em produção na fábrica, metragens programadas, OPs e previsão de faturamento.
+Campos principais:
+- `op`: Número da Ordem de Produção (ex: "2026.268 - LISO")
+- `cod_tecido`: Código do tecido (ex: "1118")
+- `nome_tecido`: Nome da linha do tecido (ex: "ILHABELA RUSTIC", "SARJA PROWORK")
+- `cod_cor`: Código da cor (ex: "001", "100", "760")
+- `nome_cor`: Nome da cor (ex: "Off White", "Branco", "Azul Maya")
+- `quantidade_solicitada`: Metragem total programada na fábrica
+- `quantidade_disponivel`: Metragem ainda disponível para venda
+- `previsao_faturamento`: Previsão de saída da produção (ex: "3ª semana de outubro")
+- `tipo`: Categoria ("liso", "estampado", "esgotado")
 
 ## REGRAS CRÍTICAS DE DADOS
 

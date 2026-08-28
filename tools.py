@@ -120,6 +120,14 @@ TOOLS = [
         }, "required": []}}},
 
     {"type": "function", "function": {
+        "name": "conexo_consulta_programacao",
+        "description": "Consulta tecidos, cores, previsões de faturamento e metragens na programação de produção do PCP (tabela programacoes). Use para 'o que tem na programação?', 'quanto metros de off white na programação?', 'previsão da linha ilhabela rustic', 'tecido X na produção'.",
+        "parameters": {"type": "object", "properties": {
+            "produto": {"type": "string", "description": "Nome ou código do tecido (ex: ilhabela rustic, sarja prowork)"},
+            "cor":     {"type": "string", "description": "Nome ou código da cor (ex: off white, 001, 100, azul maya)"}
+        }, "required": []}}},
+
+    {"type": "function", "function": {
         "name": "conexo_consulta_geral",
         "description": (
             "Use esta ferramenta para responder perguntas personalizadas ou detalhadas que não "
@@ -129,11 +137,13 @@ TOOLS = [
             "- pedidos_totvs (id, totvs_order_code, totvs_order_id, data_pedido, data_faturamento, valor_total, valor_nf, quantidade_total, representante_codigo, representante_nome, cliente_nome, status, items_json) "
             "- representantes (codigo, nome, meta) "
             "- estoque_pe (cod_produto, descricao, cor, cor_codigo, quantidade_disponivel, categoria, unidade) "
+            "- programacoes (op, cod_tecido, nome_tecido, cod_cor, nome_cor, quantidade_solicitada, quantidade_disponivel, previsao_faturamento, tipo) "
             "ATENÇÃO IMPORTANTE PARA A CONSULTA SQL:\n"
             "1. Sempre use a coluna 'totvs_order_code' para se referir ao código/número legível do pedido (ex: 35828, 35806) em vez de 'id'.\n"
             "2. As colunas de data ('data_faturamento', 'data_pedido') são do tipo timestamp. Sempre use o cast '::date' ao comparar com strings de data (ex: 'data_pedido::date = ''2026-08-19''').\n"
             "3. REGRA CRÍTICA DE DATAS: Sempre que o usuário perguntar por faturamento, vendas ou pedidos faturados em uma determinada data (ex: 'pedidos faturados no dia 19', 'faturamento de ontem'), você DEVE usar a coluna 'nota_fiscal_data::date' para filtrar a data (que representa a data de emissão da nota fiscal no ERP), usar a condição 'status IN (''Attended'', ''PartiallyAnswered'')', e usar a coluna 'valor_nf' para somar/selecionar os valores faturados. Para perguntas de pedidos gerais, carteira ou pedidos em aberto (sem mencionar faturamento/venda faturada), use a coluna 'data_pedido::date' (data de criação).\n"
-            "4. Sempre ordene os resultados de forma recente e limite a consulta a no máximo 50 linhas."
+            "4. NUNCA coloque funções de retorno de conjunto como jsonb_array_elements(...) dentro de funções agregadoras como SUM() ou COUNT(). Em vez disso, use a cláusula 'LATERAL jsonb_array_elements(...)' no FROM.\n"
+            "5. Sempre ordene os resultados de forma recente e limite a consulta a no máximo 50 linhas."
         ),
         "parameters": {"type": "object", "properties": {
             "sql": {"type": "string", "description": "Consulta SQL PostgreSQL (SELECT) válida"}
@@ -141,7 +151,7 @@ TOOLS = [
 
     {"type": "function", "function": {
         "name": "fora_de_escopo",
-        "description": "A pergunta não é sobre vendas, clientes, produtos, estoque, vendedores, metas ou mercado.",
+        "description": "A pergunta não é sobre vendas, clientes, produtos, estoque, programação PCP, vendedores, metas ou mercado.",
         "parameters": {"type": "object", "properties": {
             "motivo": {"type": "string"}
         }, "required": ["motivo"]}}},
