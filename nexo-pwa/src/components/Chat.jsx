@@ -104,7 +104,7 @@ export default function Chat({ token, email, onLogout }) {
     [input, loading, historico, token]
   );
 
-  // Gravar / parar áudio
+  // Gravar / parar áudio com compatibilidade mobile universal (iOS / Android)
   async function toggleAudio() {
     if (gravando) {
       recRef.current?.stop();
@@ -113,16 +113,44 @@ export default function Chat({ token, email, onLogout }) {
     }
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const rec = new MediaRecorder(stream, { mimeType: "audio/webm" });
+      
+      // Detecta mimeType suportado pelo navegador (Safari iOS vs Chrome Android vs Firefox)
+      let options = {};
+      const preferredTypes = [
+        "audio/webm;codecs=opus",
+        "audio/webm",
+        "audio/mp4",
+        "audio/aac",
+        "audio/ogg",
+      ];
+      for (const t of preferredTypes) {
+        if (typeof MediaRecorder !== "undefined" && MediaRecorder.isTypeSupported(t)) {
+          options = { mimeType: t };
+          break;
+        }
+      }
+
+      const rec = new MediaRecorder(stream, options);
+      const actualType = rec.mimeType || options.mimeType || "audio/mp4";
       const chunks = [];
-      rec.ondataavailable = (e) => chunks.push(e.data);
+
+      rec.ondataavailable = (e) => {
+        if (e.data && e.data.size > 0) {
+          chunks.push(e.data);
+        }
+      };
+
       rec.onstop = async () => {
         stream.getTracks().forEach((t) => t.stop());
-        const blob = new Blob(chunks, { type: "audio/webm" });
+        const blob = new Blob(chunks, { type: actualType });
         setLoading(true);
         try {
           const texto = await transcrever(blob, token);
-          await enviar(texto);
+          if (texto && texto.trim()) {
+            await enviar(texto);
+          } else {
+            setLoading(false);
+          }
         } catch (e) {
           setMsgs((m) => [
             ...m,
@@ -131,11 +159,12 @@ export default function Chat({ token, email, onLogout }) {
           setLoading(false);
         }
       };
+
       recRef.current = rec;
       rec.start();
       setGravando(true);
-    } catch {
-      alert("Permissão de microfone negada.");
+    } catch (err) {
+      alert("Não foi possível acessar o microfone. Verifique as permissões do seu navegador.");
     }
   }
 

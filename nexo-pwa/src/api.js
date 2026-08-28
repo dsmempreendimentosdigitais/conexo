@@ -60,8 +60,18 @@ export async function perguntarStream(
 
 // ── Transcrição de áudio (Whisper) ──────────────────────────
 export async function transcrever(blob, token) {
+  const type = blob.type || "";
+  let ext = "webm";
+  if (type.includes("mp4") || type.includes("aac") || type.includes("m4a")) {
+    ext = "m4a";
+  } else if (type.includes("wav")) {
+    ext = "wav";
+  } else if (type.includes("ogg")) {
+    ext = "ogg";
+  }
+  
   const fd = new FormData();
-  fd.append("audio", blob, "fala.webm");
+  fd.append("audio", blob, `fala.${ext}`);
   const r = await fetch(`${BASE}/conexo/transcrever`, {
     method: "POST",
     headers: { Authorization: `Bearer ${token}` },

@@ -112,14 +112,23 @@ TOOLS = [
         }, "required": ["assunto"]}}},
 
     {"type": "function", "function": {
+        "name": "conexo_consulta_estoque",
+        "description": "Consulta disponibilidade de tecidos e cores no estoque de pronto-entrega (tabela estoque_pe). Use para 'tem cor bege no estoque?', 'tem tricoline paris?', 'quanto temos de bege areia no estoque?', 'disponibilidade de produto'.",
+        "parameters": {"type": "object", "properties": {
+            "produto": {"type": "string", "description": "Nome ou tipo do tecido (ex: tricoline paris, tricoline havana, sarja)"},
+            "cor":     {"type": "string", "description": "Nome ou código da cor (ex: bege areia, 240, marinho)"}
+        }, "required": []}}},
+
+    {"type": "function", "function": {
         "name": "conexo_consulta_geral",
         "description": (
             "Use esta ferramenta para responder perguntas personalizadas ou detalhadas que não "
             "se encaixam nas outras ferramentas pré-definidas. Exemplos: listar números de pedidos, "
-            "detalhes de transações de ontem, ou agrupamentos específicos de vendas por cliente. "
+            "detalhes de transações de ontem, agrupamentos específicos de vendas por cliente, ou estoque detalhado. "
             "Escreva uma consulta SQL PostgreSQL de leitura (SELECT) válida sobre as tabelas: "
             "- pedidos_totvs (id, totvs_order_code, totvs_order_id, data_pedido, data_faturamento, valor_total, valor_nf, quantidade_total, representante_codigo, representante_nome, cliente_nome, status, items_json) "
             "- representantes (codigo, nome, meta) "
+            "- estoque_pe (cod_produto, descricao, cor, cor_codigo, quantidade_disponivel, categoria, unidade) "
             "ATENÇÃO IMPORTANTE PARA A CONSULTA SQL:\n"
             "1. Sempre use a coluna 'totvs_order_code' para se referir ao código/número legível do pedido (ex: 35828, 35806) em vez de 'id'.\n"
             "2. As colunas de data ('data_faturamento', 'data_pedido') são do tipo timestamp. Sempre use o cast '::date' ao comparar com strings de data (ex: 'data_pedido::date = ''2026-08-19''').\n"
@@ -132,7 +141,7 @@ TOOLS = [
 
     {"type": "function", "function": {
         "name": "fora_de_escopo",
-        "description": "A pergunta não é sobre vendas, clientes, produtos, vendedores, metas ou mercado.",
+        "description": "A pergunta não é sobre vendas, clientes, produtos, estoque, vendedores, metas ou mercado.",
         "parameters": {"type": "object", "properties": {
             "motivo": {"type": "string"}
         }, "required": ["motivo"]}}},
