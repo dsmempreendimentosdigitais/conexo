@@ -296,6 +296,13 @@ function PdfWrapper({ children, title = "Relatório CONEXO" }) {
 export default function Dashboard({ intent, dados }) {
   if (!dados) return null;
 
+  // Normaliza dados para sempre ser um array legível de objetos
+  const listaDados = Array.isArray(dados)
+    ? dados
+    : typeof dados === "object"
+    ? [dados]
+    : [];
+
   const cleanIntent = intent ? String(intent).replace("conexo_", "nexo_") : "";
 
   let content = null;
@@ -314,31 +321,33 @@ export default function Dashboard({ intent, dados }) {
       break;
 
     case "nexo_ranking_vendedores":
-      content = <BarrasIntent dados={dados} nameKey="vendedor" valKey="faturamento" title="Ranking de Vendedores" />;
+      content = <BarrasIntent dados={listaDados} nameKey="vendedor" valKey="faturamento" title="Ranking de Vendedores" />;
       title = "Ranking de Vendedores";
       break;
 
     case "nexo_top_clientes":
-      content = <BarrasIntent dados={dados} nameKey="cliente" valKey="faturamento" title="Top Clientes" />;
+      content = <BarrasIntent dados={listaDados} nameKey="cliente" valKey="faturamento" title="Top Clientes" />;
       title = "Top Clientes";
       break;
 
     case "nexo_top_produtos":
-      content = <BarrasIntent dados={dados} nameKey="produto" valKey="faturamento" title="Top Produtos" />;
+      content = <BarrasIntent dados={listaDados} nameKey="produto" valKey="faturamento" title="Top Produtos" />;
       title = "Top Produtos";
       break;
 
     case "nexo_vendas_regiao":
-      content = <BarrasIntent dados={dados} nameKey="uf" valKey="faturamento" title="Vendas por Estado" />;
+      content = <BarrasIntent dados={listaDados} nameKey="uf" valKey="faturamento" title="Vendas por Estado" />;
       title = "Vendas por Estado";
       break;
 
     case "nexo_consulta_estoque": {
-      if (!Array.isArray(dados) || dados.length === 0) return null;
+      if (listaDados.length === 0) return null;
+      const sample = listaDados[0] || {};
+      const nameKey = sample.cor ? "cor" : sample.descricao ? "descricao" : "cod_produto";
       content = (
         <div>
-          <TabelaSimples dados={dados} titulo="Disponibilidade de Estoque (Pronto-Entrega)" />
-          <BarrasIntent dados={dados} nameKey="cor" valKey="quantidade_disponivel" title="Metros Disponíveis por Cor" />
+          <TabelaSimples dados={listaDados} titulo="Disponibilidade de Estoque (Pronto-Entrega)" />
+          <BarrasIntent dados={listaDados} nameKey={nameKey} valKey="quantidade_disponivel" title="Metros Disponíveis em Estoque" />
         </div>
       );
       title = "Relatório de Estoque";
@@ -346,11 +355,13 @@ export default function Dashboard({ intent, dados }) {
     }
 
     case "nexo_consulta_programacao": {
-      if (!Array.isArray(dados) || dados.length === 0) return null;
+      if (listaDados.length === 0) return null;
+      const sample = listaDados[0] || {};
+      const nameKey = sample.nome_tecido ? "nome_tecido" : sample.nome_cor ? "nome_cor" : "op";
       content = (
         <div>
-          <TabelaSimples dados={dados} titulo="Programação de Produção (PCP)" />
-          <BarrasIntent dados={dados} nameKey="nome_tecido" valKey="quantidade_solicitada" title="Metragem Programada por Tecido" />
+          <TabelaSimples dados={listaDados} titulo="Programação de Produção (PCP)" />
+          <BarrasIntent dados={listaDados} nameKey={nameKey} valKey="quantidade_solicitada" title="Metragem Programada por Tecido" />
         </div>
       );
       title = "Programação de Produção PCP";
@@ -361,8 +372,8 @@ export default function Dashboard({ intent, dados }) {
       return <RelatorioCompleto dados={dados} />;
 
     case "nexo_consulta_geral": {
-      if (!Array.isArray(dados) || dados.length === 0) return null;
-      const firstRow = dados[0];
+      if (listaDados.length === 0) return null;
+      const firstRow = listaDados[0];
       const keys = Object.keys(firstRow);
       
       const numericCandidates = ["quantidade_disponivel", "quantidade_solicitada", "valor_nf", "valor_total", "faturamento", "valor", "total", "metros", "quantidade", "quantidade_total"];
@@ -379,8 +390,8 @@ export default function Dashboard({ intent, dados }) {
       
       content = (
         <div>
-          <TabelaSimples dados={dados} titulo="Dados Consultados" />
-          {valKey && nameKey && <BarrasIntent dados={dados} nameKey={nameKey} valKey={valKey} title="Visualização Gráfica" />}
+          <TabelaSimples dados={listaDados} titulo="Dados Consultados" />
+          {valKey && nameKey && <BarrasIntent dados={listaDados} nameKey={nameKey} valKey={valKey} title="Visualização Gráfica" />}
         </div>
       );
       title = "Consulta Comercial CONEXO";
@@ -393,8 +404,8 @@ export default function Dashboard({ intent, dados }) {
       break;
 
     default:
-      if (Array.isArray(dados) && dados.length > 0) {
-        content = <TabelaSimples dados={dados} titulo="Resultados" />;
+      if (listaDados.length > 0) {
+        content = <TabelaSimples dados={listaDados} titulo="Resultados da Consulta" />;
         title = "Relatório CONEXO";
       } else {
         return null;

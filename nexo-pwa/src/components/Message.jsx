@@ -17,9 +17,9 @@ export default function Message({ msg }) {
         <div className="msg-bubble">
           <p>{msg.conteudo}</p>
 
-          {/* Dashboard logo abaixo do texto */}
-          {!isUser && msg.intent && msg.dados && (
-            <Dashboard intent={msg.intent} dados={msg.dados} />
+          {/* Dashboard e Botões de PDF sempre que houver dados */}
+          {!isUser && msg.dados && (
+            <Dashboard intent={msg.intent || "nexo_consulta_geral"} dados={msg.dados} />
           )}
         </div>
 
