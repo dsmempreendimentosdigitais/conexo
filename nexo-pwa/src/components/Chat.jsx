@@ -11,17 +11,138 @@ const BOAS_VINDAS = {
   ts: Date.now(),
 };
 
+function getStorageKey(email) {
+  return `conexo_chats_${email || "guest"}`;
+}
+
 export default function Chat({ token, email, onLogout }) {
-  const [msgs,     setMsgs]     = useState([BOAS_VINDAS]);
-  const [input,    setInput]    = useState("");
-  const [loading,  setLoading]  = useState(false);
+  const [chats, setChats] = useState([]);
+  const [activeChatId, setActiveChatId] = useState(null);
+  const [msgs, setMsgs] = useState([BOAS_VINDAS]);
+  const [input, setInput] = useState("");
+  const [loading, setLoading] = useState(false);
   const [gravando, setGravando] = useState(false);
-  const [alertas,  setAlertas]  = useState([]);
+  const [alertas, setAlertas] = useState([]);
   const [showAlerts, setShowAlerts] = useState(false);
 
-  const recRef   = useRef(null);
-  const fimRef   = useRef(null);
+  const recRef = useRef(null);
+  const fimRef = useRef(null);
   const inputRef = useRef(null);
+
+  // Carrega histórico de chats do localStorage ao iniciar
+  useEffect(() => {
+    const storageKey = getStorageKey(email);
+    try {
+      const saved = localStorage.getItem(storageKey);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setChats(parsed);
+          setActiveChatId(parsed[0].id);
+          setMsgs(parsed[0].msgs || [BOAS_VINDAS]);
+          return;
+        }
+      }
+    } catch (e) {
+      console.error("Erro ao carregar chats do localStorage:", e);
+    }
+
+    // Se não houver chat salvo, cria o primeiro
+    const firstId = `chat_${Date.now()}`;
+    const initialChat = {
+      id: firstId,
+      titulo: "Nova Conversa",
+      criadoEm: Date.now(),
+      msgs: [BOAS_VINDAS],
+    };
+    setChats([initialChat]);
+    setActiveChatId(firstId);
+    setMsgs([BOAS_VINDAS]);
+  }, [email]);
+
+  // Salva chats no localStorage sempre que `chats` ou `msgs` mudar
+  const salvarChatsNoStorage = useCallback((novosChats) => {
+    const storageKey = getStorageKey(email);
+    try {
+      localStorage.setItem(storageKey, JSON.stringify(novosChats));
+    } catch (e) {
+      console.error("Erro ao salvar chats:", e);
+    }
+  }, [email]);
+
+  // Atualiza as mensagens do chat ativo e gera título automático se necessário
+  useEffect(() => {
+    if (!activeChatId) return;
+
+    setChats((prevChats) => {
+      const idx = prevChats.findIndex((c) => c.id === activeChatId);
+      if (idx === -1) return prevChats;
+
+      const chatAtual = prevChats[idx];
+      let novoTitulo = chatAtual.titulo;
+
+      // Gera título baseado na primeira pergunta do usuário se o título ainda for genérico
+      if (novoTitulo === "Nova Conversa" || !novoTitulo) {
+        const primeiraPerg = msgs.find((m) => m.role === "user");
+        if (primeiraPerg && primeiraPerg.conteudo) {
+          novoTitulo = primeiraPerg.conteudo.slice(0, 30) + (primeiraPerg.conteudo.length > 30 ? "..." : "");
+        }
+      }
+
+      const atualizado = {
+        ...chatAtual,
+        titulo: novoTitulo,
+        msgs: msgs,
+        atualizadoEm: Date.now(),
+      };
+
+      const novos = [...prevChats];
+      novos[idx] = atualizado;
+      salvarChatsNoStorage(novos);
+      return novos;
+    });
+  }, [msgs, activeChatId, salvarChatsNoStorage]);
+
+  // Alternar entre conversas salvas no histórico
+  const selecionarChat = (chatId) => {
+    if (chatId === activeChatId) return;
+    const chatEncontrado = chats.find((c) => c.id === chatId);
+    if (chatEncontrado) {
+      setActiveChatId(chatId);
+      setMsgs(chatEncontrado.msgs || [BOAS_VINDAS]);
+    }
+  };
+
+  // Botão + Nova Conversa
+  const novaConversa = () => {
+    const novoId = `chat_${Date.now()}`;
+    const novoChat = {
+      id: novoId,
+      titulo: "Nova Conversa",
+      criadoEm: Date.now(),
+      msgs: [BOAS_VINDAS],
+    };
+
+    setChats((prev) => [novoChat, ...prev]);
+    setActiveChatId(novoId);
+    setMsgs([BOAS_VINDAS]);
+  };
+
+  // Apagar uma conversa do histórico
+  const apagarChat = (e, chatId) => {
+    e.stopPropagation();
+    const restantes = chats.filter((c) => c.id !== chatId);
+    if (restantes.length === 0) {
+      novaConversa();
+    } else {
+      setChats(restantes);
+      salvarChatsNoStorage(restantes);
+      if (activeChatId === chatId) {
+        setActiveChatId(restantes[0].id);
+        setMsgs(restantes[0].msgs || [BOAS_VINDAS]);
+      }
+    }
+  };
 
   // Scroll automático ao fim
   useEffect(() => {
@@ -67,7 +188,7 @@ export default function Chat({ token, email, onLogout }) {
           token,
           // onDados — chega antes do texto
           (intent, dados) => {
-            dadosBuffer  = dados;
+            dadosBuffer = dados;
             intentBuffer = intent;
             setMsgs((m) =>
               m.map((msg) =>
@@ -114,7 +235,6 @@ export default function Chat({ token, email, onLogout }) {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       
-      // Detecta mimeType suportado pelo navegador (Safari iOS vs Chrome Android vs Firefox)
       let options = {};
       const preferredTypes = [
         "audio/webm;codecs=opus",
@@ -179,12 +299,47 @@ export default function Chat({ token, email, onLogout }) {
           <span className="logo-text">CONEXO</span>
         </div>
 
-        <button className="sidebar-new-chat" onClick={() => setMsgs([BOAS_VINDAS])}>
+        <button className="sidebar-new-chat" onClick={novaConversa}>
           + Nova conversa
         </button>
 
-        <div className="sidebar-section-title">Sugestões</div>
+        {/* ── Seção de Histórico de Conversas ── */}
+        <div className="sidebar-section-title">Histórico de Conversas</div>
         <div className="chat-history">
+          {chats.map((c) => (
+            <div
+              key={c.id}
+              className={`chat-history-item ${c.id === activeChatId ? "active" : ""}`}
+              onClick={() => selecionarChat(c.id)}
+              style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}
+            >
+              <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1 }}>
+                💬 {c.titulo}
+              </span>
+              {chats.length > 1 && (
+                <button
+                  onClick={(e) => apagarChat(e, c.id)}
+                  title="Apagar conversa"
+                  style={{
+                    background: "none",
+                    border: "none",
+                    color: "var(--text-muted)",
+                    cursor: "pointer",
+                    fontSize: 12,
+                    padding: "2px 4px",
+                    marginLeft: 4,
+                  }}
+                >
+                  ✕
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
+
+        {/* ── Seção de Sugestões ── */}
+        <div className="sidebar-section-title" style={{ marginTop: 12 }}>Sugestões Rápidas</div>
+        <div style={{ padding: "4px 8px" }}>
           {[
             "Como estão as vendas e metragens este mês?",
             "Quais são os representantes abaixo da meta?",
@@ -196,8 +351,9 @@ export default function Chat({ token, email, onLogout }) {
               key={s}
               className="chat-history-item"
               onClick={() => enviar(s)}
+              style={{ fontSize: 12, opacity: 0.8 }}
             >
-              {s}
+              💡 {s}
             </div>
           ))}
         </div>
