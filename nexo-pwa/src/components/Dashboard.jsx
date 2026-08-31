@@ -1,3 +1,4 @@
+import React, { useId } from "react";
 import {
   BarChart,
   Bar,
@@ -188,7 +189,8 @@ function baixarPDFUniversal(elementId, titulo = "Relatório CONEXO") {
 
 // Wrapper visual com botões de PDF (Relatório Completo e Apenas Gráficos)
 function PdfWrapper({ children, title = "Relatório CONEXO" }) {
-  const containerId = React.useId ? React.useId().replace(/:/g, "") : `pdf-${Math.random().toString(36).substring(2, 9)}`;
+  const rawId = useId ? useId() : `pdf-${Math.random().toString(36).substring(2, 9)}`;
+  const containerId = String(rawId).replace(/:/g, "");
 
   function baixarGraficosApenas() {
     const container = document.getElementById(containerId);
