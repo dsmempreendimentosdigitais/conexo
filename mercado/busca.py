@@ -9,9 +9,9 @@ FONTES_CONFIAVEIS = [
 ]
 
 
-def buscar_web(query: str, n: int = 5) -> list[dict]:
+def buscar_web(query: str, n: int = 6) -> list[dict]:
     """
-    Busca web via Tavily com foco em fontes confiáveis.
+    Busca web via Tavily para notícias e dados de mercado recentes.
     Retorna lista de {titulo, trecho, fonte, data}.
     """
     if not config.TAVILY_API_KEY:
@@ -22,10 +22,9 @@ def buscar_web(query: str, n: int = 5) -> list[dict]:
             "https://api.tavily.com/search",
             json={
                 "api_key":        config.TAVILY_API_KEY,
-                "query":          query,
+                "query":          f"{query} mercado textil algodao brasil",
                 "search_depth":   "advanced",
                 "max_results":    n,
-                "include_domains": FONTES_CONFIAVEIS,
             },
             timeout=20,
         )

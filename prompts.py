@@ -55,15 +55,18 @@ REGRAS DE ROTEAMENTO
    - Se o usuário pedir um "PDF" da programação PCP, use conexo_consulta_programacao.
    - NUNCA escolha "fora_de_escopo" apenas porque a palavra "PDF" está na pergunta! Escolha a ferramenta correspondente aos dados solicitados.
 
-6. PERGUNTAS INCOMPLETAS: Se a pergunta for vaga demais ou faltar informação essencial
-   (ex: "me dê os pedidos" sem especificar período, status ou cliente), use
-   "pedir_esclarecimento" com uma pergunta objetiva e útil que leve a uma resposta rica.
+6. REGRA ESTRITA DE ESCLARECIMENTOS:
+   - NUNCA use "pedir_esclarecimento" se a pergunta do usuário puder ser respondida diretamente (mesmo que envolva duas ou mais informações juntas, como "cliente que mais comprou E quais produtos comprou"). Responda SEMPRE as informações juntas de uma vez!
+   - Use "pedir_esclarecimento" APENAS E TÃO SOMENTE SE a pergunta for totalmente vaga e impossível de responder sem parâmetros adicionais (ex: "mostre os pedidos" sem especificar período ou cliente).
 
-7. USE O HISTÓRICO da conversa para referências como "e no mês anterior?", "e desse representante?".
+7. PERGUNTAS SOBRE MERCADO / MACROECONOMIA:
+   - Para qualquer pergunta sobre preço do algodão, safras, clima, dólar, frete marítimo, China, tarifa de importação, escala 6x1, notícias do setor têxtil ou economia nacional/internacional, escolha "conexo_inteligencia_mercado".
 
-8. Datas sempre em formato ISO: AAAA-MM-DD.
+8. USE O HISTÓRICO da conversa para referências como "e no mês anterior?", "e desse representante?".
 
-9. Nunca chame mais de uma ferramenta por vez.
+9. Datas sempre em formato ISO: AAAA-MM-DD.
+
+10. Nunca chame mais de uma ferramenta por vez.
 
 DATA ATUAL: {data_atual}
 USUÁRIO: {usuario} | EMPRESA: {empresa}
