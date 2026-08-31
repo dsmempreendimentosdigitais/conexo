@@ -186,33 +186,105 @@ function baixarPDFUniversal(elementId, titulo = "Relatório CONEXO") {
   };
 }
 
-// Wrapper visual com botão de PDF
+// Wrapper visual com botões de PDF (Relatório Completo e Apenas Gráficos)
 function PdfWrapper({ children, title = "Relatório CONEXO" }) {
   const containerId = React.useId ? React.useId().replace(/:/g, "") : `pdf-${Math.random().toString(36).substring(2, 9)}`;
 
+  function baixarGraficosApenas() {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+
+    // Clona e pega apenas gráficos ou elementos visuais
+    const clone = container.cloneNode(true);
+
+    // Remove tabelas se existirem
+    const tabelas = clone.querySelectorAll(".pdf-tabela");
+    tabelas.forEach(t => t.remove());
+
+    const dataHoje = new Date().toLocaleDateString("pt-BR", { day: "2-digit", month: "long", year: "numeric" });
+    const anterior = document.getElementById("conexo-print-frame");
+    if (anterior) anterior.remove();
+
+    const iframe = document.createElement("iframe");
+    iframe.id = "conexo-print-frame";
+    iframe.style.cssText = "position:fixed;top:-9999px;left:-9999px;width:900px;height:1px;border:none;visibility:hidden;";
+    document.body.appendChild(iframe);
+
+    const doc = iframe.contentDocument || iframe.contentWindow.document;
+    doc.open();
+    doc.write(`<!DOCTYPE html><html lang="pt-BR"><head>
+      <meta charset="UTF-8"/>
+      <title>Gráficos — ${title} (${dataHoje})</title>
+      <style>
+        body { font-family: Arial, sans-serif; color: #1a1a2e; background: white; padding: 24px; font-size: 13px; }
+        h1 { font-size: 20px; color: #0f172a; margin-bottom: 4px; }
+        .subtitulo { color: #64748b; font-size: 12px; margin-bottom: 20px; }
+        .chart-title { font-size: 14px; font-weight: 700; color: #0f172a; margin: 16px 0 8px; border-bottom: 2px solid #38bdf8; padding-bottom: 4px; }
+        .chart-wrapper { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; margin-bottom: 16px; }
+        .kpi-grid { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
+        .kpi-card { border: 1px solid #cbd5e1; padding: 12px 18px; border-radius: 8px; min-width: 130px; }
+        .kpi-label { font-size: 10px; color: #64748b; text-transform: uppercase; margin-bottom: 4px; }
+        .kpi-value { font-size: 20px; font-weight: 700; color: #0f172a; }
+        .footer { margin-top: 32px; font-size: 10px; color: #94a3b8; border-top: 1px solid #e2e8f0; padding-top: 8px; }
+        @page { margin: 1.5cm; }
+      </style>
+    </head><body>
+      <h1>📊 Gráficos executivos — ${title}</h1>
+      <div class="subtitulo">Gerado em ${dataHoje} — Designtex Tecidos / CONEXO</div>
+      ${clone.innerHTML}
+      <div class="footer">Gerado automaticamente pelo CONEXO — Inteligência Comercial</div>
+    </body></html>`);
+    doc.close();
+
+    iframe.onload = () => {
+      iframe.contentWindow.focus();
+      iframe.contentWindow.print();
+      setTimeout(() => iframe.remove(), 2000);
+    };
+  }
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 12 }}>
-      <button
-        onClick={() => baixarPDFUniversal(containerId, title)}
-        className="no-print"
-        style={{
-          alignSelf: "flex-start",
-          background: "#38bdf8",
-          color: "#0f172a",
-          border: "none",
-          borderRadius: 8,
-          padding: "8px 18px",
-          fontWeight: 700,
-          fontSize: 14,
-          cursor: "pointer",
-          display: "flex",
-          alignItems: "center",
-          gap: 6,
-          boxShadow: "0 2px 8px rgba(56, 189, 248, 0.25)"
-        }}
-      >
-        📄 Baixar PDF
-      </button>
+      <div className="no-print" style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+        <button
+          onClick={() => baixarPDFUniversal(containerId, title)}
+          style={{
+            background: "#38bdf8",
+            color: "#0f172a",
+            border: "none",
+            borderRadius: 8,
+            padding: "8px 16px",
+            fontWeight: 700,
+            fontSize: 13,
+            cursor: "pointer",
+            display: "flex",
+            alignItems: "center",
+            gap: 6,
+            boxShadow: "0 2px 8px rgba(56, 189, 248, 0.25)"
+          }}
+        >
+          📄 Baixar Relatório Completo (PDF)
+        </button>
+        <button
+          onClick={baixarGraficosApenas}
+          style={{
+            background: "#10b981",
+            color: "#0f172a",
+            border: "none",
+            borderRadius: 8,
+            padding: "8px 16px",
+            fontWeight: 700,
+            fontSize: 13,
+            cursor: "pointer",
+            display: "flex",
+            alignItems: "center",
+            gap: 6,
+            boxShadow: "0 2px 8px rgba(16, 185, 129, 0.25)"
+          }}
+        >
+          📊 Baixar Apenas Gráficos (PDF)
+        </button>
+      </div>
       <div id={containerId}>
         {children}
       </div>
