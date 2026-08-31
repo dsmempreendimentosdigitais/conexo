@@ -135,31 +135,155 @@ function Fontes({ fontes }) {
   );
 }
 
+// Função utilitária universal de download/impressão de PDF
+function baixarPDFUniversal(elementId, titulo = "Relatório CONEXO") {
+  const conteudo = document.getElementById(elementId);
+  if (!conteudo) return;
+
+  const dataHoje = new Date().toLocaleDateString("pt-BR", { day: "2-digit", month: "long", year: "numeric" });
+
+  const anterior = document.getElementById("conexo-print-frame");
+  if (anterior) anterior.remove();
+
+  const iframe = document.createElement("iframe");
+  iframe.id = "conexo-print-frame";
+  iframe.style.cssText = "position:fixed;top:-9999px;left:-9999px;width:900px;height:1px;border:none;visibility:hidden;";
+  document.body.appendChild(iframe);
+
+  const doc = iframe.contentDocument || iframe.contentWindow.document;
+  doc.open();
+  doc.write(`<!DOCTYPE html><html lang="pt-BR"><head>
+    <meta charset="UTF-8"/>
+    <title>${titulo} — ${dataHoje}</title>
+    <style>
+      body { font-family: Arial, sans-serif; color: #1a1a2e; background: white; padding: 24px; font-size: 13px; }
+      h1 { font-size: 20px; color: #0f172a; margin-bottom: 4px; }
+      .subtitulo { color: #64748b; font-size: 12px; margin-bottom: 20px; }
+      .kpi-grid { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
+      .kpi-card { border: 1px solid #cbd5e1; padding: 12px 18px; border-radius: 8px; min-width: 130px; }
+      .kpi-label { font-size: 10px; color: #64748b; text-transform: uppercase; letter-spacing: .5px; margin-bottom: 4px; }
+      .kpi-value { font-size: 20px; font-weight: 700; color: #0f172a; }
+      .section-title, .chart-title { font-size: 13px; font-weight: 700; color: #334155; margin: 20px 0 8px; border-bottom: 2px solid #e2e8f0; padding-bottom: 4px; }
+      table { width: 100%; border-collapse: collapse; margin-bottom: 16px; }
+      th { text-align: left; padding: 6px 8px; background: #f1f5f9; color: #334155; font-size: 11px; text-transform: uppercase; letter-spacing: .4px; }
+      td { padding: 5px 8px; border-bottom: 1px solid #e2e8f0; color: #1e293b; }
+      tr:nth-child(even) td { background: #f8fafc; }
+      .footer { margin-top: 32px; font-size: 10px; color: #94a3b8; border-top: 1px solid #e2e8f0; padding-top: 8px; }
+      @page { margin: 1.5cm; }
+    </style>
+  </head><body>
+    <h1>📊 ${titulo}</h1>
+    <div class="subtitulo">Gerado em ${dataHoje} — Designtex Tecidos / CONEXO</div>
+    ${conteudo.innerHTML}
+    <div class="footer">Gerado automaticamente pelo CONEXO — Inteligência Comercial</div>
+  </body></html>`);
+  doc.close();
+
+  iframe.onload = () => {
+    iframe.contentWindow.focus();
+    iframe.contentWindow.print();
+    setTimeout(() => iframe.remove(), 2000);
+  };
+}
+
+// Wrapper visual com botão de PDF
+function PdfWrapper({ children, title = "Relatório CONEXO" }) {
+  const containerId = React.useId ? React.useId().replace(/:/g, "") : `pdf-${Math.random().toString(36).substring(2, 9)}`;
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 12 }}>
+      <button
+        onClick={() => baixarPDFUniversal(containerId, title)}
+        className="no-print"
+        style={{
+          alignSelf: "flex-start",
+          background: "#38bdf8",
+          color: "#0f172a",
+          border: "none",
+          borderRadius: 8,
+          padding: "8px 18px",
+          fontWeight: 700,
+          fontSize: 14,
+          cursor: "pointer",
+          display: "flex",
+          alignItems: "center",
+          gap: 6,
+          boxShadow: "0 2px 8px rgba(56, 189, 248, 0.25)"
+        }}
+      >
+        📄 Baixar PDF
+      </button>
+      <div id={containerId}>
+        {children}
+      </div>
+    </div>
+  );
+}
+
 // ── Roteador principal de dashboards ───────────────────────
 export default function Dashboard({ intent, dados }) {
   if (!dados) return null;
 
   const cleanIntent = intent ? String(intent).replace("conexo_", "nexo_") : "";
 
+  let content = null;
+  let title = "Relatório CONEXO";
+
   switch (cleanIntent) {
     case "nexo_vendas_periodo":
-      return <KpiCards dados={dados} />;
+      content = <KpiCards dados={dados} />;
+      title = "Resumo de Vendas";
+      break;
 
     case "nexo_comparativo_mes":
     case "nexo_comparativo_ano":
-      return <Comparativo dados={dados} />;
+      content = <Comparativo dados={dados} />;
+      title = "Comparativo de Vendas";
+      break;
 
     case "nexo_ranking_vendedores":
-      return <BarrasIntent dados={dados} nameKey="vendedor" valKey="faturamento" title="Ranking de vendedores" />;
+      content = <BarrasIntent dados={dados} nameKey="vendedor" valKey="faturamento" title="Ranking de Vendedores" />;
+      title = "Ranking de Vendedores";
+      break;
 
     case "nexo_top_clientes":
-      return <BarrasIntent dados={dados} nameKey="cliente" valKey="faturamento" title="Top clientes" />;
+      content = <BarrasIntent dados={dados} nameKey="cliente" valKey="faturamento" title="Top Clientes" />;
+      title = "Top Clientes";
+      break;
 
     case "nexo_top_produtos":
-      return <BarrasIntent dados={dados} nameKey="produto" valKey="faturamento" title="Top produtos" />;
+      content = <BarrasIntent dados={dados} nameKey="produto" valKey="faturamento" title="Top Produtos" />;
+      title = "Top Produtos";
+      break;
 
     case "nexo_vendas_regiao":
-      return <BarrasIntent dados={dados} nameKey="uf" valKey="faturamento" title="Vendas por estado" />;
+      content = <BarrasIntent dados={dados} nameKey="uf" valKey="faturamento" title="Vendas por Estado" />;
+      title = "Vendas por Estado";
+      break;
+
+    case "nexo_consulta_estoque": {
+      if (!Array.isArray(dados) || dados.length === 0) return null;
+      content = (
+        <div>
+          <TabelaSimples dados={dados} titulo="Disponibilidade de Estoque (Pronto-Entrega)" />
+          <BarrasIntent dados={dados} nameKey="cor" valKey="quantidade_disponivel" title="Metros Disponíveis por Cor" />
+        </div>
+      );
+      title = "Relatório de Estoque";
+      break;
+    }
+
+    case "nexo_consulta_programacao": {
+      if (!Array.isArray(dados) || dados.length === 0) return null;
+      content = (
+        <div>
+          <TabelaSimples dados={dados} titulo="Programação de Produção (PCP)" />
+          <BarrasIntent dados={dados} nameKey="nome_tecido" valKey="quantidade_solicitada" title="Metragem Programada por Tecido" />
+        </div>
+      );
+      title = "Programação de Produção PCP";
+      break;
+    }
 
     case "nexo_relatorio_periodo":
       return <RelatorioCompleto dados={dados} />;
@@ -169,32 +293,44 @@ export default function Dashboard({ intent, dados }) {
       const firstRow = dados[0];
       const keys = Object.keys(firstRow);
       
-      const numericCandidates = ["valor_nf", "valor_total", "faturamento", "valor", "total", "metros", "quantidade", "quantidade_total"];
+      const numericCandidates = ["quantidade_disponivel", "quantidade_solicitada", "valor_nf", "valor_total", "faturamento", "valor", "total", "metros", "quantidade", "quantidade_total"];
       let valKey = keys.find(k => numericCandidates.includes(k.toLowerCase()));
       if (!valKey) {
         valKey = keys.find(k => typeof firstRow[k] === "number");
       }
       
-      const textCandidates = ["totvs_order_code", "cliente_nome", "cliente", "representante_nome", "vendedor", "nome", "uf", "produto", "artigo", "cor"];
+      const textCandidates = ["descricao", "nome_tecido", "nome_cor", "cor", "totvs_order_code", "cliente_nome", "cliente", "representante_nome", "vendedor", "nome", "uf", "produto", "artigo"];
       let nameKey = keys.find(k => textCandidates.includes(k.toLowerCase()));
       if (!nameKey) {
         nameKey = keys.find(k => typeof firstRow[k] === "string" && !k.toLowerCase().includes("data") && !k.toLowerCase().includes("created"));
       }
       
-      if (valKey && nameKey) {
-        return <BarrasIntent dados={dados} nameKey={nameKey} valKey={valKey} title="Visualização dos dados" />;
-      }
-      return null;
+      content = (
+        <div>
+          <TabelaSimples dados={dados} titulo="Dados Consultados" />
+          {valKey && nameKey && <BarrasIntent dados={dados} nameKey={nameKey} valKey={valKey} title="Visualização Gráfica" />}
+        </div>
+      );
+      title = "Consulta Comercial CONEXO";
+      break;
     }
 
     case "nexo_inteligencia_mercado":
-      return typeof dados === "object" && dados.fontes
-        ? <Fontes fontes={dados.fontes} />
-        : null;
+      content = typeof dados === "object" && dados.fontes ? <Fontes fontes={dados.fontes} /> : null;
+      title = "Inteligência de Mercado";
+      break;
 
     default:
-      return null;
+      if (Array.isArray(dados) && dados.length > 0) {
+        content = <TabelaSimples dados={dados} titulo="Resultados" />;
+        title = "Relatório CONEXO";
+      } else {
+        return null;
+      }
   }
+
+  if (!content) return null;
+  return <PdfWrapper title={title}>{content}</PdfWrapper>;
 }
 
 // Helper para evitar duplicação
@@ -208,7 +344,7 @@ function TabelaSimples({ dados, titulo }) {
   if (!Array.isArray(dados) || dados.length === 0) return null;
   const colunas = Object.keys(dados[0]);
   const fmt = (v) => {
-    if (typeof v === "number") return Number(v) > 100 ? brl(v) : v.toLocaleString("pt-BR");
+    if (typeof v === "number") return Number(v) > 1000 ? brl(v) : v.toLocaleString("pt-BR");
     return String(v ?? "—");
   };
   return (
@@ -225,7 +361,7 @@ function TabelaSimples({ dados, titulo }) {
           </tr>
         </thead>
         <tbody>
-          {dados.slice(0, 20).map((row, i) => (
+          {dados.slice(0, 30).map((row, i) => (
             <tr key={i} style={{ background: i % 2 === 0 ? "transparent" : "#1e293b" }}>
               {colunas.map((c) => (
                 <td key={c} style={{ padding: "4px 8px", borderBottom: "1px solid #1e293b" }}>
@@ -244,91 +380,19 @@ function TabelaSimples({ dados, titulo }) {
 function RelatorioCompleto({ dados }) {
   if (!dados || typeof dados !== "object") return null;
 
-  function baixarPDF() {
-    const conteudo = document.getElementById("relatorio-pdf-content");
-    if (!conteudo) return;
-
-    const dataHoje = new Date().toLocaleDateString("pt-BR", { day: "2-digit", month: "long", year: "numeric" });
-
-    // Remove iframe anterior se existir
-    const anterior = document.getElementById("conexo-print-frame");
-    if (anterior) anterior.remove();
-
-    const iframe = document.createElement("iframe");
-    iframe.id = "conexo-print-frame";
-    iframe.style.cssText = "position:fixed;top:-9999px;left:-9999px;width:900px;height:1px;border:none;visibility:hidden;";
-    document.body.appendChild(iframe);
-
-    const doc = iframe.contentDocument || iframe.contentWindow.document;
-    doc.open();
-    doc.write(`<!DOCTYPE html><html lang="pt-BR"><head>
-      <meta charset="UTF-8"/>
-      <title>Relatório CONEXO — ${dataHoje}</title>
-      <style>
-        body { font-family: Arial, sans-serif; color: #1a1a2e; background: white; padding: 24px; font-size: 13px; }
-        h1 { font-size: 22px; color: #0f172a; margin-bottom: 4px; }
-        .subtitulo { color: #64748b; font-size: 12px; margin-bottom: 20px; }
-        .kpi-grid { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
-        .kpi-card { border: 1px solid #cbd5e1; padding: 12px 18px; border-radius: 8px; min-width: 130px; }
-        .kpi-label { font-size: 10px; color: #64748b; text-transform: uppercase; letter-spacing: .5px; margin-bottom: 4px; }
-        .kpi-value { font-size: 20px; font-weight: 700; color: #0f172a; }
-        .section-title { font-size: 13px; font-weight: 700; color: #334155; margin: 20px 0 8px; border-bottom: 2px solid #e2e8f0; padding-bottom: 4px; }
-        table { width: 100%; border-collapse: collapse; margin-bottom: 8px; }
-        th { text-align: left; padding: 6px 8px; background: #f1f5f9; color: #334155; font-size: 11px; text-transform: uppercase; letter-spacing: .4px; }
-        td { padding: 5px 8px; border-bottom: 1px solid #e2e8f0; color: #1e293b; }
-        tr:hover td { background: #f8fafc; }
-        .footer { margin-top: 32px; font-size: 10px; color: #94a3b8; border-top: 1px solid #e2e8f0; padding-top: 8px; }
-        @page { margin: 1.5cm; }
-      </style>
-    </head><body>
-      <h1>📊 Relatório CONEXO</h1>
-      <div class="subtitulo">Gerado em ${dataHoje} — Designtex Tecidos</div>
-      ${conteudo.innerHTML}
-      <div class="footer">Gerado automaticamente pelo CONEXO — Inteligência Comercial</div>
-    </body></html>`);
-    doc.close();
-
-    iframe.onload = () => {
-      iframe.contentWindow.focus();
-      iframe.contentWindow.print();
-      setTimeout(() => iframe.remove(), 2000);
-    };
-  }
-
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 12, marginTop: 12 }}>
-      <button
-        onClick={baixarPDF}
-        className="no-print"
-        style={{
-          alignSelf: "flex-start",
-          background: "#38bdf8",
-          color: "#0f172a",
-          border: "none",
-          borderRadius: 8,
-          padding: "8px 18px",
-          fontWeight: 700,
-          fontSize: 14,
-          cursor: "pointer",
-          display: "flex",
-          alignItems: "center",
-          gap: 6,
-        }}
-      >
-        📄 Baixar PDF
-      </button>
-      <div id="relatorio-pdf-content">
-        {dados.resumo && <KpiCards dados={dados.resumo} />}
-        {dados.top_clientes      && <TabelaSimples dados={dados.top_clientes}      titulo="Top Clientes" />}
-        {dados.top_produtos      && <TabelaSimples dados={dados.top_produtos}      titulo="Top Produtos" />}
-        {dados.ranking_vendedores && <TabelaSimples dados={dados.ranking_vendedores} titulo="Ranking Vendedores" />}
-        {dados.por_regiao        && <TabelaSimples dados={dados.por_regiao}        titulo="Por Estado (UF)" />}
-        {/* Gráficos visuais abaixo das tabelas */}
-        {dados.top_clientes      && <Barras dados={dados.top_clientes}      nameKey="cliente"  valKey="faturamento" title="Top clientes"    />}
-        {dados.top_produtos      && <Barras dados={dados.top_produtos}      nameKey="produto"  valKey="faturamento" title="Top produtos"    />}
-        {dados.ranking_vendedores && <Barras dados={dados.ranking_vendedores} nameKey="vendedor" valKey="faturamento" title="Ranking vendedores" />}
-        {dados.por_regiao        && <Barras dados={dados.por_regiao}        nameKey="uf"       valKey="faturamento" title="Por estado"      />}
-      </div>
-    </div>
+    <PdfWrapper title="Relatório Consolidado de Período">
+      {dados.resumo && <KpiCards dados={dados.resumo} />}
+      {dados.top_clientes      && <TabelaSimples dados={dados.top_clientes}      titulo="Top Clientes" />}
+      {dados.top_produtos      && <TabelaSimples dados={dados.top_produtos}      titulo="Top Produtos" />}
+      {dados.ranking_vendedores && <TabelaSimples dados={dados.ranking_vendedores} titulo="Ranking Vendedores" />}
+      {dados.por_regiao        && <TabelaSimples dados={dados.por_regiao}        titulo="Por Estado (UF)" />}
+      {/* Gráficos visuais abaixo das tabelas */}
+      {dados.top_clientes      && <Barras dados={dados.top_clientes}      nameKey="cliente"  valKey="faturamento" title="Top clientes"    />}
+      {dados.top_produtos      && <Barras dados={dados.top_produtos}      nameKey="produto"  valKey="faturamento" title="Top produtos"    />}
+      {dados.ranking_vendedores && <Barras dados={dados.ranking_vendedores} nameKey="vendedor" valKey="faturamento" title="Ranking vendedores" />}
+      {dados.por_regiao        && <Barras dados={dados.por_regiao}        nameKey="uf"       valKey="faturamento" title="Por estado"      />}
+    </PdfWrapper>
   );
 }
+
