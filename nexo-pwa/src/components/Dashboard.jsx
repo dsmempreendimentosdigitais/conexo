@@ -7,12 +7,36 @@ import {
   Tooltip,
   ResponsiveContainer,
   Cell,
+  LabelList,
 } from "recharts";
 
 const brl = (v) =>
   Number(v).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
-const COLORS = ["#38bdf8", "#818cf8", "#34d399", "#fb923c", "#f472b6"];
+const meters = (v) =>
+  Number(v).toLocaleString("pt-BR", { minimumFractionDigits: 1, maximumFractionDigits: 2 }) + " m";
+
+const COLORS = ["#38bdf8", "#818cf8", "#34d399", "#fb923c", "#f472b6", "#a855f7", "#06b6d4"];
+
+// Helper para formatar o nome completo do rótulo no gráfico
+function formatChartLabel(r, defaultKey) {
+  const codTecido = r.cod_tecido || r.cod_produto || "";
+  const nomeTecido = r.nome_tecido || r.descricao || r.produto || "";
+  const codCor = r.cod_cor || r.cor_codigo || "";
+  const nomeCor = r.nome_cor || r.cor || "";
+
+  // Se tivermos informações estruturadas de tecido e cor:
+  if (nomeTecido || nomeCor) {
+    let partTecido = [codTecido, nomeTecido].filter(Boolean).join(" ");
+    let partCor = [codCor, nomeCor].filter(Boolean).join(" ");
+    if (partTecido && partCor) {
+      return `${partTecido} - ${partCor}`;
+    }
+    return partTecido || partCor;
+  }
+
+  return String(r[defaultKey] ?? r.nome ?? "—");
+}
 
 // ── KPI simples ──────────────────────────────────────────────
 function KpiCards({ dados }) {
@@ -51,40 +75,66 @@ function KpiCards({ dados }) {
 function Barras({ dados, nameKey, valKey, title }) {
   if (!Array.isArray(dados) || dados.length === 0) return null;
 
-  const data = dados.map((r, i) => ({
-    nome:  String(r[nameKey] ?? r.nome ?? "—").slice(0, 22),
-    valor: Number(r[valKey]  ?? r.faturamento ?? 0),
-    fill:  COLORS[i % COLORS.length],
-  }));
+  const isMeter = valKey && (
+    valKey.toLowerCase().includes("metr") ||
+    valKey.toLowerCase().includes("quantidade") ||
+    valKey.toLowerCase().includes("qtd") ||
+    valKey.toLowerCase().includes("metros")
+  );
+
+  const data = dados.map((r, i) => {
+    const valNum = Number(r[valKey] ?? r.faturamento ?? 0);
+    const labelTexto = formatChartLabel(r, nameKey);
+    return {
+      nome: labelTexto.length > 45 ? labelTexto.slice(0, 42) + "..." : labelTexto,
+      nomeCompleto: labelTexto,
+      valor: valNum,
+      valorFmt: isMeter ? meters(valNum) : brl(valNum),
+      fill: COLORS[i % COLORS.length],
+    };
+  });
+
+  const total = data.reduce((acc, curr) => acc + curr.valor, 0);
 
   return (
-    <div className="chart-wrapper">
-      {title && <div className="chart-title">{title}</div>}
-      <ResponsiveContainer width="100%" height={Math.max(180, data.length * 38)}>
-        <BarChart data={data} layout="vertical" margin={{ left: 8, right: 16 }}>
+    <div className="chart-wrapper" style={{ background: "#1e293b", padding: 16, borderRadius: 12, border: "1px solid #334155" }}>
+      {title && <div className="chart-title" style={{ color: "#f8fafc", fontSize: 14, fontWeight: 700, marginBottom: 12 }}>{title}</div>}
+      <ResponsiveContainer width="100%" height={Math.max(220, data.length * 44)}>
+        <BarChart data={data} layout="vertical" margin={{ left: 12, right: 60, top: 8, bottom: 8 }}>
           <XAxis type="number" hide />
           <YAxis
             type="category"
             dataKey="nome"
-            width={150}
-            tick={{ fill: "#94a3b8", fontSize: 12 }}
+            width={240}
+            tick={{ fill: "#cbd5e1", fontSize: 11, fontWeight: 500 }}
           />
           <Tooltip
-            formatter={(v) => brl(v)}
-            contentStyle={{
-              background: "#1e293b",
-              border: "1px solid #334155",
-              borderRadius: 8,
-              fontSize: 13,
+            content={({ active, payload }) => {
+              if (active && payload && payload.length) {
+                const d = payload[0].payload;
+                return (
+                  <div style={{ background: "#0f172a", border: "1px solid #38bdf8", borderRadius: 8, padding: "8px 12px", color: "#fff" }}>
+                    <div style={{ fontSize: 12, fontWeight: 600, color: "#94a3b8", marginBottom: 4 }}>{d.nomeCompleto}</div>
+                    <div style={{ fontSize: 14, fontWeight: 700, color: isMeter ? "#fb923c" : "#38bdf8" }}>
+                      {isMeter ? `Metragem: ${d.valorFmt}` : `Valor: ${d.valorFmt}`}
+                    </div>
+                  </div>
+                );
+              }
+              return null;
             }}
           />
           <Bar dataKey="valor" radius={[0, 6, 6, 0]}>
             {data.map((d, i) => (
               <Cell key={i} fill={d.fill} />
             ))}
+            <LabelList dataKey="valorFmt" position="right" fill={isMeter ? "#fb923c" : "#38bdf8"} fontSize={11} fontWeight={700} />
           </Bar>
         </BarChart>
       </ResponsiveContainer>
+      <div style={{ borderTop: "1px solid #334155", marginTop: 8, paddingTop: 8, color: "#94a3b8", fontSize: 12, textAlign: "right" }}>
+        TOTAL: <strong>{isMeter ? meters(total) : brl(total)}</strong>
+      </div>
     </div>
   );
 }
@@ -428,34 +478,64 @@ function BarrasIntent({ dados, nameKey, valKey, title }) {
 function TabelaSimples({ dados, titulo }) {
   if (!Array.isArray(dados) || dados.length === 0) return null;
   const colunas = Object.keys(dados[0]);
-  const fmt = (v) => {
-    if (typeof v === "number") return Number(v) > 1000 ? brl(v) : v.toLocaleString("pt-BR");
+
+  // Calcula totais das colunas numéricas
+  const totais = {};
+  colunas.forEach((col) => {
+    const isNum = dados.every((r) => r[col] == null || typeof r[col] === "number" || !isNaN(Number(r[col])));
+    if (isNum) {
+      const soma = dados.reduce((acc, curr) => acc + (Number(curr[col]) || 0), 0);
+      totais[col] = soma;
+    }
+  });
+
+  const fmt = (v, col) => {
+    if (typeof v === "number" || (!isNaN(Number(v)) && typeof v !== "string")) {
+      const num = Number(v);
+      const isMeter = col && (
+        col.toLowerCase().includes("metr") ||
+        col.toLowerCase().includes("quantidade") ||
+        col.toLowerCase().includes("qtd") ||
+        col.toLowerCase().includes("metros")
+      );
+      return isMeter ? meters(num) : num > 100 ? brl(num) : num.toLocaleString("pt-BR");
+    }
     return String(v ?? "—");
   };
+
   return (
     <div className="pdf-tabela" style={{ marginTop: 8 }}>
-      {titulo && <div className="chart-title">{titulo}</div>}
+      {titulo && <div className="chart-title" style={{ fontSize: 13, fontWeight: 700, color: "#f8fafc", marginBottom: 6 }}>{titulo}</div>}
       <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12, color: "#cbd5e1" }}>
         <thead>
           <tr>
             {colunas.map((c) => (
-              <th key={c} style={{ textAlign: "left", padding: "4px 8px", borderBottom: "1px solid #334155", color: "#94a3b8", fontWeight: 600 }}>
+              <th key={c} style={{ textAlign: "left", padding: "6px 8px", borderBottom: "1px solid #334155", color: "#94a3b8", fontWeight: 600, background: "#0f172a" }}>
                 {c.replace(/_/g, " ").toUpperCase()}
               </th>
             ))}
           </tr>
         </thead>
         <tbody>
-          {dados.slice(0, 30).map((row, i) => (
+          {dados.slice(0, 50).map((row, i) => (
             <tr key={i} style={{ background: i % 2 === 0 ? "transparent" : "#1e293b" }}>
               {colunas.map((c) => (
-                <td key={c} style={{ padding: "4px 8px", borderBottom: "1px solid #1e293b" }}>
-                  {fmt(row[c])}
+                <td key={c} style={{ padding: "5px 8px", borderBottom: "1px solid #1e293b" }}>
+                  {fmt(row[c], c)}
                 </td>
               ))}
             </tr>
           ))}
         </tbody>
+        <tfoot>
+          <tr style={{ background: "#0f172a", borderTop: "2px solid #38bdf8", fontWeight: 700, color: "#f8fafc" }}>
+            {colunas.map((c, i) => (
+              <td key={c} style={{ padding: "8px", borderBottom: "1px solid #38bdf8" }}>
+                {i === 0 ? "TOTAL GERAL" : totais[c] !== undefined ? fmt(totais[c], c) : ""}
+              </td>
+            ))}
+          </tr>
+        </tfoot>
       </table>
     </div>
   );
