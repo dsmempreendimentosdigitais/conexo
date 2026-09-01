@@ -32,6 +32,16 @@ RPCS_COM_REP = {
 }
 
 
+import unicodedata
+
+def desacentuar(txt: str) -> str:
+    if not txt:
+        return ""
+    return "".join(
+        c for c in unicodedata.normalize("NFD", str(txt)) if unicodedata.category(c) != "Mn"
+    ).lower().strip()
+
+
 def executar(intent: str, params: dict, ctx: dict | None = None):
     """
     Executa a intent. ctx contém tenant_id e rep do token (multi-tenant).
@@ -48,16 +58,20 @@ def executar(intent: str, params: dict, ctx: dict | None = None):
         
         where_clauses = []
         if produto:
-            terms = [t for t in produto.lower().split() if len(t) > 2]
+            terms = [desacentuar(t) for t in produto.split() if len(t) >= 2]
             for term in terms:
-                where_clauses.append(f"LOWER(descricao) LIKE '%{term}%'")
+                where_clauses.append(
+                    f"(translate(lower(descricao), 'áàâãéèêíïóôõöúçñ', 'aaaeeeiooooucn') LIKE '%{term}%' OR lower(cod_produto) LIKE '%{term}%')"
+                )
         if cor:
-            terms = [t for t in cor.lower().split() if len(t) > 1]
+            terms = [desacentuar(t) for t in cor.split() if len(t) >= 1]
             for term in terms:
-                where_clauses.append(f"(LOWER(cor) LIKE '%{term}%' OR LOWER(descricao) LIKE '%{term}%' OR cor_codigo = '{term}')")
+                where_clauses.append(
+                    f"(translate(lower(cor), 'áàâãéèêíïóôõöúçñ', 'aaaeeeiooooucn') LIKE '%{term}%' OR translate(lower(descricao), 'áàâãéèêíïóôõöúçñ', 'aaaeeeiooooucn') LIKE '%{term}%' OR lower(cor_codigo) LIKE '%{term}%')"
+                )
                 
         where_sql = " AND ".join(where_clauses) if where_clauses else "1=1"
-        sql = f"SELECT cod_produto, descricao, cor, cor_codigo, quantidade_disponivel, quantidade_reservada, categoria, unidade FROM estoque_pe WHERE {where_sql} ORDER BY quantidade_disponivel DESC LIMIT 20"
+        sql = f"SELECT cod_produto, descricao, cor, cor_codigo, quantidade_disponivel, quantidade_reservada, categoria, unidade, hex_color FROM estoque_pe WHERE {where_sql} ORDER BY quantidade_disponivel DESC LIMIT 30"
         
         resp = supabase.rpc("conexo_executar_leitura", {"query_str": sql}).execute()
         return resp.data
@@ -69,13 +83,17 @@ def executar(intent: str, params: dict, ctx: dict | None = None):
         
         where_clauses = []
         if produto:
-            terms = [t for t in produto.lower().split() if len(t) > 2]
+            terms = [desacentuar(t) for t in produto.split() if len(t) >= 2]
             for term in terms:
-                where_clauses.append(f"(LOWER(nome_tecido) LIKE '%{term}%' OR cod_tecido = '{term}')")
+                where_clauses.append(
+                    f"(translate(lower(nome_tecido), 'áàâãéèêíïóôõöúçñ', 'aaaeeeiooooucn') LIKE '%{term}%' OR lower(cod_tecido) LIKE '%{term}%' OR translate(lower(tipo), 'áàâãéèêíïóôõöúçñ', 'aaaeeeiooooucn') LIKE '%{term}%')"
+                )
         if cor:
-            terms = [t for t in cor.lower().split() if len(t) > 1]
+            terms = [desacentuar(t) for t in cor.split() if len(t) >= 1]
             for term in terms:
-                where_clauses.append(f"(LOWER(nome_cor) LIKE '%{term}%' OR cod_cor = '{term}')")
+                where_clauses.append(
+                    f"(translate(lower(nome_cor), 'áàâãéèêíïóôõöúçñ', 'aaaeeeiooooucn') LIKE '%{term}%' OR lower(cod_cor) LIKE '%{term}%')"
+                )
                 
         where_sql = " AND ".join(where_clauses) if where_clauses else "1=1"
         sql = f"SELECT op, cod_tecido, nome_tecido, cod_cor, nome_cor, quantidade_solicitada, quantidade_disponivel, previsao_faturamento, tipo FROM programacoes WHERE {where_sql} ORDER BY quantidade_solicitada DESC LIMIT 30"

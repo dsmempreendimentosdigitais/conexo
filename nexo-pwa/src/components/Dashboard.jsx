@@ -18,6 +18,67 @@ const meters = (v) =>
 
 const COLORS = ["#38bdf8", "#818cf8", "#34d399", "#fb923c", "#f472b6", "#a855f7", "#06b6d4"];
 
+const FABRIC_COLOR_MAP = {
+  "natural": "#e5d8c5",
+  "cru": "#ede3d2",
+  "off white": "#f8fafc",
+  "offwhite": "#f8fafc",
+  "branco": "#f1f5f9",
+  "vanila": "#fef08a",
+  "creme": "#fef9c3",
+  "bege areia": "#d6c5b3",
+  "bege raiz": "#c2b09c",
+  "bege": "#d7c4b7",
+  "nude rose": "#fbcfe8",
+  "nude": "#f3d5d8",
+  "rose": "#f472b6",
+  "rosa": "#f472b6",
+  "verde camelia": "#a7f3d0",
+  "verde camélia": "#a7f3d0",
+  "verde menta": "#a7f3d0",
+  "verde musgo": "#4d7c0f",
+  "verde militar": "#3f6212",
+  "verde": "#22c55e",
+  "azul maya": "#7dd3fc",
+  "azul claro": "#bae6fd",
+  "azul marinho": "#1e3a8a",
+  "marinho": "#1e3a8a",
+  "azul": "#38bdf8",
+  "preto": "#18181b",
+  "black": "#0f172a",
+  "amarelo crome": "#facc15",
+  "amarelo": "#facc15",
+  "vermelho": "#dc2626",
+  "vinho": "#881337",
+  "bordo": "#780016",
+  "bordô": "#780016",
+  "caramelo": "#b45309",
+  "terra": "#9a3412",
+  "cinza": "#64748b",
+  "lilas": "#c084fc",
+  "lilás": "#c084fc",
+  "violeta": "#a855f7",
+};
+
+function getHexColor(row, fallbackIndex) {
+  if (row && row.hex_color && row.hex_color.startsWith("#")) {
+    return row.hex_color;
+  }
+  const txt = (
+    (row.nome_cor || "") + " " +
+    (row.cor || "") + " " +
+    (row.nome_tecido || "") + " " +
+    (row.descricao || "")
+  ).toLowerCase();
+
+  for (const [key, hex] of Object.entries(FABRIC_COLOR_MAP)) {
+    if (txt.includes(key)) {
+      return hex;
+    }
+  }
+  return COLORS[fallbackIndex % COLORS.length];
+}
+
 // Helper para formatar o nome completo do rótulo no gráfico
 function formatChartLabel(r, defaultKey) {
   const codTecido = r.cod_tecido || r.cod_produto || "";
@@ -90,7 +151,7 @@ function Barras({ dados, nameKey, valKey, title }) {
       nomeCompleto: labelTexto,
       valor: valNum,
       valorFmt: isMeter ? meters(valNum) : brl(valNum),
-      fill: COLORS[i % COLORS.length],
+      fill: getHexColor(r, i),
     };
   });
 
@@ -126,7 +187,7 @@ function Barras({ dados, nameKey, valKey, title }) {
           />
           <Bar dataKey="valor" radius={[0, 6, 6, 0]}>
             {data.map((d, i) => (
-              <Cell key={i} fill={d.fill} />
+              <Cell key={i} fill={d.fill} stroke="#475569" strokeWidth={1} />
             ))}
             <LabelList dataKey="valorFmt" position="right" fill={isMeter ? "#fb923c" : "#38bdf8"} fontSize={11} fontWeight={700} />
           </Bar>
