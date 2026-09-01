@@ -170,9 +170,23 @@ def perguntar_stream(body: PerguntaIn, ctx: dict = Depends(get_contexto)):
             yield f"data: {json.dumps({'tipo':'fim'})}\n\n"
             return
 
+        # Calcula soma exata de colunas numéricas para garantir 100% de consistência com a tabela
+        dados_para_prompt = dados
+        if isinstance(dados, list) and len(dados) > 0:
+          first = dados[0]
+          val_keys = [k for k in first.keys() if any(x in k.lower() for x in ["valor", "faturamento", "total", "metr", "quantidade", "qtd"])]
+          totais_calculados = {}
+          for k in val_keys:
+            totais_calculados[k] = sum(float(r.get(k) or 0) for r in dados if isinstance(r.get(k), (int, float, str)) and str(r.get(k)).replace('.','',1).replace('-','',1).isdigit())
+          dados_para_prompt = {
+            "SOMA_TOTAL_EXATA_DO_BANCO": totais_calculados,
+            "TOTAL_REGISTROS": len(dados),
+            "LISTA_REGISTROS": dados
+          }
+
         prompt = FORMATTER_SYSTEM.format(
             empresa=config.EMPRESA, pergunta=pergunta, intent=intent,
-            dados=json.dumps(dados, ensure_ascii=False, default=str),
+            dados=json.dumps(dados_para_prompt, ensure_ascii=False, default=str),
         )
         try:
             stream = client_oa.chat.completions.create(

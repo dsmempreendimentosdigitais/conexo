@@ -405,8 +405,30 @@ function PdfWrapper({ children, title = "Relatório CONEXO" }) {
   );
 }
 
+// Wrapper de gráfico que oculta da tela por padrão (a menos que a pergunta peça por gráfico ou seja exportação de PDF)
+function SmartChartBlock({ children, pergunta = "" }) {
+  const pedeGrafico = pergunta && (
+    pergunta.toLowerCase().includes("grafico") ||
+    pergunta.toLowerCase().includes("gráfico") ||
+    pergunta.toLowerCase().includes("barras") ||
+    pergunta.toLowerCase().includes("visualizacao") ||
+    pergunta.toLowerCase().includes("visualização")
+  );
+
+  // Se o usuário pediu gráfico, exibe normalmente. Caso contrário, deixa disponível para PDF.
+  if (pedeGrafico) {
+    return <div className="chart-block">{children}</div>;
+  }
+
+  return (
+    <div className="pdf-only-chart" style={{ display: "none" }}>
+      {children}
+    </div>
+  );
+}
+
 // ── Roteador principal de dashboards ───────────────────────
-export default function Dashboard({ intent, dados }) {
+export default function Dashboard({ intent, dados, pergunta = "" }) {
   if (!dados) return null;
 
   // Normaliza dados para sempre ser um array legível de objetos
@@ -434,22 +456,50 @@ export default function Dashboard({ intent, dados }) {
       break;
 
     case "nexo_ranking_vendedores":
-      content = <BarrasIntent dados={listaDados} nameKey="vendedor" valKey="faturamento" title="Ranking de Vendedores" />;
+      content = (
+        <div>
+          <TabelaSimples dados={listaDados} titulo="Ranking de Vendedores" />
+          <SmartChartBlock pergunta={pergunta}>
+            <BarrasIntent dados={listaDados} nameKey="vendedor" valKey="faturamento" title="Ranking de Vendedores" />
+          </SmartChartBlock>
+        </div>
+      );
       title = "Ranking de Vendedores";
       break;
 
     case "nexo_top_clientes":
-      content = <BarrasIntent dados={listaDados} nameKey="cliente" valKey="faturamento" title="Top Clientes" />;
+      content = (
+        <div>
+          <TabelaSimples dados={listaDados} titulo="Top Clientes" />
+          <SmartChartBlock pergunta={pergunta}>
+            <BarrasIntent dados={listaDados} nameKey="cliente" valKey="faturamento" title="Top Clientes" />
+          </SmartChartBlock>
+        </div>
+      );
       title = "Top Clientes";
       break;
 
     case "nexo_top_produtos":
-      content = <BarrasIntent dados={listaDados} nameKey="produto" valKey="faturamento" title="Top Produtos" />;
+      content = (
+        <div>
+          <TabelaSimples dados={listaDados} titulo="Top Produtos" />
+          <SmartChartBlock pergunta={pergunta}>
+            <BarrasIntent dados={listaDados} nameKey="produto" valKey="faturamento" title="Top Produtos" />
+          </SmartChartBlock>
+        </div>
+      );
       title = "Top Produtos";
       break;
 
     case "nexo_vendas_regiao":
-      content = <BarrasIntent dados={listaDados} nameKey="uf" valKey="faturamento" title="Vendas por Estado" />;
+      content = (
+        <div>
+          <TabelaSimples dados={listaDados} titulo="Vendas por Estado" />
+          <SmartChartBlock pergunta={pergunta}>
+            <BarrasIntent dados={listaDados} nameKey="uf" valKey="faturamento" title="Vendas por Estado" />
+          </SmartChartBlock>
+        </div>
+      );
       title = "Vendas por Estado";
       break;
 
@@ -460,7 +510,9 @@ export default function Dashboard({ intent, dados }) {
       content = (
         <div>
           <TabelaSimples dados={listaDados} titulo="Disponibilidade de Estoque (Pronto-Entrega)" />
-          <BarrasIntent dados={listaDados} nameKey={nameKey} valKey="quantidade_disponivel" title="Metros Disponíveis em Estoque" />
+          <SmartChartBlock pergunta={pergunta}>
+            <BarrasIntent dados={listaDados} nameKey={nameKey} valKey="quantidade_disponivel" title="Metros Disponíveis em Estoque" />
+          </SmartChartBlock>
         </div>
       );
       title = "Relatório de Estoque";
@@ -474,7 +526,9 @@ export default function Dashboard({ intent, dados }) {
       content = (
         <div>
           <TabelaSimples dados={listaDados} titulo="Programação de Produção (PCP)" />
-          <BarrasIntent dados={listaDados} nameKey={nameKey} valKey="quantidade_solicitada" title="Metragem Programada por Tecido" />
+          <SmartChartBlock pergunta={pergunta}>
+            <BarrasIntent dados={listaDados} nameKey={nameKey} valKey="quantidade_solicitada" title="Metragem Programada por Tecido" />
+          </SmartChartBlock>
         </div>
       );
       title = "Programação de Produção PCP";
@@ -504,7 +558,11 @@ export default function Dashboard({ intent, dados }) {
       content = (
         <div>
           <TabelaSimples dados={listaDados} titulo="Dados Consultados" />
-          {valKey && nameKey && <BarrasIntent dados={listaDados} nameKey={nameKey} valKey={valKey} title="Visualização Gráfica" />}
+          {valKey && nameKey && (
+            <SmartChartBlock pergunta={pergunta}>
+              <BarrasIntent dados={listaDados} nameKey={nameKey} valKey={valKey} title="Visualização Gráfica" />
+            </SmartChartBlock>
+          )}
         </div>
       );
       title = "Consulta Comercial CONEXO";

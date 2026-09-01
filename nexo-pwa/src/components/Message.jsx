@@ -19,7 +19,7 @@ export default function Message({ msg }) {
 
           {/* Dashboard e Botões de PDF sempre que houver dados */}
           {!isUser && msg.dados && (
-            <Dashboard intent={msg.intent || "nexo_consulta_geral"} dados={msg.dados} />
+            <Dashboard intent={msg.intent || "nexo_consulta_geral"} dados={msg.dados} pergunta={msg.pergunta || ""} />
           )}
         </div>
 
