@@ -142,8 +142,10 @@ TOOLS = [
             "1. Sempre use a coluna 'totvs_order_code' para se referir ao código/número legível do pedido (ex: 35828, 35806) em vez de 'id'.\n"
             "2. As colunas de data ('data_faturamento', 'data_pedido') são do tipo timestamp. Sempre use o cast '::date' ao comparar com strings de data (ex: 'data_pedido::date = ''2026-08-19''').\n"
             "3. REGRA CRÍTICA DE DATAS: Sempre que o usuário perguntar por faturamento, vendas ou pedidos faturados em uma determinada data (ex: 'pedidos faturados no dia 19', 'faturamento de ontem'), você DEVE usar a coluna 'nota_fiscal_data::date' para filtrar a data (que representa a data de emissão da nota fiscal no ERP), usar a condição 'status IN (''Attended'', ''PartiallyAnswered'')', e usar a coluna 'valor_nf' para somar/selecionar os valores faturados. Para perguntas de pedidos gerais, carteira ou pedidos em aberto (sem mencionar faturamento/venda faturada), use a coluna 'data_pedido::date' (data de criação).\n"
-            "4. NUNCA coloque funções de retorno de conjunto como jsonb_array_elements(...) dentro de funções agregadoras como SUM() ou COUNT(). Em vez disso, use a cláusula 'LATERAL jsonb_array_elements(...)' no FROM.\n"
-            "5. Sempre ordene os resultados de forma recente e limite a consulta a no máximo 50 linhas."
+            "4. CONSULTAS EM ITEMS_JSON: Para buscar por produto ou cor dentro dos pedidos_totvs, NUNCA use a sintaxe com ponto (item.quantity). Use SEMPRE o operador de seta JSONB: (item->>'quantity')::numeric, item->>'referenceName', item->>'colorName', (item->>'totalValue')::numeric. Exemplo:\n"
+            "   SELECT p.totvs_order_code, p.cliente_nome, p.data_pedido::date, item->>'referenceName' as produto, item->>'colorName' as cor, (item->>'quantity')::numeric as metragem, (item->>'totalValue')::numeric as valor FROM pedidos_totvs p, LATERAL jsonb_array_elements(CASE WHEN jsonb_typeof(p.items_json) = 'array' THEN p.items_json ELSE '[]'::jsonb END) item WHERE item->>'colorName' ILIKE '%Caqui Tangelo%' ORDER BY p.data_pedido DESC LIMIT 20;\n"
+            "5. NUNCA coloque funções de retorno de conjunto como jsonb_array_elements(...) dentro de funções agregadoras como SUM() ou COUNT(). Em vez disso, use a cláusula 'LATERAL jsonb_array_elements(...)' no FROM.\n"
+            "6. Sempre ordene os resultados de forma recente e limite a consulta a no máximo 50 linhas."
         ),
         "parameters": {"type": "object", "properties": {
             "sql": {"type": "string", "description": "Consulta SQL PostgreSQL (SELECT) válida"}

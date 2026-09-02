@@ -598,28 +598,61 @@ function TabelaSimples({ dados, titulo }) {
   if (!Array.isArray(dados) || dados.length === 0) return null;
   const colunas = Object.keys(dados[0]);
 
-  // Calcula totais das colunas numéricas
+  // Função estrita para determinar se a coluna é somável (Valores ou Metragens, NUNCA códigos/IDs)
+  const isSummableColumn = (col) => {
+    const c = col.toLowerCase();
+    if (c.includes("cod") || c.includes("code") || c.includes("id") || c.includes("op") || c.includes("pedido") || c.includes("order") || c.includes("cpf") || c.includes("cnpj")) {
+      return false;
+    }
+    return (
+      c.includes("valor") ||
+      c.includes("faturamento") ||
+      c.includes("metr") ||
+      c.includes("quantidade") ||
+      c.includes("qtd") ||
+      c.includes("total") ||
+      c.includes("receita") ||
+      c.includes("ticket")
+    );
+  };
+
+  // Calcula totais apenas das colunas somáveis
   const totais = {};
   colunas.forEach((col) => {
-    const isNum = dados.every((r) => r[col] == null || typeof r[col] === "number" || !isNaN(Number(r[col])));
-    if (isNum) {
+    if (isSummableColumn(col)) {
       const soma = dados.reduce((acc, curr) => acc + (Number(curr[col]) || 0), 0);
       totais[col] = soma;
     }
   });
 
   const fmt = (v, col) => {
+    if (v == null || v === "") return "—";
+    const colLower = (col || "").toLowerCase();
+    
+    // Se for código ou ID, retorna como texto puro sem formatação de moeda
+    if (colLower.includes("cod") || colLower.includes("code") || colLower.includes("id") || colLower.includes("op") || colLower.includes("pedido")) {
+      return String(v);
+    }
+
     if (typeof v === "number" || (!isNaN(Number(v)) && typeof v !== "string")) {
       const num = Number(v);
-      const isMeter = col && (
-        col.toLowerCase().includes("metr") ||
-        col.toLowerCase().includes("quantidade") ||
-        col.toLowerCase().includes("qtd") ||
-        col.toLowerCase().includes("metros")
+      const isMeter = (
+        colLower.includes("metr") ||
+        colLower.includes("quantidade") ||
+        colLower.includes("qtd") ||
+        colLower.includes("metros")
       );
-      return isMeter ? meters(num) : num > 100 ? brl(num) : num.toLocaleString("pt-BR");
+      const isMoney = (
+        colLower.includes("valor") ||
+        colLower.includes("faturamento") ||
+        colLower.includes("receita") ||
+        colLower.includes("previsao_faturamento")
+      );
+      if (isMeter) return meters(num);
+      if (isMoney) return brl(num);
+      return num.toLocaleString("pt-BR");
     }
-    return String(v ?? "—");
+    return String(v);
   };
 
   return (
