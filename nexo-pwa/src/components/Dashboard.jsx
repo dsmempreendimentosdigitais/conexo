@@ -593,6 +593,26 @@ function BarrasIntent({ dados, nameKey, valKey, title }) {
   return <Barras dados={lista} nameKey={nameKey} valKey={valKey} title={title} />;
 }
 
+// Componente de quadradinho da cor exata
+function ColorSquare({ colorHex }) {
+  if (!colorHex) return null;
+  return (
+    <span
+      style={{
+        display: "inline-block",
+        width: 14,
+        height: 14,
+        backgroundColor: colorHex,
+        borderRadius: 3,
+        border: "1px solid #94a3b8",
+        marginRight: 6,
+        verticalAlign: "middle",
+        boxShadow: "0 1px 3px rgba(0,0,0,0.3)",
+      }}
+    />
+  );
+}
+
 // Tabela simples para exibir lista de linhas no relatório PDF
 function TabelaSimples({ dados, titulo }) {
   if (!Array.isArray(dados) || dados.length === 0) return null;
@@ -669,15 +689,24 @@ function TabelaSimples({ dados, titulo }) {
           </tr>
         </thead>
         <tbody>
-          {dados.slice(0, 50).map((row, i) => (
-            <tr key={i} style={{ background: i % 2 === 0 ? "transparent" : "#1e293b" }}>
-              {colunas.map((c) => (
-                <td key={c} style={{ padding: "5px 8px", borderBottom: "1px solid #1e293b" }}>
-                  {fmt(row[c], c)}
-                </td>
-              ))}
-            </tr>
-          ))}
+          {dados.slice(0, 50).map((row, i) => {
+            const rowHex = getHexColor(row, i);
+            return (
+              <tr key={i} style={{ background: i % 2 === 0 ? "transparent" : "#1e293b" }}>
+                {colunas.map((c) => {
+                  const cLower = c.toLowerCase();
+                  const isColorCol = cLower.includes("cor") || cLower.includes("color") || cLower === "hex_color";
+
+                  return (
+                    <td key={c} style={{ padding: "5px 8px", borderBottom: "1px solid #1e293b" }}>
+                      {isColorCol && <ColorSquare colorHex={rowHex} />}
+                      {cLower === "hex_color" ? rowHex : fmt(row[c], c)}
+                    </td>
+                  );
+                })}
+              </tr>
+            );
+          })}
         </tbody>
         <tfoot>
           <tr style={{ background: "#0f172a", borderTop: "2px solid #38bdf8", fontWeight: 700, color: "#f8fafc" }}>
