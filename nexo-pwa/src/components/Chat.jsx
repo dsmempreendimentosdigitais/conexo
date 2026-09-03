@@ -225,22 +225,38 @@ export default function Chat({ token, email, onLogout }) {
     [input, loading, historico, token]
   );
 
-  // Gravar / parar áudio com compatibilidade mobile universal (iOS / Android)
+  // Gravar / parar áudio com compatibilidade mobile universal (iOS Safari / Android Chrome / Desktop)
   async function toggleAudio() {
-    if (gravando) {
-      recRef.current?.stop();
+    if (gravando && recRef.current) {
+      try {
+        if (recRef.current.state === "recording") {
+          recRef.current.requestData();
+        }
+      } catch (e) {
+        console.warn("requestData error:", e);
+      }
+      setTimeout(() => {
+        try {
+          if (recRef.current && recRef.current.state !== "inactive") {
+            recRef.current.stop();
+          }
+        } catch (e) {
+          console.warn("stop error:", e);
+        }
+      }, 100);
       setGravando(false);
       return;
     }
+
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       
       let options = {};
       const preferredTypes = [
-        "audio/webm;codecs=opus",
-        "audio/webm",
         "audio/mp4",
         "audio/aac",
+        "audio/webm;codecs=opus",
+        "audio/webm",
         "audio/ogg",
       ];
       for (const t of preferredTypes) {
@@ -263,6 +279,15 @@ export default function Chat({ token, email, onLogout }) {
       rec.onstop = async () => {
         stream.getTracks().forEach((t) => t.stop());
         const blob = new Blob(chunks, { type: actualType });
+
+        if (!blob || blob.size < 200) {
+          setMsgs((m) => [
+            ...m,
+            { role: "conexo", conteudo: "⚠️ Áudio muito curto ou não capturado pelo microfone. Por favor, fale novamente após clicar no microfone.", ts: Date.now() },
+          ]);
+          return;
+        }
+
         setLoading(true);
         try {
           const texto = await transcrever(blob, token);
@@ -281,10 +306,11 @@ export default function Chat({ token, email, onLogout }) {
       };
 
       recRef.current = rec;
-      rec.start();
+      // Inicia com timeslice de 250ms para forçar ondataavailable no iOS Safari
+      rec.start(250);
       setGravando(true);
     } catch (err) {
-      alert("Não foi possível acessar o microfone. Verifique as permissões do seu navegador.");
+      alert("Não foi possível acessar o microfone. Verifique se a permissão de microfone está liberada no seu navegador.");
     }
   }
 
