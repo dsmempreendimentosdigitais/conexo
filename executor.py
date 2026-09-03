@@ -61,17 +61,44 @@ def executar(intent: str, params: dict, ctx: dict | None = None):
             terms = [desacentuar(t) for t in produto.split() if len(t) >= 2]
             for term in terms:
                 where_clauses.append(
-                    f"(translate(lower(descricao), 'áàâãéèêíïóôõöúçñ', 'aaaeeeiooooucn') LIKE '%{term}%' OR lower(cod_produto) LIKE '%{term}%')"
+                    f"(translate(lower(e.descricao), 'áàâãéèêíïóôõöúçñ', 'aaaeeeiooooucn') LIKE '%{term}%' OR lower(e.cod_produto) LIKE '%{term}%')"
                 )
         if cor:
             terms = [desacentuar(t) for t in cor.split() if len(t) >= 1]
             for term in terms:
                 where_clauses.append(
-                    f"(translate(lower(cor), 'áàâãéèêíïóôõöúçñ', 'aaaeeeiooooucn') LIKE '%{term}%' OR translate(lower(descricao), 'áàâãéèêíïóôõöúçñ', 'aaaeeeiooooucn') LIKE '%{term}%' OR lower(cor_codigo) LIKE '%{term}%')"
+                    f"(translate(lower(e.cor), 'áàâãéèêíïóôõöúçñ', 'aaaeeeiooooucn') LIKE '%{term}%' OR translate(lower(e.descricao), 'áàâãéèêíïóôõöúçñ', 'aaaeeeiooooucn') LIKE '%{term}%' OR lower(e.cor_codigo) LIKE '%{term}%')"
                 )
                 
         where_sql = " AND ".join(where_clauses) if where_clauses else "1=1"
-        sql = f"SELECT cod_produto, descricao, cor, cor_codigo, quantidade_disponivel, quantidade_reservada, categoria, unidade, hex_color FROM estoque_pe WHERE {where_sql} ORDER BY quantidade_disponivel DESC LIMIT 30"
+        sql = f"""
+        WITH reservas_vivas AS (
+            SELECT 
+                item->>'colorCode' as cor_codigo,
+                COALESCE(SUM((item->>'quantity')::numeric), 0) as reserva_pedidos
+            FROM pedidos_totvs p,
+            LATERAL jsonb_array_elements(
+                CASE WHEN jsonb_typeof(p.items_json) = 'array' THEN p.items_json ELSE '[]'::jsonb END
+            ) item
+            WHERE p.status IN ('InProgress', 'Blocked', 'InComposition')
+            GROUP BY item->>'colorCode'
+        )
+        SELECT 
+            e.cod_produto, 
+            e.descricao, 
+            e.cor, 
+            e.cor_codigo, 
+            GREATEST(0, ROUND((COALESCE(NULLIF(e.estoque_1, 0), e.quantidade_disponivel + e.quantidade_reservada, 0) - GREATEST(COALESCE(r.reserva_pedidos, 0), e.quantidade_reservada))::numeric, 1)) AS quantidade_disponivel, 
+            GREATEST(COALESCE(r.reserva_pedidos, 0), e.quantidade_reservada) AS quantidade_reservada, 
+            ROUND(GREATEST(COALESCE(e.estoque_1, 0), e.quantidade_disponivel + e.quantidade_reservada)::numeric, 1) AS estoque_fisico, 
+            e.categoria, 
+            e.unidade, 
+            e.hex_color 
+        FROM estoque_pe e
+        LEFT JOIN reservas_vivas r ON e.cor_codigo = r.cor_codigo
+        WHERE {where_sql} 
+        ORDER BY quantidade_disponivel DESC LIMIT 30
+        """
         
         resp = supabase.rpc("conexo_executar_leitura", {"query_str": sql}).execute()
         return resp.data
