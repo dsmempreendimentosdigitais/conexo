@@ -247,61 +247,85 @@ function Fontes({ fontes }) {
   );
 }
 
-// Função utilitária universal de download/impressão de PDF
-function baixarPDFUniversal(elementId, titulo = "Relatório CONEXO") {
-  const conteudo = document.getElementById(elementId);
-  if (!conteudo) return;
-
+// Função utilitária universal de visualização/download de PDF compatível com Celulares (iOS Safari / Android) e PCs
+function abrirImpressaoUniversal(htmlContent, titulo = "Relatório CONEXO") {
   const dataHoje = new Date().toLocaleDateString("pt-BR", { day: "2-digit", month: "long", year: "numeric" });
-
-  const anterior = document.getElementById("conexo-print-frame");
-  if (anterior) anterior.remove();
-
-  const iframe = document.createElement("iframe");
-  iframe.id = "conexo-print-frame";
-  iframe.style.cssText = "position:fixed;top:-9999px;left:-9999px;width:900px;height:1px;border:none;visibility:hidden;";
-  document.body.appendChild(iframe);
-
-  const doc = iframe.contentDocument || iframe.contentWindow.document;
-  doc.open();
-  doc.write(`<!DOCTYPE html><html lang="pt-BR"><head>
+  
+  const fullHtml = `<!DOCTYPE html><html lang="pt-BR"><head>
     <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
     <title>${titulo} — ${dataHoje}</title>
     <style>
-      body { font-family: Arial, sans-serif; color: #1a1a2e; background: white; padding: 24px; font-size: 13px; }
-      h1 { font-size: 20px; color: #0f172a; margin-bottom: 4px; }
-      .subtitulo { color: #64748b; font-size: 12px; margin-bottom: 20px; }
-      .kpi-grid { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
-      .kpi-card { border: 1px solid #cbd5e1; padding: 12px 18px; border-radius: 8px; min-width: 130px; }
-      .kpi-label { font-size: 10px; color: #64748b; text-transform: uppercase; letter-spacing: .5px; margin-bottom: 4px; }
-      .kpi-value { font-size: 20px; font-weight: 700; color: #0f172a; }
-      .section-title, .chart-title { font-size: 13px; font-weight: 700; color: #334155; margin: 20px 0 8px; border-bottom: 2px solid #e2e8f0; padding-bottom: 4px; }
-      table { width: 100%; border-collapse: collapse; margin-bottom: 16px; }
-      th { text-align: left; padding: 6px 8px; background: #f1f5f9; color: #334155; font-size: 11px; text-transform: uppercase; letter-spacing: .4px; }
-      td { padding: 5px 8px; border-bottom: 1px solid #e2e8f0; color: #1e293b; }
+      body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; color: #1a1a2e; background: #f8fafc; padding: 16px; font-size: 12px; margin: 0; }
+      .header-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; background: #0f172a; color: white; padding: 12px 16px; border-radius: 10px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
+      .btn-print { background: #0284c7; color: white; border: none; padding: 10px 18px; border-radius: 8px; font-weight: 700; font-size: 13px; cursor: pointer; display: flex; align-items: center; gap: 6px; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
+      .report-card { background: white; padding: 20px; border-radius: 12px; border: 1px solid #e2e8f0; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+      h1 { font-size: 18px; color: #0f172a; margin: 0 0 4px 0; }
+      .subtitulo { color: #64748b; font-size: 11px; margin-bottom: 16px; }
+      .kpi-grid { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 16px; }
+      .kpi-card { border: 1px solid #cbd5e1; padding: 10px 14px; border-radius: 8px; min-width: 110px; flex: 1; background: #f8fafc; }
+      .kpi-label { font-size: 10px; color: #64748b; text-transform: uppercase; letter-spacing: .5px; margin-bottom: 2px; }
+      .kpi-value { font-size: 18px; font-weight: 700; color: #0f172a; }
+      .section-title, .chart-title { font-size: 13px; font-weight: 700; color: #334155; margin: 16px 0 8px; border-bottom: 2px solid #e2e8f0; padding-bottom: 4px; }
+      table { width: 100%; border-collapse: collapse; margin-bottom: 16px; font-size: 11px; }
+      th { text-align: left; padding: 6px; background: #f1f5f9; color: #334155; font-size: 10px; text-transform: uppercase; border-bottom: 2px solid #cbd5e1; }
+      td { padding: 6px; border-bottom: 1px solid #e2e8f0; color: #1e293b; }
       tr:nth-child(even) td { background: #f8fafc; }
-      .footer { margin-top: 32px; font-size: 10px; color: #94a3b8; border-top: 1px solid #e2e8f0; padding-top: 8px; }
-      @page { margin: 1.5cm; }
+      .footer { margin-top: 24px; font-size: 10px; color: #94a3b8; border-top: 1px solid #e2e8f0; padding-top: 8px; }
+      @media print {
+        .no-print { display: none !important; }
+        body { padding: 0; background: white; }
+        .report-card { border: none; shadow: none; padding: 0; }
+      }
     </style>
   </head><body>
-    <h1>📊 ${titulo}</h1>
-    <div class="subtitulo">Gerado em ${dataHoje} — Designtex Tecidos / CONEXO</div>
-    ${conteudo.innerHTML}
-    <div class="footer">Gerado automaticamente pelo CONEXO — Inteligência Comercial</div>
-  </body></html>`);
-  doc.close();
+    <div class="header-bar no-print">
+      <div>
+        <div style="font-size:14px; font-weight:700;">📄 Relatório Comercial CONEXO</div>
+        <div style="font-size:11px; opacity:0.8;">Toque no botão para salvar em PDF ou imprimir</div>
+      </div>
+      <button class="btn-print" onclick="window.print()">🖨️ Salvar em PDF</button>
+    </div>
+    <div class="report-card">
+      <h1>📊 ${titulo}</h1>
+      <div class="subtitulo">Gerado em ${dataHoje} — Designtex Tecidos / CONEXO</div>
+      ${htmlContent}
+      <div class="footer">Gerado automaticamente pelo CONEXO — Inteligência Comercial</div>
+    </div>
+    <script>
+      // No desktop dispara a caixa de impressão automaticamente
+      if (!/Android|iPhone|iPad|iPod/i.test(navigator.userAgent)) {
+        setTimeout(function() { window.print(); }, 400);
+      }
+    </script>
+  </body></html>`;
 
-  iframe.onload = () => {
-    iframe.contentWindow.focus();
-    iframe.contentWindow.print();
-    setTimeout(() => iframe.remove(), 2000);
-  };
+  const win = window.open("", "_blank");
+  if (win) {
+    win.document.open();
+    win.document.write(fullHtml);
+    win.document.close();
+  } else {
+    // Fallback se houver bloqueador de popup no celular
+    const winLocation = window.open();
+    if (winLocation) {
+      winLocation.document.open();
+      winLocation.document.write(fullHtml);
+      winLocation.document.close();
+    }
+  }
 }
 
 // Wrapper visual com botões de PDF (Relatório Completo e Apenas Gráficos)
 function PdfWrapper({ children, title = "Relatório CONEXO" }) {
   const rawId = useId ? useId() : `pdf-${Math.random().toString(36).substring(2, 9)}`;
   const containerId = String(rawId).replace(/:/g, "");
+
+  function baixarPDFUniversal() {
+    const conteudo = document.getElementById(containerId);
+    if (!conteudo) return;
+    abrirImpressaoUniversal(conteudo.innerHTML, title);
+  }
 
   function baixarGraficosApenas() {
     const container = document.getElementById(containerId);
@@ -314,46 +338,7 @@ function PdfWrapper({ children, title = "Relatório CONEXO" }) {
     const tabelas = clone.querySelectorAll(".pdf-tabela");
     tabelas.forEach(t => t.remove());
 
-    const dataHoje = new Date().toLocaleDateString("pt-BR", { day: "2-digit", month: "long", year: "numeric" });
-    const anterior = document.getElementById("conexo-print-frame");
-    if (anterior) anterior.remove();
-
-    const iframe = document.createElement("iframe");
-    iframe.id = "conexo-print-frame";
-    iframe.style.cssText = "position:fixed;top:-9999px;left:-9999px;width:900px;height:1px;border:none;visibility:hidden;";
-    document.body.appendChild(iframe);
-
-    const doc = iframe.contentDocument || iframe.contentWindow.document;
-    doc.open();
-    doc.write(`<!DOCTYPE html><html lang="pt-BR"><head>
-      <meta charset="UTF-8"/>
-      <title>Gráficos — ${title} (${dataHoje})</title>
-      <style>
-        body { font-family: Arial, sans-serif; color: #1a1a2e; background: white; padding: 24px; font-size: 13px; }
-        h1 { font-size: 20px; color: #0f172a; margin-bottom: 4px; }
-        .subtitulo { color: #64748b; font-size: 12px; margin-bottom: 20px; }
-        .chart-title { font-size: 14px; font-weight: 700; color: #0f172a; margin: 16px 0 8px; border-bottom: 2px solid #38bdf8; padding-bottom: 4px; }
-        .chart-wrapper { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; margin-bottom: 16px; }
-        .kpi-grid { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
-        .kpi-card { border: 1px solid #cbd5e1; padding: 12px 18px; border-radius: 8px; min-width: 130px; }
-        .kpi-label { font-size: 10px; color: #64748b; text-transform: uppercase; margin-bottom: 4px; }
-        .kpi-value { font-size: 20px; font-weight: 700; color: #0f172a; }
-        .footer { margin-top: 32px; font-size: 10px; color: #94a3b8; border-top: 1px solid #e2e8f0; padding-top: 8px; }
-        @page { margin: 1.5cm; }
-      </style>
-    </head><body>
-      <h1>📊 Gráficos executivos — ${title}</h1>
-      <div class="subtitulo">Gerado em ${dataHoje} — Designtex Tecidos / CONEXO</div>
-      ${clone.innerHTML}
-      <div class="footer">Gerado automaticamente pelo CONEXO — Inteligência Comercial</div>
-    </body></html>`);
-    doc.close();
-
-    iframe.onload = () => {
-      iframe.contentWindow.focus();
-      iframe.contentWindow.print();
-      setTimeout(() => iframe.remove(), 2000);
-    };
+    abrirImpressaoUniversal(clone.innerHTML, `Gráficos — ${title}`);
   }
 
   return (
