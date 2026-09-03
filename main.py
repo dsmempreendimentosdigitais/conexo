@@ -219,13 +219,22 @@ async def transcrever(
     audio: UploadFile = File(...),
     ctx: dict = Depends(get_contexto),
 ):
-    conteudo = await audio.read()
-    resp = client_oa.audio.transcriptions.create(
-        model="whisper-1",
-        file=(audio.filename, conteudo, audio.content_type),
-        language="pt",
-    )
-    return {"texto": resp.text}
+    try:
+        conteudo = await audio.read()
+        filename = audio.filename or "fala.webm"
+        if not filename.endswith((".webm", ".m4a", ".mp4", ".wav", ".ogg", ".mp3")):
+            filename += ".webm"
+            
+        content_type = audio.content_type or "audio/webm"
+        
+        resp = client_oa.audio.transcriptions.create(
+            model="whisper-1",
+            file=(filename, conteudo, content_type),
+            language="pt",
+        )
+        return {"texto": resp.text}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erro ao processar transcrição de áudio: {str(e)}")
 
 
 # ─────────────────────────────────────────────────

@@ -58,7 +58,7 @@ export async function perguntarStream(
   }
 }
 
-// ── Transcrição de áudio (Whisper) ──────────────────────────
+// ── Transcrição de áudio (Whisper) com retry automático ──────
 export async function transcrever(blob, token) {
   const type = blob.type || "";
   let ext = "webm";
@@ -72,13 +72,37 @@ export async function transcrever(blob, token) {
   
   const fd = new FormData();
   fd.append("audio", blob, `fala.${ext}`);
-  const r = await fetch(`${BASE}/conexo/transcrever`, {
-    method: "POST",
-    headers: { Authorization: `Bearer ${token}` },
-    body: fd,
-  });
-  if (!r.ok) throw new Error("Falha ao transcrever áudio");
-  return (await r.json()).texto;
+
+  let tentativas = 0;
+  const maxTentativas = 2;
+
+  while (tentativas < maxTentativas) {
+    try {
+      const r = await fetch(`${BASE}/conexo/transcrever`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        body: fd,
+      });
+
+      if (!r.ok) {
+        const errData = await r.json().catch(() => ({}));
+        throw new Error(errData.detail || "Falha ao processar o áudio");
+      }
+
+      const data = await r.json();
+      return data.texto;
+    } catch (err) {
+      tentativas++;
+      if (tentativas >= maxTentativas) {
+        if (err.name === "TypeError" || err.message.includes("fetch")) {
+          throw new Error("Conexão instável com o servidor. Aguarde alguns segundos e tente gravar novamente.");
+        }
+        throw err;
+      }
+      // Aguarda 1 segundo antes de tentar novamente (caso o servidor esteja acordando)
+      await new Promise((res) => setTimeout(res, 1000));
+    }
+  }
 }
 
 // ── Alertas ─────────────────────────────────────────────────
