@@ -145,7 +145,10 @@ TOOLS = [
             "4. CONSULTAS EM ITEMS_JSON: Para buscar por produto ou cor dentro dos pedidos_totvs, NUNCA use a sintaxe com ponto (item.quantity). Use SEMPRE o operador de seta JSONB: (item->>'quantity')::numeric, item->>'referenceName', item->>'colorName', (item->>'totalValue')::numeric. Exemplo:\n"
             "   SELECT p.totvs_order_code, p.cliente_nome, p.data_pedido::date, item->>'referenceName' as produto, item->>'colorName' as cor, (item->>'quantity')::numeric as metragem, (item->>'totalValue')::numeric as valor FROM pedidos_totvs p, LATERAL jsonb_array_elements(CASE WHEN jsonb_typeof(p.items_json) = 'array' THEN p.items_json ELSE '[]'::jsonb END) item WHERE item->>'colorName' ILIKE '%Caqui Tangelo%' ORDER BY p.data_pedido DESC LIMIT 20;\n"
             "5. NUNCA coloque funções de retorno de conjunto como jsonb_array_elements(...) dentro de funções agregadoras como SUM() ou COUNT(). Em vez disso, use a cláusula 'LATERAL jsonb_array_elements(...)' no FROM.\n"
-            "6. Sempre ordene os resultados de forma recente e limite a consulta a no máximo 50 linhas."
+            "6. REGRA CRÍTICA PARA CONSULTAS DE PEDIDOS E CARTEIRA: Sempre que o usuário perguntar por pedidos em andamento, carteira ou listagem de pedidos de vendas, você DEVE incluir na consulta SQL as colunas de totalização global da base completa usando Window Functions:\n"
+            "   COUNT(*) OVER() AS total_pedidos_geral, SUM(valor_total) OVER() AS valor_total_geral, SUM(quantidade_total) OVER() AS metragem_total_geral.\n"
+            "   Exemplo: SELECT COUNT(*) OVER() AS total_pedidos_geral, SUM(valor_total) OVER() AS valor_total_geral, SUM(quantidade_total) OVER() AS metragem_total_geral, totvs_order_code, cliente_nome, representante_nome, data_pedido::date, valor_total, previsao_faturamento::date, status FROM pedidos_totvs WHERE status NOT IN ('Canceled', 'Attended') ORDER BY data_pedido DESC LIMIT 50;\n"
+            "   Dessa forma, mesmo que a cláusula LIMIT 50 restrinja as linhas na tabela da tela, o totalizador citará no texto a quantidade real exata (ex: 370 pedidos) e o valor total real da carteira inteira (ex: R$ 7.519.850,22)."
         ),
         "parameters": {"type": "object", "properties": {
             "sql": {"type": "string", "description": "Consulta SQL PostgreSQL (SELECT) válida"}

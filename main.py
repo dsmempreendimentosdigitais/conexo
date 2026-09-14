@@ -174,13 +174,26 @@ def perguntar_stream(body: PerguntaIn, ctx: dict = Depends(get_contexto)):
         dados_para_prompt = dados
         if isinstance(dados, list) and len(dados) > 0:
           first = dados[0]
+          total_registros_geral = first.get("total_pedidos_geral") or first.get("total_registros_geral") or len(dados)
+          
           val_keys = [k for k in first.keys() if any(x in k.lower() for x in ["valor", "faturamento", "total", "metr", "quantidade", "qtd"])]
           totais_calculados = {}
           for k in val_keys:
-            totais_calculados[k] = sum(float(r.get(k) or 0) for r in dados if isinstance(r.get(k), (int, float, str)) and str(r.get(k)).replace('.','',1).replace('-','',1).isdigit())
+            if k in ["total_pedidos_geral", "total_registros_geral"]:
+              continue
+            if "geral" in k.lower():
+              totais_calculados[k] = float(first.get(k) or 0)
+            else:
+              chave_geral = f"{k}_geral"
+              if chave_geral in first:
+                totais_calculados[k] = float(first.get(chave_geral) or 0)
+              else:
+                totais_calculados[k] = sum(float(r.get(k) or 0) for r in dados if isinstance(r.get(k), (int, float, str)) and str(r.get(k)).replace('.','',1).replace('-','',1).isdigit())
+          
           dados_para_prompt = {
+            "TOTAL_REGISTROS_GERAL_DA_BASE": int(total_registros_geral),
+            "REGISTROS_EXIBIDOS_NA_TABELA": len(dados),
             "SOMA_TOTAL_EXATA_DO_BANCO": totais_calculados,
-            "TOTAL_REGISTROS": len(dados),
             "LISTA_REGISTROS": dados
           }
 

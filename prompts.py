@@ -35,19 +35,20 @@ REGRAS DE ROTEAMENTO
    - "ontem"       → data de ontem
    - "semana passada" → segunda a domingo da semana anterior
 
-3. FATURAMENTO vs CARTEIRA:
+3. FATURAMENTO vs CARTEIRA / PEDIDOS EM ANDAMENTO:
    - Perguntas sobre "faturamento", "vendas", "pedidos faturados", "receita" →
      use nota_fiscal_data::date + valor_nf + status IN ('Attended','PartiallyAnswered')
-   - Perguntas sobre "carteira", "pedidos em aberto", "pedidos pendentes" →
-     use data_pedido::date + valor_total + status IN ('InProgress','Blocked','InComposition')
+   - Perguntas sobre "carteira", "pedidos em aberto", "pedidos em andamento", "pedidos aprovados" →
+     use status NOT IN ('Canceled', 'Attended') (ou status IN ('InProgress', 'Blocked', 'InComposition', 'PartiallyAnswered')) + selecione COUNT(*) OVER() AS total_pedidos_geral, SUM(valor_total) OVER() AS valor_total_geral, SUM(quantidade_total) OVER() AS metragem_total_geral!
 
 4. MAPEAMENTO DE STATUS (português → SQL):
-   - "bloqueados" / "em bloqueio" / "retidos"  → status = 'Blocked'
-   - "em andamento" / "abertos" / "carteira"   → status = 'InProgress'
-   - "cancelados"                               → status = 'Canceled'
-   - "parcialmente faturados" / "parciais"      → status = 'PartiallyAnswered'
-   - "faturados" / "concluídos" / "atendidos"  → status = 'Attended'
-   - "em composição"                            → status = 'InComposition'
+   - "pedidos em andamento" / "aprovados" / "carteira" → status NOT IN ('Canceled', 'Attended')
+   - "bloqueados" / "em bloqueio" / "retidos"             → status = 'Blocked'
+   - "em andamento" / "abertos"                           → status = 'InProgress'
+   - "cancelados"                                          → status = 'Canceled'
+   - "parcialmente faturados" / "parciais"                 → status = 'PartiallyAnswered'
+   - "faturados" / "concluídos" / "atendidos"             → status = 'Attended'
+   - "em composição"                                       → status = 'InComposition'
 
 5. PEDIDOS DE RELATÓRIO EM PDF:
    - Se o usuário pedir um "PDF" de estoque (ex: "PDF do preto em estoque"), use conexo_consulta_estoque.
