@@ -17,49 +17,50 @@ function getStorageKey(email) {
 
 const PERGUNTAS_CATEGORIZADAS = [
   {
-    categoria: "Vendas & Performance",
+    categoria: "Desempenho de vendas e Metas",
     icone: "📈",
     perguntas: [
-      { label: "Vendas de hoje, semana e mês", prompt: "Quanto vendemos hoje, esta semana e este mês?" },
-      { label: "Comparativo vs Mês Passado e Ano Anterior", prompt: "Como estamos vs mês passado e vs mesmo período do ano passado?" },
-      { label: "Projeção & Meta Comercial", prompt: "Estamos atingindo a meta de vendas e qual a projeção para o mês?" },
+      { label: "Quanto vendemos hoje, esta semana, este mês?", prompt: "Quanto vendemos hoje, esta semana e este mês?" },
+      { label: "Como estamos vs mês passado e ano passado?", prompt: "Como estamos vs mês passado e vs mesmo período do ano passado?" },
+      { label: "Estamos atingindo a meta de vendas?", prompt: "Estamos atingindo a meta de vendas e qual a projeção para o mês?" },
     ]
   },
   {
-    categoria: "Equipe Comercial",
+    categoria: "Vendedores e Equipe",
     icone: "👥",
     perguntas: [
-      { label: "Vendedor Destaque vs Maior Queda", prompt: "Qual vendedor vendeu mais e qual teve a maior queda?" },
-      { label: "Vendedores Abaixo da Meta/Histórico", prompt: "Quais vendedores estão abaixo da meta ou do histórico comercial?" },
+      { label: "Qual vendedor vendeu mais e qual caiu mais?", prompt: "Qual vendedor vendeu mais e qual teve a maior queda?" },
+      { label: "Quais vendedores estão abaixo da meta/histórico?", prompt: "Quais vendedores estão abaixo da meta ou do histórico comercial?" },
     ]
   },
   {
-    categoria: "Clientes & Oportunidades",
+    categoria: "Clientes e Oportunidades",
     icone: "🤝",
     perguntas: [
-      { label: "Clientes que Mais Compraram", prompt: "Quais clientes mais compraram este mês?" },
-      { label: "Clientes sem Comprar (60+ dias)", prompt: "Quais clientes estão há mais de 60 dias sem comprar?" },
-      { label: "Clientes a Priorizar Hoje & Ofertas", prompt: "Quais clientes eu deveria priorizar hoje e quais produtos oferecer para eles?" },
-      { label: "Oportunidades Ocultas de Vendas", prompt: "Quais oportunidades de vendas o CONEXO enxerga que talvez eu não esteja vendo?" },
+      { label: "Quais mais compraram este mês?", prompt: "Quais clientes mais compraram este mês?" },
+      { label: "Quais pararam de comprar ou tão comprando menos?", prompt: "Quais clientes pararam de comprar ou estão comprando menos?" },
+      { label: "Quais estão há mais de 60 dias sem comprar?", prompt: "Quais clientes estão há mais de 60 dias sem comprar?" },
+      { label: "Quais clientes priorizar hoje e produtos a oferecer?", prompt: "Quais clientes eu deveria priorizar hoje e quais produtos oferecer para eles?" },
+      { label: "Quais oportunidades de vendas o CONEXO enxerga?", prompt: "Quais oportunidades de vendas o CONEXO enxerga que talvez eu não esteja vendo?" },
     ]
   },
   {
-    categoria: "Produtos & Estoque",
+    categoria: "Produtos e Estoque",
     icone: "📦",
     perguntas: [
-      { label: "Mais e Menos Vendidos", prompt: "Quais tecidos vendem mais e quais estão menos faturados?" },
-      { label: "Produtos Parados no Estoque", prompt: "Quais produtos estão parados no estoque de pronto-entrega?" },
-      { label: "Estoque Alto x Vendas Baixas", prompt: "Quais produtos têm estoque alto e vendas baixas?" },
-      { label: "Ruptura & Perto de Acabar", prompt: "Quais produtos estão perto de acabar em estoque?" },
+      { label: "Quais vendem mais e quais vendem menos?", prompt: "Quais produtos vendem mais e quais vendem menos?" },
+      { label: "Quais estão parados em estoque?", prompt: "Quais produtos estão parados no estoque de pronto-entrega?" },
+      { label: "Quais estão perto de acabar em estoque?", prompt: "Quais produtos estão perto de acabar em estoque?" },
+      { label: "Quais produtos têm estoque alto e vendas baixas?", prompt: "Quais produtos têm estoque alto e vendas baixas?" },
     ]
   },
   {
-    categoria: "Estratégia & Regiões",
+    categoria: "Gestão e Regiões",
     icone: "🌐",
     perguntas: [
-      { label: "Região/Estado em Crescimento", prompt: "Qual região ou estado está crescendo mais este mês?" },
-      { label: "Análise da Queda de Vendas", prompt: "Por que as vendas caíram e qual região ou produto mais impactou?" },
-      { label: "Impacto do Mercado & Macroeconomia", prompt: "Como o preço do algodão, frete, dólar e a China impactam o nosso mercado?" },
+      { label: "Por que as vendas caíram?", prompt: "Por que as vendas caíram e qual região ou produto mais impactou?" },
+      { label: "Qual região tá crescendo mais?", prompt: "Qual região ou estado está crescendo mais este mês?" },
+      { label: "Impacto do algodão, frete, dólar e China?", prompt: "Como o preço do algodão, frete, dólar e a China impactam o nosso mercado?" },
     ]
   }
 ];
@@ -82,7 +83,13 @@ export default function Chat({ token, email, onLogout }) {
   const [gravando, setGravando] = useState(false);
   const [alertas, setAlertas] = useState([]);
   const [showAlerts, setShowAlerts] = useState(false);
-  const [openGroupIndex, setOpenGroupIndex] = useState(0); // Categoria de Vendas aberta por padrão
+  const [openGroups, setOpenGroups] = useState([0, 1, 2, 3, 4]); // Todas as 5 categorias abertas por padrão
+
+  const toggleGroup = (idx) => {
+    setOpenGroups((prev) =>
+      prev.includes(idx) ? prev.filter((i) => i !== idx) : [...prev, idx]
+    );
+  };
 
   const recRef = useRef(null);
   const fimRef = useRef(null);
@@ -426,12 +433,12 @@ export default function Chat({ token, email, onLogout }) {
         <div className="sidebar-section-title" style={{ marginTop: 12 }}>Atalhos de Gestão</div>
         <div className="sidebar-prompts-container">
           {PERGUNTAS_CATEGORIZADAS.map((grp, gIdx) => {
-            const isOpen = openGroupIndex === gIdx;
+            const isOpen = openGroups.includes(gIdx);
             return (
               <div key={grp.categoria} className="prompt-group">
                 <div
                   className="prompt-group-header"
-                  onClick={() => setOpenGroupIndex(isOpen ? null : gIdx)}
+                  onClick={() => toggleGroup(gIdx)}
                 >
                   <span>{grp.icone} {grp.categoria}</span>
                   <span style={{ fontSize: 10, opacity: 0.7 }}>{isOpen ? "▲" : "▼"}</span>
