@@ -15,12 +15,13 @@ export default function Message({ msg }) {
 
       <div style={{ display: "flex", flexDirection: "column", gap: 4, minWidth: 0 }}>
         <div className="msg-bubble">
-          <p>{msg.conteudo}</p>
-
-          {/* Dashboard e Botões de PDF sempre que houver dados */}
+          {/* Prioridade #1: Gráfico e Tabela de dados no topo da resposta */}
           {!isUser && msg.dados && (
             <Dashboard intent={msg.intent || "nexo_consulta_geral"} dados={msg.dados} pergunta={msg.pergunta || ""} />
           )}
+
+          {/* Prioridade #2: Texto síntese ultra-resumido em poucas palavras */}
+          {msg.conteudo && <p style={{ marginTop: !isUser && msg.dados ? 12 : 0 }}>{msg.conteudo}</p>}
         </div>
 
         {msg.ts && (

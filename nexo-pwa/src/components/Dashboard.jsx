@@ -254,6 +254,56 @@ function Comparativo({ dados }) {
           </Bar>
         </BarChart>
       </ResponsiveContainer>
+
+      {/* Tabela analítica com linhas e colunas */}
+      <div style={{ marginTop: 12, borderTop: "1px solid #334155", paddingTop: 12 }}>
+        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11, color: "#cbd5e1" }}>
+          <thead>
+            <tr style={{ background: "#0f172a" }}>
+              <th style={{ padding: "6px 8px", textAlign: "left", color: "#94a3b8" }}>PERÍODO MTD</th>
+              <th style={{ padding: "6px 8px", textAlign: "right", color: "#94a3b8" }}>FATURAMENTO</th>
+              <th style={{ padding: "6px 8px", textAlign: "right", color: "#94a3b8" }}>METRAGEM</th>
+              <th style={{ padding: "6px 8px", textAlign: "right", color: "#94a3b8" }}>VARIAÇÃO MTD</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr style={{ background: "transparent" }}>
+              <td style={{ padding: "6px 8px", fontWeight: 700, color: "#38bdf8" }}>Set/26 (1-{diaAtual}d MTD)</td>
+              <td style={{ padding: "6px 8px", textAlign: "right", fontWeight: 700, color: "#f8fafc" }}>{brl(atualMtd)}</td>
+              <td style={{ padding: "6px 8px", textAlign: "right", color: "#fb923c" }}>{meters(d.metragem_atual_mtd || 0)}</td>
+              <td style={{ padding: "6px 8px", textAlign: "right", fontWeight: 700, color: "#38bdf8" }}>Atual</td>
+            </tr>
+            {antMtd > 0 && (
+              <tr style={{ background: "#0f172a" }}>
+                <td style={{ padding: "6px 8px", fontWeight: 600, color: "#818cf8" }}>Ago/26 (1-{diaAtual}d MTD)</td>
+                <td style={{ padding: "6px 8px", textAlign: "right", fontWeight: 600, color: "#f8fafc" }}>{brl(antMtd)}</td>
+                <td style={{ padding: "6px 8px", textAlign: "right", color: "#fb923c" }}>{meters(d.metragem_ant_mtd || 0)}</td>
+                <td style={{ padding: "6px 8px", textAlign: "right", fontWeight: 700, color: (atualMtd - antMtd) >= 0 ? "#22c55e" : "#ef4444" }}>
+                  {((atualMtd - antMtd) / antMtd * 100).toFixed(2)}%
+                </td>
+              </tr>
+            )}
+            {anoMtd > 0 && (
+              <tr style={{ background: "transparent" }}>
+                <td style={{ padding: "6px 8px", fontWeight: 600, color: "#34d399" }}>Set/25 (1-{diaAtual}d MTD)</td>
+                <td style={{ padding: "6px 8px", textAlign: "right", fontWeight: 600, color: "#f8fafc" }}>{brl(anoMtd)}</td>
+                <td style={{ padding: "6px 8px", textAlign: "right", color: "#fb923c" }}>{meters(d.metragem_ano_ant_mtd || 0)}</td>
+                <td style={{ padding: "6px 8px", textAlign: "right", fontWeight: 700, color: (atualMtd - anoMtd) >= 0 ? "#22c55e" : "#ef4444" }}>
+                  {((atualMtd - anoMtd) / anoMtd * 100).toFixed(2)}%
+                </td>
+              </tr>
+            )}
+            {antFull > 0 && (
+              <tr style={{ background: "#0f172a" }}>
+                <td style={{ padding: "6px 8px", color: "#94a3b8" }}>Ago/26 (Mês Cheio)</td>
+                <td style={{ padding: "6px 8px", textAlign: "right", color: "#94a3b8" }}>{brl(antFull)}</td>
+                <td style={{ padding: "6px 8px", textAlign: "right", color: "#94a3b8" }}>{meters(d.metragem_ant_full || 0)}</td>
+                <td style={{ padding: "6px 8px", textAlign: "right", color: "#94a3b8" }}>Mês Cheio</td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }
