@@ -15,6 +15,64 @@ function getStorageKey(email) {
   return `conexo_chats_${email || "guest"}`;
 }
 
+const PERGUNTAS_CATEGORIZADAS = [
+  {
+    categoria: "Vendas & Performance",
+    icone: "📈",
+    perguntas: [
+      { label: "Vendas de hoje, semana e mês", prompt: "Quanto vendemos hoje, esta semana e este mês?" },
+      { label: "Comparativo vs Mês Passado e Ano Anterior", prompt: "Como estamos vs mês passado e vs mesmo período do ano passado?" },
+      { label: "Projeção & Meta Comercial", prompt: "Estamos atingindo a meta de vendas e qual a projeção para o mês?" },
+    ]
+  },
+  {
+    categoria: "Equipe Comercial",
+    icone: "👥",
+    perguntas: [
+      { label: "Vendedor Destaque vs Maior Queda", prompt: "Qual vendedor vendeu mais e qual teve a maior queda?" },
+      { label: "Vendedores Abaixo da Meta/Histórico", prompt: "Quais vendedores estão abaixo da meta ou do histórico comercial?" },
+    ]
+  },
+  {
+    categoria: "Clientes & Oportunidades",
+    icone: "🤝",
+    perguntas: [
+      { label: "Clientes que Mais Compraram", prompt: "Quais clientes mais compraram este mês?" },
+      { label: "Clientes sem Comprar (60+ dias)", prompt: "Quais clientes estão há mais de 60 dias sem comprar?" },
+      { label: "Clientes a Priorizar Hoje & Ofertas", prompt: "Quais clientes eu deveria priorizar hoje e quais produtos oferecer para eles?" },
+      { label: "Oportunidades Ocultas de Vendas", prompt: "Quais oportunidades de vendas o CONEXO enxerga que talvez eu não esteja vendo?" },
+    ]
+  },
+  {
+    categoria: "Produtos & Estoque",
+    icone: "📦",
+    perguntas: [
+      { label: "Mais e Menos Vendidos", prompt: "Quais tecidos vendem mais e quais estão menos faturados?" },
+      { label: "Produtos Parados no Estoque", prompt: "Quais produtos estão parados no estoque de pronto-entrega?" },
+      { label: "Estoque Alto x Vendas Baixas", prompt: "Quais produtos têm estoque alto e vendas baixas?" },
+      { label: "Ruptura & Perto de Acabar", prompt: "Quais produtos estão perto de acabar em estoque?" },
+    ]
+  },
+  {
+    categoria: "Estratégia & Regiões",
+    icone: "🌐",
+    perguntas: [
+      { label: "Região/Estado em Crescimento", prompt: "Qual região ou estado está crescendo mais este mês?" },
+      { label: "Análise da Queda de Vendas", prompt: "Por que as vendas caíram e qual região ou produto mais impactou?" },
+      { label: "Impacto do Mercado & Macroeconomia", prompt: "Como o preço do algodão, frete, dólar e a China impactam o nosso mercado?" },
+    ]
+  }
+];
+
+const CHIPS_RAPIDOS = [
+  { label: "📈 Vendas do Mês", prompt: "Quanto vendemos hoje, esta semana e este mês?" },
+  { label: "🎯 Meta Comercial", prompt: "Estamos atingindo a meta de vendas e qual a projeção para o mês?" },
+  { label: "👥 Vendedores em Queda", prompt: "Qual vendedor vendeu mais e qual teve a maior queda?" },
+  { label: "🤝 Inativos (60+ dias)", prompt: "Quais clientes estão há mais de 60 dias sem comprar?" },
+  { label: "📦 Estoque Parado", prompt: "Quais produtos têm estoque alto e vendas baixas?" },
+  { label: "🔮 Oportunidades do Dia", prompt: "Quais oportunidades de vendas o CONEXO enxerga que talvez eu não esteja vendo?" },
+];
+
 export default function Chat({ token, email, onLogout }) {
   const [chats, setChats] = useState([]);
   const [activeChatId, setActiveChatId] = useState(null);
@@ -24,6 +82,7 @@ export default function Chat({ token, email, onLogout }) {
   const [gravando, setGravando] = useState(false);
   const [alertas, setAlertas] = useState([]);
   const [showAlerts, setShowAlerts] = useState(false);
+  const [openGroupIndex, setOpenGroupIndex] = useState(0); // Categoria de Vendas aberta por padrão
 
   const recRef = useRef(null);
   const fimRef = useRef(null);
@@ -363,25 +422,37 @@ export default function Chat({ token, email, onLogout }) {
           ))}
         </div>
 
-        {/* ── Seção de Sugestões ── */}
-        <div className="sidebar-section-title" style={{ marginTop: 12 }}>Sugestões Rápidas</div>
-        <div style={{ padding: "4px 8px" }}>
-          {[
-            "Como estão as vendas e metragens este mês?",
-            "Quais são os representantes abaixo da meta?",
-            "Quais são os produtos mais faturados este ano?",
-            "Quais são as cores mais vendidas?",
-            "Quais clientes estão inativos há mais de 90 dias?",
-          ].map((s) => (
-            <div
-              key={s}
-              className="chat-history-item"
-              onClick={() => enviar(s)}
-              style={{ fontSize: 12, opacity: 0.8 }}
-            >
-              💡 {s}
-            </div>
-          ))}
+        {/* ── Seção de Perguntas Padrão (Categorias Estratégicas de Gestão) ── */}
+        <div className="sidebar-section-title" style={{ marginTop: 12 }}>Atalhos de Gestão</div>
+        <div className="sidebar-prompts-container">
+          {PERGUNTAS_CATEGORIZADAS.map((grp, gIdx) => {
+            const isOpen = openGroupIndex === gIdx;
+            return (
+              <div key={grp.categoria} className="prompt-group">
+                <div
+                  className="prompt-group-header"
+                  onClick={() => setOpenGroupIndex(isOpen ? null : gIdx)}
+                >
+                  <span>{grp.icone} {grp.categoria}</span>
+                  <span style={{ fontSize: 10, opacity: 0.7 }}>{isOpen ? "▲" : "▼"}</span>
+                </div>
+                {isOpen && (
+                  <div style={{ marginTop: 2 }}>
+                    {grp.perguntas.map((p, pIdx) => (
+                      <div
+                        key={pIdx}
+                        className="prompt-item"
+                        onClick={() => enviar(p.prompt)}
+                        title={p.prompt}
+                      >
+                        • {p.label}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
 
         <div className="sidebar-user">
@@ -423,6 +494,63 @@ export default function Chat({ token, email, onLogout }) {
             <Message key={i} msg={m} />
           ))}
 
+          {/* Empty State / Cards Interativos de Perguntas Estratégicas quando só há boas-vindas */}
+          {msgs.length === 1 && (
+            <div className="empty-state-container">
+              <div className="empty-title">🎯 Central de Tomada de Decisão</div>
+              <div className="empty-subtitle">
+                Selecione uma análise estratégica rápida ou pergunte qualquer informação comercial por texto ou voz.
+              </div>
+
+              <div className="prompt-cards-grid">
+                {[
+                  {
+                    cat: "📈 Vendas & Desempenho",
+                    icon: "📈",
+                    prompt: "Quanto vendemos hoje, esta semana e este mês? Como estamos vs mês passado e ano passado?",
+                  },
+                  {
+                    cat: "👥 Equipe Comercial",
+                    icon: "👥",
+                    prompt: "Qual vendedor vendeu mais e qual teve a maior queda? Quais estão abaixo da meta?",
+                  },
+                  {
+                    cat: "🤝 Clientes & Oportunidades",
+                    icon: "🤝",
+                    prompt: "Quais clientes estão há mais de 60 dias sem comprar e quais oportunidades eu deveria priorizar hoje?",
+                  },
+                  {
+                    cat: "📦 Produtos & Estoque",
+                    icon: "📦",
+                    prompt: "Quais produtos vendem mais e quais estão com estoque alto e vendas baixas?",
+                  },
+                  {
+                    cat: "🌐 Regiões & Tendências",
+                    icon: "🌐",
+                    prompt: "Qual região ou estado está crescendo mais este mês e por que as vendas subiram ou caíram?",
+                  },
+                  {
+                    cat: "🔮 Oportunidades Ocultas",
+                    icon: "🔮",
+                    prompt: "Quais oportunidades de vendas o CONEXO enxerga que talvez eu não esteja vendo?",
+                  },
+                ].map((card, cIdx) => (
+                  <div
+                    key={cIdx}
+                    className="prompt-card"
+                    onClick={() => enviar(card.prompt)}
+                  >
+                    <div className="prompt-card-header">
+                      <span>{card.icon}</span>
+                      <span>{card.cat}</span>
+                    </div>
+                    <div className="prompt-card-text">{card.prompt}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {loading && msgs[msgs.length - 1]?.conteudo === "" && (
             <div className="message conexo">
               <div className="msg-avatar conexo-av">C</div>
@@ -434,6 +562,19 @@ export default function Chat({ token, email, onLogout }) {
             </div>
           )}
           <div ref={fimRef} />
+        </div>
+
+        {/* Barra de Chips Rápidos Deslizantes */}
+        <div className="prompt-chips-bar">
+          {CHIPS_RAPIDOS.map((chip, chIdx) => (
+            <div
+              key={chIdx}
+              className="prompt-chip"
+              onClick={() => enviar(chip.prompt)}
+            >
+              {chip.label}
+            </div>
+          ))}
         </div>
 
         {/* Input */}
