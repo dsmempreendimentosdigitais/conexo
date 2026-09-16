@@ -200,31 +200,57 @@ function Barras({ dados, nameKey, valKey, title }) {
   );
 }
 
-// ── Comparativo (2 barras: atual vs anterior) ───────────────
+// ── Comparativo Proporcional MTD (Gráfico de colunas) ───────────
 function Comparativo({ dados }) {
   const d = Array.isArray(dados) ? dados[0] : dados;
   if (!d) return null;
 
-  const atual    = Number(d.faturamento_ref ?? d.faturamento_atual ?? 0);
-  const anterior = Number(d.faturamento_ant ?? d.faturamento_anterior ?? 0);
-  const label1   = d.mes_ref ? `${d.mes_ref}` : "Atual";
-  const label2   = "Anterior";
+  const diaAtual = d.dia_atual || 16;
+  
+  // Suporta tanto os novos campos MTD quanto os legados
+  const atualMtd = Number(d.faturamento_atual_mtd ?? d.faturamento_ref ?? d.faturamento_atual ?? 0);
+  const antMtd   = Number(d.faturamento_ant_mtd ?? d.faturamento_ant ?? d.faturamento_anterior ?? 0);
+  const anoMtd   = Number(d.faturamento_ano_ant_mtd ?? 0);
+  const antFull  = Number(d.faturamento_ant_full ?? 0);
 
   const data = [
-    { nome: label1, valor: atual,    fill: "#38bdf8" },
-    { nome: label2, valor: anterior, fill: "#475569" },
-  ];
+    atualMtd > 0 && { nome: `Set/26 (1-${diaAtual}d MTD)`, valor: atualMtd, valorFmt: brl(atualMtd), fill: "#38bdf8" },
+    antMtd > 0 && { nome: `Ago/26 (1-${diaAtual}d MTD)`, valor: antMtd, valorFmt: brl(antMtd), fill: "#818cf8" },
+    anoMtd > 0 && { nome: `Set/25 (1-${diaAtual}d MTD)`, valor: anoMtd, valorFmt: brl(anoMtd), fill: "#34d399" },
+    antFull > 0 && { nome: `Ago/26 (Mês Cheio)`, valor: antFull, valorFmt: brl(antFull), fill: "#475569" },
+  ].filter(Boolean);
+
+  if (data.length === 0) return null;
 
   return (
-    <div className="chart-wrapper">
-      <div className="chart-title">Comparativo de faturamento</div>
-      <ResponsiveContainer width="100%" height={140}>
-        <BarChart data={data} margin={{ left: 8, right: 16 }}>
-          <XAxis dataKey="nome" tick={{ fill: "#94a3b8", fontSize: 12 }} />
+    <div className="chart-wrapper" style={{ background: "#1e293b", padding: 16, borderRadius: 12, border: "1px solid #334155", marginTop: 12 }}>
+      <div className="chart-title" style={{ color: "#f8fafc", fontSize: 14, fontWeight: 700, marginBottom: 12, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <span>📊 Comparativo Proporcional MTD (1 ao dia {diaAtual})</span>
+        <span style={{ fontSize: 11, color: "#38bdf8", fontWeight: 600 }}>Projeção 30d: {brl(d.projecao_fechamento_mes || 0)}</span>
+      </div>
+      <ResponsiveContainer width="100%" height={240}>
+        <BarChart data={data} margin={{ top: 20, right: 20, left: 10, bottom: 20 }}>
+          <XAxis dataKey="nome" tick={{ fill: "#cbd5e1", fontSize: 11, fontWeight: 600 }} />
           <YAxis hide />
-          <Tooltip formatter={(v) => brl(v)} contentStyle={{ background: "#1e293b", border: "1px solid #334155", borderRadius: 8 }} />
+          <Tooltip
+            content={({ active, payload }) => {
+              if (active && payload && payload.length) {
+                const item = payload[0].payload;
+                return (
+                  <div style={{ background: "#0f172a", border: "1px solid #38bdf8", borderRadius: 8, padding: "8px 12px", color: "#fff" }}>
+                    <div style={{ fontSize: 12, fontWeight: 600, color: "#94a3b8", marginBottom: 4 }}>{item.nome}</div>
+                    <div style={{ fontSize: 15, fontWeight: 700, color: item.fill }}>Faturamento: {item.valorFmt}</div>
+                  </div>
+                );
+              }
+              return null;
+            }}
+          />
           <Bar dataKey="valor" radius={[6, 6, 0, 0]}>
-            {data.map((d, i) => <Cell key={i} fill={d.fill} />)}
+            {data.map((entry, index) => (
+              <Cell key={`cell-${index}`} fill={entry.fill} stroke="#334155" strokeWidth={1} />
+            ))}
+            <LabelList dataKey="valorFmt" position="top" fill="#f8fafc" fontSize={11} fontWeight={700} />
           </Bar>
         </BarChart>
       </ResponsiveContainer>
@@ -391,17 +417,25 @@ function PdfWrapper({ children, title = "Relatório CONEXO" }) {
 }
 
 // Wrapper de gráfico que oculta da tela por padrão (a menos que a pergunta peça por gráfico ou seja exportação de PDF)
-function SmartChartBlock({ children, pergunta = "" }) {
-  const pedeGrafico = pergunta && (
-    pergunta.toLowerCase().includes("grafico") ||
-    pergunta.toLowerCase().includes("gráfico") ||
-    pergunta.toLowerCase().includes("barras") ||
-    pergunta.toLowerCase().includes("visualizacao") ||
-    pergunta.toLowerCase().includes("visualização")
+// Wrapper de gráfico inteligente que exibe gráficos proativamente em comparações, rankings e análises
+function SmartChartBlock({ children, pergunta = "", forceVisible = true }) {
+  const p = (pergunta || "").toLowerCase();
+
+  // Exibe gráficos proativamente se forceVisible for true (padrão) ou se a pergunta sugerir análise visual
+  const exibeGrafico = forceVisible || (
+    p.includes("grafico") ||
+    p.includes("gráfico") ||
+    p.includes("barras") ||
+    p.includes("colunas") ||
+    p.includes("comparar") ||
+    p.includes("comparativo") ||
+    p.includes("vs") ||
+    p.includes("ranking") ||
+    p.includes("top") ||
+    p.includes("visualizacao")
   );
 
-  // Se o usuário pediu gráfico, exibe normalmente. Caso contrário, deixa disponível para PDF.
-  if (pedeGrafico) {
+  if (exibeGrafico) {
     return <div className="chart-block">{children}</div>;
   }
 

@@ -138,6 +138,58 @@ def executar(intent: str, params: dict, ctx: dict | None = None):
         resp = supabase.rpc("conexo_executar_leitura", {"query_str": sql}).execute()
         return resp.data
 
+    # Comparativo Inteligente Proporcional (MTD - Month-to-Date)
+    if intent in ("conexo_comparativo_mes", "conexo_comparativo_ano"):
+        import datetime
+        hoje = datetime.date.today()
+        dia_atual = hoje.day
+        ano_atual = hoje.year
+
+        str_hoje = hoje.strftime("%Y-%m-%d")
+        str_inicio_mes = hoje.replace(day=1).strftime("%Y-%m-%d")
+
+        primeiro_dia_mes = hoje.replace(day=1)
+        ultimo_dia_mes_ant = primeiro_dia_mes - datetime.timedelta(days=1)
+        str_inicio_mes_ant = ultimo_dia_mes_ant.replace(day=1).strftime("%Y-%m-%d")
+        dia_limite_ant = min(dia_atual, ultimo_dia_mes_ant.day)
+        str_fim_mes_ant_mtd = ultimo_dia_mes_ant.replace(day=dia_limite_ant).strftime("%Y-%m-%d")
+        str_fim_mes_ant_full = ultimo_dia_mes_ant.strftime("%Y-%m-%d")
+
+        try:
+            data_ano_ant_mtd = hoje.replace(year=ano_atual - 1)
+        except ValueError:
+            data_ano_ant_mtd = hoje.replace(year=ano_atual - 1, day=28)
+        str_inicio_ano_ant_mtd = data_ano_ant_mtd.replace(day=1).strftime("%Y-%m-%d")
+        str_fim_ano_ant_mtd = data_ano_ant_mtd.strftime("%Y-%m-%d")
+
+        sql_mtd = f"""
+        SELECT 
+            COALESCE(SUM(CASE WHEN nota_fiscal_data::date >= '{str_inicio_mes}' AND nota_fiscal_data::date <= '{str_hoje}' THEN valor_nf ELSE 0 END), 0) AS faturamento_atual_mtd,
+            COALESCE(SUM(CASE WHEN nota_fiscal_data::date >= '{str_inicio_mes}' AND nota_fiscal_data::date <= '{str_hoje}' THEN quantidade_total ELSE 0 END), 0) AS metragem_atual_mtd,
+            COUNT(CASE WHEN nota_fiscal_data::date >= '{str_inicio_mes}' AND nota_fiscal_data::date <= '{str_hoje}' THEN 1 END) AS pedidos_atual_mtd,
+
+            COALESCE(SUM(CASE WHEN nota_fiscal_data::date >= '{str_inicio_mes_ant}' AND nota_fiscal_data::date <= '{str_fim_mes_ant_mtd}' THEN valor_nf ELSE 0 END), 0) AS faturamento_ant_mtd,
+            COALESCE(SUM(CASE WHEN nota_fiscal_data::date >= '{str_inicio_mes_ant}' AND nota_fiscal_data::date <= '{str_fim_mes_ant_mtd}' THEN quantidade_total ELSE 0 END), 0) AS metragem_ant_mtd,
+
+            COALESCE(SUM(CASE WHEN nota_fiscal_data::date >= '{str_inicio_mes_ant}' AND nota_fiscal_data::date <= '{str_fim_mes_ant_full}' THEN valor_nf ELSE 0 END), 0) AS faturamento_ant_full,
+            COALESCE(SUM(CASE WHEN nota_fiscal_data::date >= '{str_inicio_mes_ant}' AND nota_fiscal_data::date <= '{str_fim_mes_ant_full}' THEN quantidade_total ELSE 0 END), 0) AS metragem_ant_full,
+
+            COALESCE(SUM(CASE WHEN nota_fiscal_data::date >= '{str_inicio_ano_ant_mtd}' AND nota_fiscal_data::date <= '{str_fim_ano_ant_mtd}' THEN valor_nf ELSE 0 END), 0) AS faturamento_ano_ant_mtd,
+            COALESCE(SUM(CASE WHEN nota_fiscal_data::date >= '{str_inicio_ano_ant_mtd}' AND nota_fiscal_data::date <= '{str_fim_ano_ant_mtd}' THEN quantidade_total ELSE 0 END), 0) AS metragem_ano_ant_mtd
+        FROM pedidos_totvs
+        WHERE status IN ('Attended', 'PartiallyAnswered')
+        """
+        resp = supabase.rpc("conexo_executar_leitura", {"query_str": sql_mtd}).execute()
+        d = resp.data[0] if resp.data else {}
+
+        d["dia_atual"] = dia_atual
+        d["dias_mes_anterior"] = dia_limite_ant
+        
+        fat_atual = float(d.get("faturamento_atual_mtd") or 0)
+        d["projecao_fechamento_mes"] = round((fat_atual / dia_atual) * 30, 2) if dia_atual > 0 else 0
+
+        return [d]
+
     if intent not in RPCS:
         raise ValueError(f"Intent '{intent}' não é uma RPC válida.")
 
