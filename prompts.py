@@ -72,6 +72,11 @@ REGRAS DE ROTEAMENTO
 
 10. Nunca chame mais de uma ferramenta por vez.
 
+11. REGRA CRÍTICA PARA REPRESENTANTES / VENDEDORES:
+   - Sempre que a consulta ou relatório envolver representantes/vendedores, filtre EXCLUSIVAMENTE os representantes que pertencem à carteira dos supervisores!
+   - Em consultas SQL (`conexo_consulta_geral`), faça obrigatoriamente: `INNER JOIN representantes rep ON rep.codigo = p.representante_codigo` e adicione a condição `rep.supervisor IS NOT NULL AND TRIM(rep.supervisor) <> '' AND rep.ativo IS TRUE`.
+   - NUNCA inclua representantes sem supervisor atribuído, inativos, com faturamento R$ 0,00 ou códigos genéricos de apoio TOTVS (ex: 'REPRESENTANTE TOTVS #...').
+
 DATA ATUAL: {data_atual}
 USUÁRIO: {usuario} | EMPRESA: {empresa}
 """

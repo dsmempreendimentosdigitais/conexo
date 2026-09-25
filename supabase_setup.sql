@@ -176,19 +176,23 @@ CREATE OR REPLACE FUNCTION conexo_ranking_vendedores(
   p_rep TEXT DEFAULT NULL, limite INT DEFAULT 10
 )
 RETURNS JSON LANGUAGE SQL STABLE SECURITY DEFINER AS $$
-  SELECT JSON_AGG(r ORDER BY r.metragem_vendida DESC)
+  SELECT JSON_AGG(r ORDER BY r.faturamento DESC)
   FROM (
     SELECT
-      representante_codigo,
-      MAX(representante_nome) AS vendedor,
-      SUM(valor_total)        AS faturamento,
-      SUM(quantidade_total)   AS metragem_vendida,
+      p.representante_codigo,
+      MAX(p.representante_nome) AS vendedor,
+      SUM(p.valor_total)        AS faturamento,
+      SUM(p.quantidade_total)   AS metragem_vendida,
       COUNT(*)                AS total_pedidos
-    FROM pedidos_totvs
-    WHERE data_pedido::date BETWEEN inicio AND fim
-      AND (status IS NULL OR LOWER(status) NOT LIKE '%canc%')
-      AND (p_rep IS NULL OR representante_codigo = p_rep)
-    GROUP BY representante_codigo
+    FROM pedidos_totvs p
+    INNER JOIN representantes rep ON rep.codigo = p.representante_codigo
+    WHERE p.data_pedido::date BETWEEN inicio AND fim
+      AND (p.status IS NULL OR LOWER(p.status) NOT LIKE '%canc%')
+      AND rep.supervisor IS NOT NULL AND TRIM(rep.supervisor) <> ''
+      AND rep.ativo IS TRUE
+      AND (p_rep IS NULL OR p.representante_codigo = p_rep)
+    GROUP BY p.representante_codigo
+    ORDER BY faturamento DESC
     LIMIT limite
   ) r;
 $$;
@@ -206,9 +210,11 @@ RETURNS JSON LANGUAGE SQL STABLE SECURITY DEFINER AS $$
       MAX(rep.meta)                                                  AS meta_metros,
       ROUND(SUM(p.quantidade_total) / NULLIF(MAX(rep.meta),0) * 100, 1) AS percentual_atingido
     FROM pedidos_totvs p
-    LEFT JOIN representantes rep ON rep.codigo = p.representante_codigo
+    INNER JOIN representantes rep ON rep.codigo = p.representante_codigo
     WHERE p.data_pedido::date BETWEEN inicio AND fim
       AND (p.status IS NULL OR LOWER(p.status) NOT LIKE '%canc%')
+      AND rep.supervisor IS NOT NULL AND TRIM(rep.supervisor) <> ''
+      AND rep.ativo IS TRUE
     GROUP BY p.representante_codigo
     HAVING SUM(p.quantidade_total) < MAX(rep.meta)
   ) r;

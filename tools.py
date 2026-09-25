@@ -148,7 +148,8 @@ TOOLS = [
             "6. REGRA CRÍTICA PARA CONSULTAS DE PEDIDOS E CARTEIRA: Sempre que o usuário perguntar por pedidos em andamento, carteira ou listagem de pedidos de vendas, você DEVE incluir na consulta SQL as colunas de totalização global da base completa usando Window Functions:\n"
             "   COUNT(*) OVER() AS total_pedidos_geral, SUM(valor_total) OVER() AS valor_total_geral, SUM(quantidade_total) OVER() AS metragem_total_geral.\n"
             "   Exemplo: SELECT COUNT(*) OVER() AS total_pedidos_geral, SUM(valor_total) OVER() AS valor_total_geral, SUM(quantidade_total) OVER() AS metragem_total_geral, totvs_order_code, cliente_nome, representante_nome, data_pedido::date, valor_total, previsao_faturamento::date, status FROM pedidos_totvs WHERE status NOT IN ('Canceled', 'Attended') ORDER BY data_pedido DESC LIMIT 50;\n"
-            "   Dessa forma, mesmo que a cláusula LIMIT 50 restrinja as linhas na tabela da tela, o totalizador citará no texto a quantidade real exata (ex: 370 pedidos) e o valor total real da carteira inteira (ex: R$ 7.519.850,22)."
+            "   Dessa forma, mesmo que a cláusula LIMIT 50 restrinja as linhas na tabela da tela, o totalizador citará no texto a quantidade real exata (ex: 370 pedidos) e o valor total real da carteira inteira (ex: R$ 7.519.850,22).\n"
+            "7. REGRA CRÍTICA PARA REPRESENTANTES E VENDEDORES: Sempre que a consulta envolver representantes/vendedores, você DEVE obrigatoriamente fazer INNER JOIN representantes rep ON rep.codigo = p.representante_codigo e filtrar rep.supervisor IS NOT NULL AND TRIM(rep.supervisor) <> '' AND rep.ativo IS TRUE. NUNCA traga representantes inativos, sem supervisor ou códigos de apoio TOTVS ('REPRESENTANTE TOTVS #...')."
         ),
         "parameters": {"type": "object", "properties": {
             "sql": {"type": "string", "description": "Consulta SQL PostgreSQL (SELECT) válida"}
