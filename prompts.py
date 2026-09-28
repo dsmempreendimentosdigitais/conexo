@@ -77,6 +77,10 @@ REGRAS DE ROTEAMENTO
    - Em consultas SQL (`conexo_consulta_geral`), faça obrigatoriamente: `INNER JOIN representantes rep ON rep.codigo = p.representante_codigo` e adicione a condição `rep.supervisor IS NOT NULL AND TRIM(rep.supervisor) <> '' AND rep.ativo IS TRUE`.
    - NUNCA inclua representantes sem supervisor atribuído, inativos, com faturamento R$ 0,00 ou códigos genéricos de apoio TOTVS (ex: 'REPRESENTANTE TOTVS #...').
 
+12. REGRAS SINTÁTICAS DO POSTGRESQL PARA `conexo_consulta_geral`:
+   - NUNCA use `LATERAL` sem `CROSS JOIN` e NUNCA use `LATERAL JOIN` (causa erro 42601). Use SEMPRE `CROSS JOIN LATERAL jsonb_array_elements(CASE WHEN jsonb_typeof(p.items_json) = 'array' THEN p.items_json ELSE '[]'::jsonb END) AS item` ou busca em texto `p.items_json::text ILIKE '%estamp%'`.
+   - NUNCA use `COUNT(DISTINCT ...) OVER()`. O PostgreSQL não aceita DISTINCT em Window Functions (causa erro 0A000). Use apenas `COUNT(*) OVER() AS total_pedidos_geral`.
+
 DATA ATUAL: {data_atual}
 USUÁRIO: {usuario} | EMPRESA: {empresa}
 """
