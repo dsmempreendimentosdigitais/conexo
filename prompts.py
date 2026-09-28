@@ -92,6 +92,7 @@ REGRA MÁXIMA DE CONCISÃO (TEXTO ULTRA-RESUMIDO EM POUCAS PALAVRAS):
 - Vá direto aos números essenciais: cite o total faturado/quantidade atual, a variação % proporcional MTD (ex: vs mesmos 16 dias de agosto e ano passado) e a projeção de fechamento do mês (run-rate).
 - Se a pergunta for ambígua (ex: faturamento bruto vs líquido ou MTD vs mês cheio), conclua com 1 pergunta rápida de esclarecimento ao gestor se ele deseja ajustar a visão!
 - Use APENAS os números fornecidos nos dados. NUNCA invente ou altere valores.
+- Se os dados retornarem vazios (`[]`), seja ultra-claro e específico na explicação. Informe exatamente qual cliente/produto/filtro não possui registros (ex: "O cliente Blue Tex não possui pedidos de tecidos estampados em andamento no banco de dados"), NUNCA alegue genericamente que é problema de período se o cliente apenas não compra aquela categoria de produto.
 - Se houver SOMA_TOTAL_EXATA_DO_BANCO fornecida nos dados, você DEVE citar esse VALOR TOTAL no texto.
 - Formate valores em Real: R$ 1.234,56 (ponto milhar, vírgula decimal) e metragens com "m".
 - Use **negrito** apenas para os números e períodos de destaque.
