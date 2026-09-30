@@ -685,12 +685,27 @@ function ColorSquare({ colorHex }) {
 // Tabela simples para exibir lista de linhas no relatório PDF
 function TabelaSimples({ dados, titulo }) {
   if (!Array.isArray(dados) || dados.length === 0) return null;
-  const colunas = Object.keys(dados[0]);
+  
+  const rawColunas = Object.keys(dados[0]);
+
+  // Remove a coluna duplicada 'valor_total_geral' e 'metragem_total_geral' da exibição da tabela
+  const colunas = rawColunas.filter((col) => {
+    const c = col.toLowerCase();
+    if (
+      c === "valor_total_geral" ||
+      c === "metragem_total_geral" ||
+      c.includes("valor_total_dos_pedidos_geral") ||
+      c.includes("metragem_total_dos_pedidos_geral")
+    ) {
+      return false;
+    }
+    return true;
+  });
 
   // Função estrita para determinar se a coluna é somável (Valores ou Metragens, NUNCA códigos/IDs)
   const isSummableColumn = (col) => {
     const c = col.toLowerCase();
-    if (c.includes("cod") || c.includes("code") || c.includes("id") || c.includes("op") || c.includes("pedido") || c.includes("order") || c.includes("cpf") || c.includes("cnpj")) {
+    if (c.includes("total_pedidos") || c.includes("cod") || c.includes("code") || c.includes("id") || c.includes("op") || c.includes("pedido") || c.includes("order") || c.includes("cpf") || c.includes("cnpj")) {
       return false;
     }
     return (
@@ -699,7 +714,6 @@ function TabelaSimples({ dados, titulo }) {
       c.includes("metr") ||
       c.includes("quantidade") ||
       c.includes("qtd") ||
-      c.includes("total") ||
       c.includes("receita") ||
       c.includes("ticket")
     );
@@ -718,8 +732,17 @@ function TabelaSimples({ dados, titulo }) {
     if (v == null || v === "") return "—";
     const colLower = (col || "").toLowerCase();
     
+    // Formata qualquer data ISO (AAAA-MM-DD ou AAAA-MM-DDTHH:mm:ss) para o padrão brasileiro DD/MM/AAAA
+    if (typeof v === "string") {
+      const dateMatch = v.match(/^(\d{4})-(\d{2})-(\d{2})/);
+      if (dateMatch) {
+        const [, ano, mes, dia] = dateMatch;
+        return `${dia}/${mes}/${ano}`;
+      }
+    }
+
     // Se for código ou ID, retorna como texto puro sem formatação de moeda
-    if (colLower.includes("cod") || colLower.includes("code") || colLower.includes("id") || colLower.includes("op") || colLower.includes("pedido")) {
+    if (colLower.includes("cod") || colLower.includes("code") || colLower.includes("id") || colLower.includes("op") || colLower.includes("pedido") || colLower.includes("numero")) {
       return String(v);
     }
 
@@ -744,6 +767,11 @@ function TabelaSimples({ dados, titulo }) {
     return String(v);
   };
 
+  const isIndexCol = (c) => {
+    const cLower = c.toLowerCase();
+    return cLower.includes("total_pedidos") || cLower.includes("total_itens") || cLower === "index" || cLower === "nº";
+  };
+
   return (
     <div className="pdf-tabela" style={{ marginTop: 8 }}>
       {titulo && <div className="chart-title" style={{ fontSize: 13, fontWeight: 700, color: "#f8fafc", marginBottom: 6 }}>{titulo}</div>}
@@ -751,8 +779,8 @@ function TabelaSimples({ dados, titulo }) {
         <thead>
           <tr>
             {colunas.map((c) => (
-              <th key={c} style={{ textAlign: "left", padding: "6px 8px", borderBottom: "1px solid #334155", color: "#94a3b8", fontWeight: 600, background: "#0f172a" }}>
-                {c.replace(/_/g, " ").toUpperCase()}
+              <th key={c} style={{ textAlign: isIndexCol(c) ? "center" : "left", padding: "6px 8px", borderBottom: "1px solid #334155", color: "#94a3b8", fontWeight: 600, background: "#0f172a" }}>
+                {isIndexCol(c) ? "Nº" : c.replace(/_/g, " ").toUpperCase()}
               </th>
             ))}
           </tr>
@@ -767,9 +795,9 @@ function TabelaSimples({ dados, titulo }) {
                   const isColorCol = cLower.includes("cor") || cLower.includes("color") || cLower === "hex_color";
 
                   return (
-                    <td key={c} style={{ padding: "5px 8px", borderBottom: "1px solid #1e293b" }}>
+                    <td key={c} style={{ padding: "5px 8px", borderBottom: "1px solid #1e293b", textAlign: isIndexCol(c) ? "center" : "left", fontWeight: isIndexCol(c) ? 700 : 400, color: isIndexCol(c) ? "#38bdf8" : "inherit" }}>
                       {isColorCol && <ColorSquare colorHex={rowHex} />}
-                      {cLower === "hex_color" ? rowHex : fmt(row[c], c)}
+                      {isIndexCol(c) ? i + 1 : cLower === "hex_color" ? rowHex : fmt(row[c], c)}
                     </td>
                   );
                 })}
@@ -779,11 +807,21 @@ function TabelaSimples({ dados, titulo }) {
         </tbody>
         <tfoot>
           <tr style={{ background: "#0f172a", borderTop: "2px solid #38bdf8", fontWeight: 700, color: "#f8fafc" }}>
-            {colunas.map((c, i) => (
-              <td key={c} style={{ padding: "8px", borderBottom: "1px solid #38bdf8" }}>
-                {i === 0 ? "TOTAL GERAL" : totais[c] !== undefined ? fmt(totais[c], c) : ""}
-              </td>
-            ))}
+            {colunas.map((c, i) => {
+              let footerVal = "";
+              if (isIndexCol(c)) {
+                footerVal = String(dados[0][c] || dados.length);
+              } else if (i === 0 && !colunas.some(isIndexCol)) {
+                footerVal = "TOTAL GERAL";
+              } else if (totais[c] !== undefined) {
+                footerVal = fmt(totais[c], c);
+              }
+              return (
+                <td key={c} style={{ padding: "8px", borderBottom: "1px solid #38bdf8", textAlign: isIndexCol(c) ? "center" : "left", color: isIndexCol(c) ? "#38bdf8" : "#f8fafc" }}>
+                  {footerVal}
+                </td>
+              );
+            })}
           </tr>
         </tfoot>
       </table>
