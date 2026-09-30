@@ -81,6 +81,12 @@ REGRAS DE ROTEAMENTO
    - NUNCA use `LATERAL` sem `CROSS JOIN` e NUNCA use `LATERAL JOIN` (causa erro 42601). Use SEMPRE `CROSS JOIN LATERAL jsonb_array_elements(CASE WHEN jsonb_typeof(p.items_json) = 'array' THEN p.items_json ELSE '[]'::jsonb END) AS item` ou busca em texto `p.items_json::text ILIKE '%estamp%'`.
    - NUNCA use `COUNT(DISTINCT ...) OVER()`. O PostgreSQL não aceita DISTINCT em Window Functions (causa erro 0A000). Use apenas `COUNT(*) OVER() AS total_pedidos_geral`.
 
+13. PEDIDOS BLOQUEADOS E NO PORTAL DE VENDAS (vendas.designtex.com.br):
+   - Sempre que o usuário perguntar por "pedidos bloqueados", "pedidos travados", "aprovações pendentes" ou "pedidos do força de vendas", você DEVE obrigatoriamente consultar a tabela `pedidos` (Portal de Vendas) fazendo JOIN com `clientes c ON c.id = p.cliente_id` e JOIN `representantes r ON r.codigo = p.representante_codigo` com a condição `WHERE p.status ILIKE '%bloquead%' AND p.valor_total > 0`.
+
+14. REGRA OBRIGATÓRIA CONTRA PEDIDOS ZERADOS:
+   - NUNCA inclua pedidos com `valor_total = 0` ou `valor_total IS NULL` em listagens de pedidos, carteira ou bloqueados. Adicione SEMPRE a condição `valor_total > 0` (ou `p.valor_total > 0`).
+
 DATA ATUAL: {data_atual}
 USUÁRIO: {usuario} | EMPRESA: {empresa}
 """

@@ -37,10 +37,21 @@ Campos principais:
 ## REGRAS CRÍTICAS DE DADOS
 
 FATURAMENTO: usar nota_fiscal_data::date como filtro de data, valor_nf como valor, status IN ('Attended','PartiallyAnswered')
-CARTEIRA: usar data_pedido::date, valor_total, status IN ('InProgress','Blocked','InComposition')
-CÓDIGO DO PEDIDO: sempre usar totvs_order_code (ex: 35828), nunca id interno
+CARTEIRA EM ANDAMENTO: usar data_pedido::date, valor_total, status IN ('InProgress','Blocked','InComposition')
+PEDIDOS BLOQUEADOS / PORTAL DE VENDAS (vendas.designtex.com.br): Usar a tabela `pedidos` (Portal de Vendas), JOIN clientes c ON c.id = p.cliente_id, JOIN representantes r ON r.codigo = p.representante_codigo, onde `p.status = 'Bloqueado'` e `p.valor_total > 0`.
+FILTRO DE VALOR ZERADO (OBRIGATÓRIO): NUNCA inclua pedidos com `valor_total = 0` ou `valor_total IS NULL` em listagens de pedidos, carteira ou bloqueados. Adicione SEMPRE `valor_total > 0`.
+CÓDIGO DO PEDIDO: sempre usar totvs_order_code ou numero (ex: 35828 ou W001347GIGI), nunca id interno
 META PADRÃO: R$ 10.000/mês por representante
 TIMEZONE: UTC no banco, exibir em Brasília (UTC-3)
+
+## CAMPOS DA TABELA pedidos (Portal de Vendas — vendas.designtex.com.br)
+
+- `numero`: código legível do pedido no portal (ex: "W001347GIGI", "36554")
+- `status`: status no portal (ex: "Bloqueado", "Atendido", "Aprovado", "Cancelado")
+- `valor_total`: valor total do pedido no portal
+- `created_at`: data de criação do pedido no portal (usar `created_at::date`)
+- `cliente_id`: ID para JOIN com `clientes c ON c.id = p.cliente_id` (`c.razao_social AS cliente_nome`)
+- `representante_codigo`: código para JOIN com `representantes r ON r.codigo = p.representante_codigo` (`r.nome AS representante_nome`)
 
 ## CAMPOS DA TABELA pedidos_totvs
 
