@@ -8,6 +8,9 @@ import {
   ResponsiveContainer,
   Cell,
   LabelList,
+  PieChart,
+  Pie,
+  Legend,
 } from "recharts";
 
 const brl = (v) =>
@@ -196,6 +199,101 @@ function Barras({ dados, nameKey, valKey, title }) {
       <div style={{ borderTop: "1px solid #334155", marginTop: 8, paddingTop: 8, color: "#94a3b8", fontSize: 12, textAlign: "right" }}>
         TOTAL: <strong>{isMeter ? meters(total) : brl(total)}</strong>
       </div>
+    </div>
+  );
+}
+
+// ── Gráfico de Pizza / Rosca Inteligente ──────────────────────────
+function PizzaChart({ dados, nameKey, valKey, title }) {
+  if (!Array.isArray(dados) || dados.length === 0) return null;
+
+  const first = dados[0] || {};
+  const hasPcpBreakdown = "quantidade_solicitada" in first || "quantidade_disponivel" in first || "quantidade_reservada" in first;
+
+  let pieData = [];
+
+  if (hasPcpBreakdown) {
+    const totalSolicitado = dados.reduce((acc, curr) => acc + (Number(curr.quantidade_solicitada) || 0), 0);
+    const totalDisponivel = dados.reduce((acc, curr) => acc + (Number(curr.quantidade_disponivel) || 0), 0);
+    const totalReservado  = dados.reduce((acc, curr) => acc + (Number(curr.quantidade_reservada) != null ? Number(curr.quantidade_reservada) : Math.max(0, (Number(curr.quantidade_solicitada) || 0) - (Number(curr.quantidade_disponivel) || 0))), 0);
+
+    const base = totalSolicitado || (totalDisponivel + totalReservado) || 1;
+    const pctDisp = ((totalDisponivel / base) * 100).toFixed(1);
+    const pctRes  = ((totalReservado / base) * 100).toFixed(1);
+
+    pieData = [
+      { name: `Disponível (${pctDisp}%)`, value: totalDisponivel, valueFmt: meters(totalDisponivel), fill: "#10b981", pct: pctDisp },
+      { name: `Reservado / Vendido (${pctRes}%)`, value: totalReservado, valueFmt: meters(totalReservado), fill: "#f59e0b", pct: pctRes },
+    ].filter(d => d.value > 0);
+  } else {
+    const isMeter = valKey && (valKey.toLowerCase().includes("metr") || valKey.toLowerCase().includes("quantidade") || valKey.toLowerCase().includes("qtd"));
+    const map = {};
+    let grandTotal = 0;
+
+    dados.forEach((r, i) => {
+      const name = formatChartLabel(r, nameKey || "nome_tecido");
+      const val = Number(r[valKey] || r.faturamento || r.valor || r.quantidade_solicitada || 0);
+      map[name] = (map[name] || 0) + val;
+      grandTotal += val;
+    });
+
+    pieData = Object.entries(map).map(([name, val], i) => {
+      const pct = grandTotal > 0 ? ((val / grandTotal) * 100).toFixed(1) : "0";
+      return {
+        name: `${name} (${pct}%)`,
+        nomeCompleto: name,
+        value: val,
+        valueFmt: isMeter ? meters(val) : brl(val),
+        fill: getHexColor({ nome_tecido: name }, i),
+        pct,
+      };
+    });
+  }
+
+  if (pieData.length === 0) return null;
+
+  return (
+    <div className="chart-wrapper" style={{ background: "#1e293b", padding: 16, borderRadius: 12, border: "1px solid #334155", marginTop: 12 }}>
+      {title && <div className="chart-title" style={{ color: "#f8fafc", fontSize: 14, fontWeight: 700, marginBottom: 12 }}>{title}</div>}
+      <ResponsiveContainer width="100%" height={260}>
+        <PieChart>
+          <Pie
+            data={pieData}
+            cx="50%"
+            cy="50%"
+            innerRadius={55}
+            outerRadius={90}
+            paddingAngle={3}
+            dataKey="value"
+          >
+            {pieData.map((entry, index) => (
+              <Cell key={`cell-${index}`} fill={entry.fill} stroke="#0f172a" strokeWidth={2} />
+            ))}
+          </Pie>
+          <Tooltip
+            content={({ active, payload }) => {
+              if (active && payload && payload.length) {
+                const d = payload[0].payload;
+                return (
+                  <div style={{ background: "#0f172a", border: "1px solid #38bdf8", borderRadius: 8, padding: "8px 12px", color: "#fff" }}>
+                    <div style={{ fontSize: 12, fontWeight: 600, color: "#94a3b8" }}>{d.name}</div>
+                    <div style={{ fontSize: 14, fontWeight: 700, color: d.fill, marginTop: 4 }}>
+                      Volume: {d.valueFmt} ({d.pct}%)
+                    </div>
+                  </div>
+                );
+              }
+              return null;
+            }}
+          />
+          <Legend
+            verticalAlign="bottom"
+            height={36}
+            iconType="circle"
+            formatter={(val) => <span style={{ color: "#cbd5e1", fontSize: 11, fontWeight: 600 }}>{val}</span>}
+          />
+        </PieChart>
+      </ResponsiveContainer>
     </div>
   );
 }
@@ -596,7 +694,7 @@ export default function Dashboard({ intent, dados, pergunta = "" }) {
         <div>
           <TabelaSimples dados={listaDados} titulo="Programação de Produção (PCP)" />
           <SmartChartBlock pergunta={pergunta}>
-            <BarrasIntent dados={listaDados} nameKey={nameKey} valKey="quantidade_solicitada" title="Metragem Programada por Tecido" />
+            <PizzaChart dados={listaDados} nameKey={nameKey} valKey="quantidade_solicitada" title="Proporção & Análise da Produção (PCP)" />
           </SmartChartBlock>
         </div>
       );
@@ -612,13 +710,16 @@ export default function Dashboard({ intent, dados, pergunta = "" }) {
       const firstRow = listaDados[0];
       const keys = Object.keys(firstRow);
       
-      const numericCandidates = ["quantidade_disponivel", "quantidade_solicitada", "valor_nf", "valor_total", "faturamento", "valor", "total", "metros", "quantidade", "quantidade_total"];
+      const p = (pergunta || "").toLowerCase();
+      const hasOpOrPcp = "op" in firstRow || "quantidade_solicitada" in firstRow || "quantidade_reservada" in firstRow || p.includes("op") || p.includes("pcp") || p.includes("programacao") || p.includes("proporcao") || p.includes("pizza") || p.includes("artigo");
+
+      const numericCandidates = ["quantidade_disponivel", "quantidade_solicitada", "quantidade_reservada", "valor_nf", "valor_total", "faturamento", "valor", "total", "metros", "quantidade", "quantidade_total"];
       let valKey = keys.find(k => numericCandidates.includes(k.toLowerCase()));
       if (!valKey) {
         valKey = keys.find(k => typeof firstRow[k] === "number");
       }
       
-      const textCandidates = ["descricao", "nome_tecido", "nome_cor", "cor", "totvs_order_code", "cliente_nome", "cliente", "representante_nome", "vendedor", "nome", "uf", "produto", "artigo"];
+      const textCandidates = ["nome_tecido", "descricao", "nome_cor", "cor", "totvs_order_code", "cliente_nome", "cliente", "representante_nome", "vendedor", "nome", "uf", "produto", "artigo", "op"];
       let nameKey = keys.find(k => textCandidates.includes(k.toLowerCase()));
       if (!nameKey) {
         nameKey = keys.find(k => typeof firstRow[k] === "string" && !k.toLowerCase().includes("data") && !k.toLowerCase().includes("created"));
@@ -629,7 +730,11 @@ export default function Dashboard({ intent, dados, pergunta = "" }) {
           <TabelaSimples dados={listaDados} titulo="Dados Consultados" />
           {valKey && nameKey && (
             <SmartChartBlock pergunta={pergunta}>
-              <BarrasIntent dados={listaDados} nameKey={nameKey} valKey={valKey} title="Visualização Gráfica" />
+              {hasOpOrPcp ? (
+                <PizzaChart dados={listaDados} nameKey={nameKey} valKey={valKey} title="Proporção & Análise de Volume (PCP / Produção)" />
+              ) : (
+                <BarrasIntent dados={listaDados} nameKey={nameKey} valKey={valKey} title="Visualização Gráfica" />
+              )}
             </SmartChartBlock>
           )}
         </div>
