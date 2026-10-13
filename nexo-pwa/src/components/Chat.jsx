@@ -498,7 +498,7 @@ export default function Chat({ token, email, onLogout }) {
         {/* Mensagens */}
         <div className="messages-area">
           {msgs.map((m, i) => (
-            <Message key={i} msg={m} />
+            <Message key={i} msg={m} onEnviar={enviar} />
           ))}
 
           {/* Empty State / Cards Interativos de Perguntas Estratégicas quando só há boas-vindas */}

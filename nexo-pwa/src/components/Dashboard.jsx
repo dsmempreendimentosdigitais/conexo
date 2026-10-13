@@ -425,48 +425,99 @@ function Fontes({ fontes }) {
 function abrirImpressaoUniversal(htmlContent, titulo = "Relatório CONEXO") {
   const dataHoje = new Date().toLocaleDateString("pt-BR", { day: "2-digit", month: "long", year: "numeric" });
   
+  // Higieniza HTML limpando cores claras de modo escuro para garantir texto 100% PRETO e alto contraste no PDF
+  const cleanedHtml = (htmlContent || "")
+    .replace(/color:\s*(#f8fafc|#cbd5e1|#94a3b8|#64748b|rgb\(248,\s*250,\s*252\)|rgb\(203,\s*213,\s*225\)|rgb\(148,\s*163,\s*184\)|rgb\(100,\s*116,\s*139\)|inherit)/gi, "color: #000000")
+    .replace(/background:\s*(#1e293b|rgb\(30,\s*41,\s*59\))/gi, "background: transparent")
+    .replace(/border-bottom:\s*1px\s*solid\s*(#1e293b|#334155|rgb\(30,\s*41,\s*59\)|rgb\(51,\s*65,\s*85\))/gi, "border-bottom: 1px solid #cbd5e1");
+
   const fullHtml = `<!DOCTYPE html><html lang="pt-BR"><head>
     <meta charset="UTF-8"/>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
     <title>${titulo} — ${dataHoje}</title>
     <style>
-      body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; color: #1a1a2e; background: #f8fafc; padding: 16px; font-size: 12px; margin: 0; }
-      .header-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; background: #0f172a; color: white; padding: 12px 16px; border-radius: 10px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
-      .btn-print { background: #0284c7; color: white; border: none; padding: 10px 18px; border-radius: 8px; font-weight: 700; font-size: 13px; cursor: pointer; display: flex; align-items: center; gap: 6px; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
-      .report-card { background: white; padding: 20px; border-radius: 12px; border: 1px solid #e2e8f0; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
-      h1 { font-size: 18px; color: #0f172a; margin: 0 0 4px 0; }
-      .subtitulo { color: #64748b; font-size: 11px; margin-bottom: 16px; }
+      body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; color: #000000; background: #f8fafc; padding: 16px; font-size: 12px; margin: 0; }
+      .header-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; background: #0f172a; color: white; padding: 12px 16px; border-radius: 10px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); gap: 12px; flex-wrap: wrap; }
+      .header-left { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+      .btn-voltar { background: #1e293b; color: #ffffff; border: 1px solid #475569; padding: 10px 18px; border-radius: 8px; font-weight: 700; font-size: 13px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 2px 4px rgba(0,0,0,0.2); text-decoration: none; transition: background 0.2s; }
+      .btn-voltar:hover, .btn-voltar:active { background: #334155; border-color: #94a3b8; }
+      .btn-print { background: #0284c7; color: white; border: none; padding: 10px 18px; border-radius: 8px; font-weight: 700; font-size: 13px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
+      .btn-print:hover { background: #0369a1; }
+      .bottom-bar { display: flex; gap: 12px; margin-top: 20px; padding: 14px 16px; background: #0f172a; border-radius: 10px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); flex-wrap: wrap; }
+      .report-card { background: #ffffff; padding: 24px; border-radius: 12px; border: 1px solid #cbd5e1; box-shadow: 0 1px 4px rgba(0,0,0,0.06); }
+      
+      /* Regra estrita: Toda a tipografia de dados no relatório é PRETA (#000000) para máxima visibilidade e contraste */
+      .report-card, 
+      .report-card table, 
+      .report-card tbody, 
+      .report-card tr, 
+      .report-card td, 
+      .report-card p, 
+      .report-card span, 
+      .report-card div:not(.no-print) {
+        color: #000000 !important;
+      }
+      .report-card h1 { font-size: 20px; font-weight: 800; color: #000000 !important; margin: 0 0 6px 0; }
+      .report-card .subtitulo { color: #334155 !important; font-size: 12px; font-weight: 600; margin-bottom: 20px; }
+      .report-card .section-title, .report-card .chart-title { font-size: 14px !important; font-weight: 800 !important; color: #000000 !important; margin: 20px 0 10px !important; border-bottom: 2px solid #000000 !important; padding-bottom: 6px !important; text-transform: uppercase !important; }
+      .report-card table { width: 100% !important; border-collapse: collapse !important; margin-bottom: 20px !important; font-size: 12px !important; }
+      .report-card th { text-align: left !important; padding: 8px 8px !important; background: #0f172a !important; color: #ffffff !important; font-size: 11px !important; font-weight: 700 !important; text-transform: uppercase !important; border-bottom: 2px solid #000000 !important; }
+      .report-card td { padding: 8px 8px !important; border-bottom: 1px solid #cbd5e1 !important; color: #000000 !important; font-size: 12px !important; font-weight: 600 !important; }
+      .report-card tr:nth-child(even) td { background: #f8fafc !important; }
+      .report-card tr:nth-child(odd) td { background: #ffffff !important; }
+      .report-card tfoot tr td { background: #0f172a !important; color: #ffffff !important; font-weight: 700 !important; }
+      .report-card .footer { margin-top: 28px !important; font-size: 11px !important; color: #475569 !important; border-top: 1px solid #cbd5e1 !important; padding-top: 10px !important; font-weight: 500 !important; }
+      
       .kpi-grid { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 16px; }
       .kpi-card { border: 1px solid #cbd5e1; padding: 10px 14px; border-radius: 8px; min-width: 110px; flex: 1; background: #f8fafc; }
       .kpi-label { font-size: 10px; color: #64748b; text-transform: uppercase; letter-spacing: .5px; margin-bottom: 2px; }
       .kpi-value { font-size: 18px; font-weight: 700; color: #0f172a; }
-      .section-title, .chart-title { font-size: 13px; font-weight: 700; color: #334155; margin: 16px 0 8px; border-bottom: 2px solid #e2e8f0; padding-bottom: 4px; }
-      table { width: 100%; border-collapse: collapse; margin-bottom: 16px; font-size: 11px; }
-      th { text-align: left; padding: 6px; background: #f1f5f9; color: #334155; font-size: 10px; text-transform: uppercase; border-bottom: 2px solid #cbd5e1; }
-      td { padding: 6px; border-bottom: 1px solid #e2e8f0; color: #1e293b; }
-      tr:nth-child(even) td { background: #f8fafc; }
-      .footer { margin-top: 24px; font-size: 10px; color: #94a3b8; border-top: 1px solid #e2e8f0; padding-top: 8px; }
+      
       @media print {
         .no-print { display: none !important; }
         body { padding: 0; background: white; }
-        .report-card { border: none; shadow: none; padding: 0; }
+        .report-card { border: none; box-shadow: none; padding: 0; }
       }
     </style>
   </head><body>
     <div class="header-bar no-print">
-      <div>
-        <div style="font-size:14px; font-weight:700;">📄 Relatório Comercial CONEXO</div>
-        <div style="font-size:11px; opacity:0.8;">Toque no botão para salvar em PDF ou imprimir</div>
+      <div class="header-left">
+        <button class="btn-voltar" onclick="voltarAoConexo()">⬅️ Voltar ao CONEXO</button>
+        <div>
+          <div style="font-size:14px; font-weight:700;">📄 Relatório Comercial CONEXO</div>
+          <div style="font-size:11px; opacity:0.85;">Visualização de Relatório</div>
+        </div>
       </div>
       <button class="btn-print" onclick="window.print()">🖨️ Salvar em PDF</button>
     </div>
     <div class="report-card">
       <h1>📊 ${titulo}</h1>
       <div class="subtitulo">Gerado em ${dataHoje} — Designtex Tecidos / CONEXO</div>
-      ${htmlContent}
+      ${cleanedHtml}
       <div class="footer">Gerado automaticamente pelo CONEXO — Inteligência Comercial</div>
     </div>
+    <div class="bottom-bar no-print">
+      <button class="btn-voltar" onclick="voltarAoConexo()" style="flex:1; justify-content:center;">⬅️ Voltar ao CONEXO</button>
+      <button class="btn-print" onclick="window.print()" style="flex:1; justify-content:center;">🖨️ Salvar em PDF</button>
+    </div>
     <script>
+      function voltarAoConexo() {
+        try {
+          if (window.opener && !window.opener.closed) {
+            window.close();
+            return;
+          }
+        } catch(e) {}
+        try {
+          window.close();
+        } catch(e) {}
+        if (window.history && window.history.length > 1) {
+          window.history.back();
+        } else {
+          window.location.href = window.location.origin || "/";
+        }
+      }
+
       // No desktop dispara a caixa de impressão automaticamente
       if (!/Android|iPhone|iPad|iPod/i.test(navigator.userAgent)) {
         setTimeout(function() { window.print(); }, 400);
