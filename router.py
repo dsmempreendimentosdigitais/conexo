@@ -29,13 +29,29 @@ def rotear(pergunta: str, usuario: str, historico: list | None = None) -> tuple[
 
     msgs.append({"role": "user", "content": pergunta})
 
-    resp = client.chat.completions.create(
-        model=config.MODEL_ROUTER,
-        messages=msgs,
-        tools=TOOLS,
-        tool_choice="required",   # obriga escolher uma ferramenta
-        temperature=0,            # roteamento é decisão, não criatividade
-    )
+    import time
+    resp = None
+    ultimo_erro = None
+    for tentativa in range(2):
+        try:
+            resp = client.chat.completions.create(
+                model=config.MODEL_ROUTER,
+                messages=msgs,
+                tools=TOOLS,
+                tool_choice="required",   # obriga escolher uma ferramenta
+                temperature=0,            # roteamento é decisão, não criatividade
+            )
+            break
+        except Exception as e:
+            ultimo_erro = e
+            if tentativa == 0 and any(code in str(e) for code in ["503", "429", "UNAVAILABLE", "quota"]):
+                time.sleep(1.5)
+                continue
+            raise
+
+    if not resp:
+        raise ultimo_erro or RuntimeError("Falha no roteamento")
+
     call = resp.choices[0].message.tool_calls
     if not call:
         return "fora_de_escopo", {"motivo": "não foi possível interpretar"}

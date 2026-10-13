@@ -227,6 +227,21 @@ def perguntar_stream(body: PerguntaIn, ctx: dict = Depends(get_contexto)):
 # Transcrição de áudio (Whisper)
 # ─────────────────────────────────────────────────
 
+def _detectar_mimetype_audio(filename: str, content_type: str | None) -> str:
+    fn = filename.lower()
+    ct = (content_type or "").lower()
+    if "webm" in fn or "webm" in ct:
+        return "audio/webm"
+    if "mp4" in fn or "m4a" in fn or "aac" in fn or "mp4" in ct or "m4a" in ct:
+        return "audio/mp4"
+    if "wav" in fn or "wav" in ct:
+        return "audio/wav"
+    if "ogg" in fn or "ogg" in ct:
+        return "audio/ogg"
+    if "mp3" in fn or "mpeg" in ct:
+        return "audio/mp3"
+    return "audio/webm"
+
 @app.post("/conexo/transcrever")
 async def transcrever(
     audio: UploadFile = File(...),
@@ -237,15 +252,45 @@ async def transcrever(
         filename = audio.filename or "fala.webm"
         if not filename.endswith((".webm", ".m4a", ".mp4", ".wav", ".ogg", ".mp3")):
             filename += ".webm"
+
+        content_type = _detectar_mimetype_audio(filename, audio.content_type)
+
+        if config.IS_GEMINI:
+            import base64
+            import requests
+
+            b64_audio = base64.b64encode(conteudo).decode("utf-8")
+            url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={config.OPENAI_API_KEY}"
+            payload = {
+                "contents": [{
+                    "parts": [
+                        {"inline_data": {"mime_type": content_type, "data": b64_audio}},
+                        {"text": "Transcreva exatamente o que foi dito neste áudio em português. Retorne APENAS o texto falado transcrito. Se não houver fala clara ou for apenas ruído/silêncio, responda vazio."}
+                    ]
+                }],
+                "generationConfig": {"temperature": 0.0}
+            }
+            resp = requests.post(url, json=payload, timeout=25)
+            if resp.status_code != 200:
+                raise HTTPException(status_code=500, detail=f"Erro no serviço de áudio: {resp.text}")
             
-        content_type = audio.content_type or "audio/webm"
-        
-        resp = client_oa.audio.transcriptions.create(
-            model="whisper-1",
-            file=(filename, conteudo, content_type),
-            language="pt",
-        )
-        return {"texto": resp.text}
+            data = resp.json()
+            candidates = data.get("candidates", [])
+            texto = ""
+            if candidates:
+                parts = candidates[0].get("content", {}).get("parts", [])
+                if parts:
+                    texto = parts[0].get("text", "").strip()
+            return {"texto": texto}
+        else:
+            resp = client_oa.audio.transcriptions.create(
+                model="whisper-1",
+                file=(filename, conteudo, content_type),
+                language="pt",
+            )
+            return {"texto": resp.text}
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Erro ao processar transcrição de áudio: {str(e)}")
 

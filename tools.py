@@ -154,9 +154,9 @@ TOOLS = [
             "7. REGRA CRÍTICA PARA CONSULTAS DE PEDIDOS E CARTEIRA: Sempre que o usuário perguntar por pedidos em andamento, carteira ou listagem de pedidos de vendas, você DEVE incluir na consulta SQL as colunas de totalização global usando Window Functions simples SEM DISTINCT:\n"
             "   `COUNT(*) OVER() AS total_pedidos_geral, SUM(valor_total) OVER() AS valor_total_geral, SUM(quantidade_total) OVER() AS metragem_total_geral`.\n"
             "   ATENÇÃO: NUNCA use `COUNT(DISTINCT ...) OVER()` pois o PostgreSQL não suporta DISTINCT em Window Functions (erro 0A000!). Use apenas `COUNT(*) OVER()`.\n"
-            "   Exemplo: SELECT COUNT(*) OVER() AS total_pedidos_geral, SUM(valor_total) OVER() AS valor_total_geral, SUM(quantidade_total) OVER() AS metragem_total_geral, totvs_order_code, cliente_nome, representante_nome, data_pedido::date, valor_total, previsao_faturamento::date, status FROM pedidos_totvs WHERE status NOT IN ('Canceled', 'Attended') ORDER BY data_pedido DESC LIMIT 50;\n"
-            "8. REGRA CRÍTICA PARA REPRESENTANTES E VENDEDORES: Sempre que a consulta envolver representantes/vendedores, você DEVE obrigatoriamente fazer `INNER JOIN representantes rep ON rep.codigo = p.representante_codigo` e filtrar `rep.supervisor IS NOT NULL AND TRIM(rep.supervisor) <> '' AND rep.ativo IS TRUE`. NUNCA traga representantes inativos, sem supervisor ou códigos de apoio TOTVS ('REPRESENTANTE TOTVS #...').\n"
-            "9. CONSULTAS PCP E PROGRAMAÇÃO DE PRODUÇÃO (programacoes): Sempre que consultar a tabela `programacoes`, selecione obrigatoriamente `op, cod_tecido, nome_tecido, cod_cor, nome_cor, quantidade_solicitada, quantidade_disponivel, GREATEST(0, quantidade_solicitada - quantidade_disponivel) AS quantidade_reservada, previsao_faturamento, tipo` para que a metragem reservada/vendida seja exibida corretamente no gráfico em pizza e na tabela."
+                     "8. REGRA CRÍTICA PARA REPRESENTANTES E VENDEDORES: Sempre que a consulta envolver representantes/vendedores, você DEVE obrigatoriamente fazer `INNER JOIN representantes rep ON rep.codigo = p.representante_codigo` e filtrar `rep.supervisor IS NOT NULL AND TRIM(rep.supervisor) <> '' AND rep.ativo IS TRUE`. NUNCA traga representantes inativos, sem supervisor ou códigos de apoio TOTVS ('REPRESENTANTE TOTVS #...').\n"
+            "9. CONSULTAS PCP E PROGRAMAÇÃO DE PRODUÇÃO (programacoes): Sempre que consultar a tabela `programacoes`, selecione obrigatoriamente `op, cod_tecido, nome_tecido, cod_cor, nome_cor, quantidade_solicitada, quantidade_disponivel, GREATEST(0, quantidade_solicitada - quantidade_disponivel) AS quantidade_reservada, previsao_faturamento, tipo` para que a metragem reservada/vendida seja exibida corretamente no gráfico em pizza e na tabela.\n"
+            "10. ANÁLISES ESTRATÉGICAS, POTENCIAL DE CRESCIMENTO E PLANOS DE AÇÃO: Use SEMPRE esta ferramenta para perguntas estratégicas sobre representantes e vendedores (ex: 'potencial de crescimento do André', 'expectativa de vendas', 'nicho dos clientes e tamanho de carteira', 'plano de ação para a Designtex apoiar o representante'). Monte uma query rica agrupando por cliente e somando o faturamento total do representante no pedidos_totvs."
         ),
         "parameters": {"type": "object", "properties": {
             "sql": {"type": "string", "description": "Consulta SQL PostgreSQL (SELECT) válida"}
@@ -164,7 +164,7 @@ TOOLS = [
 
     {"type": "function", "function": {
         "name": "fora_de_escopo",
-        "description": "A pergunta não é sobre vendas, clientes, produtos, estoque, programação PCP, vendedores, metas ou mercado.",
+        "description": "A pergunta NÃO tem qualquer relação com o negócio da empresa (ex: futebol, previsão do tempo pessoal, receitas culinárias). NUNCA use fora_de_escopo para perguntas estratégicas, de vendas, clientes, representantes/vendedores, planos de ação comercial, produtos ou metas!",
         "parameters": {"type": "object", "properties": {
             "motivo": {"type": "string"}
         }, "required": ["motivo"]}}},

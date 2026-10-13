@@ -4,7 +4,7 @@ function hora(ts) {
   return new Date(ts).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
 }
 
-export default function Message({ msg, onEnviar }) {
+export default function Message({ msg, onEnviar, falandoTs, onToggleFala }) {
   const isUser = msg.role === "user";
   const avatarClass = isUser ? "user-av" : "conexo-av";
   const avatarText  = isUser ? "U" : "C";
@@ -86,6 +86,32 @@ export default function Message({ msg, onEnviar }) {
 
           {/* Prioridade #2: Texto síntese ultra-resumido em poucas palavras */}
           {msg.conteudo && <p style={{ marginTop: !isUser && msg.dados ? 12 : 0, whiteSpace: "pre-line" }}>{msg.conteudo}</p>}
+
+          {/* Botão de Áudio (Text-to-Speech) */}
+          {!isUser && msg.conteudo && (
+            <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 8 }}>
+              <button
+                onClick={() => onToggleFala && onToggleFala(msg)}
+                style={{
+                  background: falandoTs === msg.ts ? "rgba(239, 68, 68, 0.25)" : "rgba(255, 255, 255, 0.06)",
+                  border: `1px solid ${falandoTs === msg.ts ? "#ef4444" : "rgba(255, 255, 255, 0.15)"}`,
+                  color: falandoTs === msg.ts ? "#fca5a5" : "#94a3b8",
+                  padding: "4px 10px",
+                  borderRadius: 8,
+                  fontSize: 11,
+                  fontWeight: 600,
+                  cursor: "pointer",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 5,
+                  transition: "all 0.2s"
+                }}
+                title={falandoTs === msg.ts ? "Parar áudio" : "Ouvir esta resposta em voz alta"}
+              >
+                {falandoTs === msg.ts ? "⏹️ Parar voz" : "🔊 Ouvir resposta"}
+              </button>
+            </div>
+          )}
 
           {/* Sugestões Rápidas Interativas para Enriquecer a Análise com 1 toque */}
           {!isUser && sugestoes.length > 0 && (

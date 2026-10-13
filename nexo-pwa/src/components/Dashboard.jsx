@@ -1,4 +1,4 @@
-import React, { useId } from "react";
+import React, { useId, useState } from "react";
 import {
   BarChart,
   Bar,
@@ -545,32 +545,40 @@ function abrirImpressaoUniversal(htmlContent, titulo = "Relatório CONEXO") {
 function PdfWrapper({ children, title = "Relatório CONEXO" }) {
   const rawId = useId ? useId() : `pdf-${Math.random().toString(36).substring(2, 9)}`;
   const containerId = String(rawId).replace(/:/g, "");
+  const [modalData, setModalData] = useState(null);
 
-  function baixarPDFUniversal() {
-    const conteudo = document.getElementById(containerId);
-    if (!conteudo) return;
-    abrirImpressaoUniversal(conteudo.innerHTML, title);
-  }
-
-  function baixarGraficosApenas() {
+  function abrirModalPDF(apenasGraficos = false) {
     const container = document.getElementById(containerId);
     if (!container) return;
 
-    // Clona e pega apenas gráficos ou elementos visuais
-    const clone = container.cloneNode(true);
+    let htmlLimpo = "";
+    if (apenasGraficos) {
+      const clone = container.cloneNode(true);
+      const tabelas = clone.querySelectorAll(".pdf-tabela");
+      tabelas.forEach(t => t.remove());
+      htmlLimpo = clone.innerHTML;
+    } else {
+      htmlLimpo = container.innerHTML;
+    }
 
-    // Remove tabelas se existirem
-    const tabelas = clone.querySelectorAll(".pdf-tabela");
-    tabelas.forEach(t => t.remove());
+    // Higieniza garantindo texto 100% preto
+    htmlLimpo = (htmlLimpo || "")
+      .replace(/color:\s*(#f8fafc|#cbd5e1|#94a3b8|#64748b|rgb\(248,\s*250,\s*252\)|rgb\(203,\s*213,\s*225\)|rgb\(148,\s*163,\s*184\)|rgb\(100,\s*116,\s*139\)|inherit)/gi, "color: #000000")
+      .replace(/background:\s*(#1e293b|rgb\(30,\s*41,\s*59\))/gi, "background: transparent")
+      .replace(/border-bottom:\s*1px\s*solid\s*(#1e293b|#334155|rgb\(30,\s*41,\s*59\)|rgb\(51,\s*65,\s*85\))/gi, "border-bottom: 1px solid #cbd5e1");
 
-    abrirImpressaoUniversal(clone.innerHTML, `Gráficos — ${title}`);
+    setModalData({
+      titulo: apenasGraficos ? `Gráficos — ${title}` : title,
+      html: htmlLimpo,
+      dataHoje: new Date().toLocaleDateString("pt-BR", { day: "2-digit", month: "long", year: "numeric" }),
+    });
   }
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 12 }}>
       <div className="no-print" style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
         <button
-          onClick={() => baixarPDFUniversal(containerId, title)}
+          onClick={() => abrirModalPDF(false)}
           style={{
             background: "#38bdf8",
             color: "#0f172a",
@@ -589,7 +597,7 @@ function PdfWrapper({ children, title = "Relatório CONEXO" }) {
           📄 Baixar Relatório Completo (PDF)
         </button>
         <button
-          onClick={baixarGraficosApenas}
+          onClick={() => abrirModalPDF(true)}
           style={{
             background: "#10b981",
             color: "#0f172a",
@@ -608,9 +616,217 @@ function PdfWrapper({ children, title = "Relatório CONEXO" }) {
           📊 Baixar Apenas Gráficos (PDF)
         </button>
       </div>
+
       <div id={containerId}>
         {children}
       </div>
+
+      {/* MODAL IN-APP DE VISUALIZAÇÃO E DOWNLOAD DE PDF COM BOTÃO FECHAR 100% GARANTIDO */}
+      {modalData && (
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            width: "100vw",
+            height: "100vh",
+            backgroundColor: "#f1f5f9",
+            zIndex: 999999,
+            display: "flex",
+            flexDirection: "column",
+            overflow: "hidden",
+          }}
+        >
+          {/* Top Bar com botão Voltar proeminente */}
+          <div
+            className="no-print"
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              padding: "12px 16px",
+              background: "#0f172a",
+              color: "#ffffff",
+              boxShadow: "0 4px 12px rgba(0,0,0,0.2)",
+              gap: 12,
+              flexShrink: 0,
+              zIndex: 10,
+            }}
+          >
+            <button
+              onClick={() => setModalData(null)}
+              style={{
+                background: "#0284c7",
+                color: "#ffffff",
+                border: "none",
+                padding: "10px 18px",
+                borderRadius: 8,
+                fontWeight: 800,
+                fontSize: 14,
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
+                boxShadow: "0 2px 6px rgba(0,0,0,0.3)",
+              }}
+            >
+              ⬅️ Voltar ao CONEXO
+            </button>
+
+            <span
+              style={{
+                fontSize: 14,
+                fontWeight: 700,
+                color: "#f8fafc",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap",
+                flex: 1,
+                textAlign: "center",
+              }}
+            >
+              📄 {modalData.titulo}
+            </span>
+
+            <div style={{ display: "flex", gap: 8 }}>
+              <button
+                onClick={() => window.print()}
+                style={{
+                  background: "#10b981",
+                  color: "#0f172a",
+                  border: "none",
+                  padding: "10px 16px",
+                  borderRadius: 8,
+                  fontWeight: 800,
+                  fontSize: 13,
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 6,
+                }}
+              >
+                🖨️ Salvar em PDF
+              </button>
+              <button
+                onClick={() => setModalData(null)}
+                style={{
+                  background: "#334155",
+                  color: "#ffffff",
+                  border: "none",
+                  padding: "10px 14px",
+                  borderRadius: 8,
+                  fontWeight: 700,
+                  fontSize: 13,
+                  cursor: "pointer",
+                }}
+                title="Fechar"
+              >
+                ✕
+              </button>
+            </div>
+          </div>
+
+          {/* Área do Relatório Rolável com Alta Legibilidade */}
+          <div
+            style={{
+              flex: 1,
+              overflowY: "auto",
+              padding: "16px",
+              display: "flex",
+              justifyContent: "center",
+            }}
+          >
+            <div
+              className="report-card"
+              style={{
+                width: "100%",
+                maxWidth: "850px",
+                backgroundColor: "#ffffff",
+                padding: "24px",
+                borderRadius: "12px",
+                border: "1px solid #cbd5e1",
+                boxShadow: "0 4px 15px rgba(0,0,0,0.06)",
+                color: "#000000",
+                height: "fit-content",
+                marginBottom: "40px",
+              }}
+            >
+              <h1 style={{ fontSize: 22, fontWeight: 800, color: "#000000", margin: "0 0 6px 0" }}>
+                📊 {modalData.titulo}
+              </h1>
+              <div style={{ fontSize: 12, fontWeight: 600, color: "#475569", marginBottom: 20 }}>
+                Gerado em {modalData.dataHoje} — Designtex Tecidos / CONEXO
+              </div>
+
+              <div
+                style={{ color: "#000000" }}
+                dangerouslySetInnerHTML={{ __html: modalData.html }}
+              />
+
+              <div
+                style={{
+                  marginTop: 28,
+                  paddingTop: 12,
+                  borderTop: "1px solid #cbd5e1",
+                  fontSize: 11,
+                  color: "#64748b",
+                  fontWeight: 500,
+                }}
+              >
+                Gerado automaticamente pelo CONEXO — Inteligência Comercial
+              </div>
+
+              {/* Botões de Rodapé na Visualização Mobile */}
+              <div
+                className="no-print"
+                style={{
+                  display: "flex",
+                  gap: 12,
+                  marginTop: 28,
+                  paddingTop: 16,
+                  borderTop: "2px solid #e2e8f0",
+                }}
+              >
+                <button
+                  onClick={() => setModalData(null)}
+                  style={{
+                    flex: 1,
+                    background: "#0284c7",
+                    color: "#ffffff",
+                    border: "none",
+                    padding: "14px",
+                    borderRadius: 8,
+                    fontWeight: 800,
+                    fontSize: 14,
+                    cursor: "pointer",
+                    boxShadow: "0 2px 6px rgba(0,0,0,0.15)",
+                  }}
+                >
+                  ⬅️ Voltar ao CONEXO
+                </button>
+                <button
+                  onClick={() => window.print()}
+                  style={{
+                    flex: 1,
+                    background: "#10b981",
+                    color: "#0f172a",
+                    border: "none",
+                    padding: "14px",
+                    borderRadius: 8,
+                    fontWeight: 800,
+                    fontSize: 14,
+                    cursor: "pointer",
+                  }}
+                >
+                  🖨️ Salvar em PDF
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

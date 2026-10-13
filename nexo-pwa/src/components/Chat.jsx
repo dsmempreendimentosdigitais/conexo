@@ -226,11 +226,64 @@ export default function Chat({ token, email, onLogout }) {
     .slice(-6)
     .map((m) => ({ role: m.role, conteudo: m.conteudo }));
 
+  const [falandoTs, setFalandoTs] = useState(null);
+
+  const pararFala = useCallback(() => {
+    if (typeof window !== "undefined" && "speechSynthesis" in window) {
+      window.speechSynthesis.cancel();
+    }
+    setFalandoTs(null);
+  }, []);
+
+  const falarTexto = useCallback((texto, ts) => {
+    if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
+    window.speechSynthesis.cancel();
+
+    // Remove markdown, links e sugestões para leitura fluida e natural
+    const textoLimpo = (texto || "")
+      .replace(/[*#_`~]/g, "")
+      .replace(/https?:\/\/\S+/g, "")
+      .replace(/💡\s*Sugestões.*$/is, "")
+      .replace(/[^\w\s\d.,!?;:áàâãéèêíïóôõöúçñÁÀÂÃÉÈÊÍÏÓÔÕÖÚÇÑ-]/g, " ")
+      .trim();
+
+    if (!textoLimpo) return;
+
+    const utterance = new SpeechSynthesisUtterance(textoLimpo);
+    utterance.lang = "pt-BR";
+    utterance.rate = 1.05;
+
+    const voices = window.speechSynthesis.getVoices();
+    const ptVoice = voices.find(
+      (v) => v.lang === "pt-BR" || v.lang.startsWith("pt") || v.lang.includes("BR")
+    );
+    if (ptVoice) utterance.voice = ptVoice;
+
+    setFalandoTs(ts || true);
+
+    utterance.onend = () => setFalandoTs(null);
+    utterance.onerror = () => setFalandoTs(null);
+
+    window.speechSynthesis.speak(utterance);
+  }, []);
+
+  const toggleFalaMsg = useCallback((m) => {
+    if (falandoTs === m.ts) {
+      pararFala();
+    } else {
+      falarTexto(m.conteudo, m.ts);
+    }
+  }, [falandoTs, pararFala, falarTexto]);
+
   const enviar = useCallback(
-    async (textoPronto) => {
+    async (textoPronto, opcoes = {}) => {
       const texto = (textoPronto ?? input).trim();
+      const veioPorAudio = opcoes?.veioPorAudio || false;
       if (!texto || loading) return;
       setInput("");
+
+      // Se CONEXO estava falando, para a fala ao enviar nova pergunta
+      pararFala();
 
       const now = Date.now();
       const msgUser = { role: "user", conteudo: texto, ts: now };
@@ -244,8 +297,7 @@ export default function Chat({ token, email, onLogout }) {
         { role: "conexo", conteudo: "", intent: null, dados: null, ts: idxConexo },
       ]);
 
-      let dadosBuffer = null;
-      let intentBuffer = null;
+      let conteudoAcumulado = "";
 
       try {
         await perguntarStream(
@@ -254,8 +306,6 @@ export default function Chat({ token, email, onLogout }) {
           token,
           // onDados — chega antes do texto
           (intent, dados) => {
-            dadosBuffer = dados;
-            intentBuffer = intent;
             setMsgs((m) =>
               m.map((msg) =>
                 msg.ts === idxConexo
@@ -266,6 +316,7 @@ export default function Chat({ token, email, onLogout }) {
           },
           // onDelta — tokens de texto em tempo real
           (delta) => {
+            conteudoAcumulado += delta;
             setMsgs((m) =>
               m.map((msg) =>
                 msg.ts === idxConexo
@@ -275,7 +326,12 @@ export default function Chat({ token, email, onLogout }) {
             );
           },
           // onFim
-          () => setLoading(false)
+          () => {
+            setLoading(false);
+            if (veioPorAudio && conteudoAcumulado) {
+              falarTexto(conteudoAcumulado, idxConexo);
+            }
+          }
         );
       } catch (e) {
         setMsgs((m) =>
@@ -288,7 +344,7 @@ export default function Chat({ token, email, onLogout }) {
         setLoading(false);
       }
     },
-    [input, loading, historico, token]
+    [input, loading, historico, token, pararFala, falarTexto]
   );
 
   // Gravar / parar áudio com compatibilidade mobile universal (iOS Safari / Android Chrome / Desktop)
@@ -358,8 +414,12 @@ export default function Chat({ token, email, onLogout }) {
         try {
           const texto = await transcrever(blob, token);
           if (texto && texto.trim()) {
-            await enviar(texto);
+            await enviar(texto, { veioPorAudio: true });
           } else {
+            setMsgs((m) => [
+              ...m,
+              { role: "conexo", conteudo: "⚠️ Não identifiquei fala audível no áudio. Por favor, fale mais próximo ao microfone e tente novamente.", ts: Date.now() },
+            ]);
             setLoading(false);
           }
         } catch (e) {
@@ -498,8 +558,55 @@ export default function Chat({ token, email, onLogout }) {
         {/* Mensagens */}
         <div className="messages-area">
           {msgs.map((m, i) => (
-            <Message key={i} msg={m} onEnviar={enviar} />
+            <Message
+              key={i}
+              msg={m}
+              onEnviar={enviar}
+              falandoTs={falandoTs}
+              onToggleFala={toggleFalaMsg}
+            />
           ))}
+
+          {/* Banner de Fala Ativa (se o CONEXO estiver respondendo em áudio) */}
+          {falandoTs && (
+            <div
+              style={{
+                position: "sticky",
+                bottom: 8,
+                alignSelf: "center",
+                background: "#0f172a",
+                border: "1px solid #38bdf8",
+                color: "#38bdf8",
+                padding: "8px 16px",
+                borderRadius: 20,
+                fontSize: 12,
+                fontWeight: 700,
+                display: "flex",
+                alignItems: "center",
+                gap: 10,
+                boxShadow: "0 4px 14px rgba(0,0,0,0.4)",
+                zIndex: 20,
+              }}
+            >
+              <span className="pulse-dot">🔊</span>
+              <span>CONEXO falando em áudio...</span>
+              <button
+                onClick={pararFala}
+                style={{
+                  background: "#ef4444",
+                  color: "#ffffff",
+                  border: "none",
+                  padding: "4px 10px",
+                  borderRadius: 12,
+                  fontSize: 11,
+                  fontWeight: 800,
+                  cursor: "pointer",
+                }}
+              >
+                ⏹️ Parar voz
+              </button>
+            </div>
+          )}
 
           {/* Empty State / Cards Interativos de Perguntas Estratégicas quando só há boas-vindas */}
           {msgs.length === 1 && (
@@ -583,6 +690,42 @@ export default function Chat({ token, email, onLogout }) {
             </div>
           ))}
         </div>
+
+        {/* Indicador de gravação de áudio */}
+        {gravando && (
+          <div
+            style={{
+              padding: "6px 16px",
+              background: "#ef4444",
+              color: "#ffffff",
+              fontSize: 12,
+              fontWeight: 700,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              borderRadius: "8px 8px 0 0",
+              margin: "0 16px -8px 16px",
+              animation: "pulse 1.5s infinite",
+            }}
+          >
+            <span>🔴 Gravando sua voz... Fale sua pergunta e clique no microfone para enviar</span>
+            <button
+              onClick={toggleAudio}
+              style={{
+                background: "#ffffff",
+                color: "#ef4444",
+                border: "none",
+                borderRadius: 4,
+                padding: "2px 8px",
+                fontWeight: 800,
+                cursor: "pointer",
+                fontSize: 11,
+              }}
+            >
+              Concluir e Enviar
+            </button>
+          </div>
+        )}
 
         {/* Input */}
         <div className="input-area">
