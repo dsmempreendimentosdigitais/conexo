@@ -311,9 +311,9 @@ html, body, #root {
   background: var(--bg-surface);
 }
 .input-wrapper {
-  display: flex; gap: 8px; align-items: flex-end;
+  display: flex; gap: 10px; align-items: center;
   background: var(--bg-elevated); border: 1px solid var(--border);
-  border-radius: var(--radius-lg); padding: 8px 8px 8px 16px;
+  border-radius: var(--radius-lg); padding: 10px 10px 10px 16px;
   transition: var(--transition);
 }
 .input-wrapper:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-glow); }
@@ -321,12 +321,13 @@ html, body, #root {
 .chat-input {
   flex: 1; background: none; border: none; outline: none;
   color: var(--text-primary); font-size: 14px; font-family: inherit;
-  resize: none; max-height: 120px; line-height: 1.5;
+  resize: none; min-height: 46px; max-height: 140px; line-height: 1.5;
+  padding: 2px 0; overflow-y: auto;
 }
 .chat-input::placeholder { color: var(--text-muted); }
 
 .btn-icon {
-  width: 36px; height: 36px; border-radius: var(--radius-md);
+  width: 40px; height: 40px; border-radius: var(--radius-md);
   border: none; cursor: pointer; display: flex; align-items: center; justify-content: center;
   font-size: 16px; transition: var(--transition); flex-shrink: 0;
 }
@@ -461,4 +462,5 @@ html, body, #root {
   .kpi-grid { grid-template-columns: repeat(2, 1fr); }
   .messages-area { padding: 16px; }
   .input-area { padding: 12px 16px; }
+  .chat-input { min-height: 48px; font-size: 16px; }
 }

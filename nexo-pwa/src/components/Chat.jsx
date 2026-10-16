@@ -281,6 +281,9 @@ export default function Chat({ token, email, onLogout }) {
       const veioPorAudio = opcoes?.veioPorAudio || false;
       if (!texto || loading) return;
       setInput("");
+      if (inputRef.current) {
+        inputRef.current.style.height = "auto";
+      }
 
       // Se CONEXO estava falando, para a fala ao enviar nova pergunta
       pararFala();
@@ -733,10 +736,14 @@ export default function Chat({ token, email, onLogout }) {
             <textarea
               ref={inputRef}
               className="chat-input"
-              rows={1}
+              rows={2}
               placeholder="Pergunte ao CONEXO… (Enter para enviar)"
               value={input}
-              onChange={(e) => setInput(e.target.value)}
+              onChange={(e) => {
+                setInput(e.target.value);
+                e.target.style.height = "auto";
+                e.target.style.height = `${Math.min(e.target.scrollHeight, 140)}px`;
+              }}
               onKeyDown={(e) => {
                 if (e.key === "Enter" && !e.shiftKey) {
                   e.preventDefault();

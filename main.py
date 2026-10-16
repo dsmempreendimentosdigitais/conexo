@@ -47,7 +47,7 @@ class Turno(BaseModel):
     conteudo: str
 
 class PerguntaIn(BaseModel):
-    pergunta: str = Field(..., min_length=2, max_length=500)
+    pergunta: str = Field(..., min_length=2, max_length=4000)
     historico: list[Turno] = Field(default_factory=list)
 
 class RespostaOut(BaseModel):
