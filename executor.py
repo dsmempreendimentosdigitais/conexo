@@ -128,13 +128,35 @@ def executar(intent: str, params: dict, ctx: dict | None = None):
         resp = supabase.rpc("conexo_executar_leitura", {"query_str": sql}).execute()
         return resp.data
 
-    # Consulta geral dinêmica (Text-to-SQL)
+    # Consulta geral dinâmica (Text-to-SQL)
     if intent == "conexo_consulta_geral":
         if ctx and ctx.get("perfil") != "gestor":
             raise ValueError("Apenas gestores podem realizar consultas personalizadas no banco de dados.")
         sql = params.get("sql", "")
         if sql:
+            import re
             sql = sql.strip().rstrip(";")
+            # Corrige automaticamente item->>'totalValue' (campo inexistente no JSON) para quantity * price
+            sql = re.sub(
+                r"\(\s*item->>'totalValue'\s*\)::numeric",
+                "(COALESCE((item->>'settledQuantity')::numeric, (item->>'quantity')::numeric, 0) * COALESCE((item->>'price')::numeric, 0))",
+                sql,
+                flags=re.IGNORECASE,
+            )
+            sql = re.sub(
+                r"item->>'totalValue'",
+                "((COALESCE((item->>'settledQuantity')::numeric, (item->>'quantity')::numeric, 0) * COALESCE((item->>'price')::numeric, 0))::text)",
+                sql,
+                flags=re.IGNORECASE,
+            )
+            # Se a query cruza estoque_pe com item->>'referenceCode' sem regexp_replace, sanitiza para extrair apenas dígitos
+            if "estoque_pe" in sql.lower() and "referencecode" in sql.lower() and "regexp_replace" not in sql.lower():
+                sql = re.sub(
+                    r"item->>'referenceCode'",
+                    "regexp_replace(COALESCE(item->>'referenceCode', ''), '[^0-9]', '', 'g')",
+                    sql,
+                    flags=re.IGNORECASE,
+                )
         resp = supabase.rpc("conexo_executar_leitura", {"query_str": sql}).execute()
         return resp.data
 

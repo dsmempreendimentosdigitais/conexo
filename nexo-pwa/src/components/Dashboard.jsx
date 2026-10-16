@@ -19,6 +19,26 @@ const brl = (v) =>
 const meters = (v) =>
   Number(v).toLocaleString("pt-BR", { minimumFractionDigits: 1, maximumFractionDigits: 2 }) + " m";
 
+const isColunaMetragem = (col) => {
+  if (!col) return false;
+  const c = String(col).toLowerCase();
+  if (c.includes("valor") || c.includes("faturamento") || c.includes("receita") || c.includes("preco") || c.includes("preço") || c.includes("ticket") || c.includes("pedido") || c.includes("cliente")) {
+    return false;
+  }
+  return (
+    c.includes("metr") ||
+    c.includes("metros") ||
+    c.includes("estoque") ||
+    c.includes("disponivel") ||
+    c.includes("disponível") ||
+    c.includes("reservad") ||
+    c.includes("solicitad") ||
+    c.includes("quantidade") ||
+    c.includes("qtd") ||
+    c.endsWith("_m")
+  );
+};
+
 const COLORS = ["#38bdf8", "#818cf8", "#34d399", "#fb923c", "#f472b6", "#a855f7", "#06b6d4"];
 
 const FABRIC_COLOR_MAP = {
@@ -139,12 +159,7 @@ function KpiCards({ dados }) {
 function Barras({ dados, nameKey, valKey, title }) {
   if (!Array.isArray(dados) || dados.length === 0) return null;
 
-  const isMeter = valKey && (
-    valKey.toLowerCase().includes("metr") ||
-    valKey.toLowerCase().includes("quantidade") ||
-    valKey.toLowerCase().includes("qtd") ||
-    valKey.toLowerCase().includes("metros")
-  );
+  const isMeter = isColunaMetragem(valKey);
 
   const data = dados.map((r, i) => {
     const valNum = Number(r[valKey] ?? r.faturamento ?? 0);
@@ -226,7 +241,7 @@ function PizzaChart({ dados, nameKey, valKey, title }) {
       { name: `Reservado / Vendido (${pctRes}%)`, value: totalReservado, valueFmt: meters(totalReservado), fill: "#f59e0b", pct: pctRes },
     ].filter(d => d.value > 0);
   } else {
-    const isMeter = valKey && (valKey.toLowerCase().includes("metr") || valKey.toLowerCase().includes("quantidade") || valKey.toLowerCase().includes("qtd"));
+    const isMeter = isColunaMetragem(valKey);
     const map = {};
     let grandTotal = 0;
 
@@ -980,10 +995,40 @@ export default function Dashboard({ intent, dados, pergunta = "" }) {
       const p = (pergunta || "").toLowerCase();
       const hasOpOrPcp = "op" in firstRow || "quantidade_solicitada" in firstRow || "quantidade_reservada" in firstRow || p.includes("op") || p.includes("pcp") || p.includes("programacao") || p.includes("proporcao") || p.includes("pizza") || p.includes("artigo");
 
-      const numericCandidates = ["quantidade_disponivel", "quantidade_solicitada", "quantidade_reservada", "valor_nf", "valor_total", "faturamento", "valor", "total", "metros", "quantidade", "quantidade_total"];
-      let valKey = keys.find(k => numericCandidates.includes(k.toLowerCase()));
+      const numericCandidates = [
+        "vendas_valor_este_ano",
+        "vendas_metragem_este_ano",
+        "quantidade_disponivel",
+        "quantidade_solicitada",
+        "quantidade_reservada",
+        "estoque_atual_m",
+        "estoque_atual",
+        "valor_nf",
+        "valor_total",
+        "faturamento",
+        "valor",
+        "total",
+        "metros",
+        "quantidade",
+        "quantidade_total",
+      ];
+      let valKey = keys.find(
+        (k) =>
+          numericCandidates.includes(k.toLowerCase()) &&
+          listaDados.some((r) => Number(r[k]) > 0)
+      );
       if (!valKey) {
-        valKey = keys.find(k => typeof firstRow[k] === "number");
+        valKey = keys.find((k) => numericCandidates.includes(k.toLowerCase()));
+      }
+      if (!valKey) {
+        valKey = keys.find(
+          (k) =>
+            typeof firstRow[k] === "number" &&
+            listaDados.some((r) => Number(r[k]) > 0)
+        );
+      }
+      if (!valKey) {
+        valKey = keys.find((k) => typeof firstRow[k] === "number");
       }
       
       const textCandidates = ["nome_tecido", "descricao", "nome_cor", "cor", "totvs_order_code", "cliente_nome", "cliente", "representante_nome", "vendedor", "nome", "uf", "produto", "artigo", "op"];
@@ -1081,11 +1126,9 @@ function TabelaSimples({ dados, titulo }) {
       return false;
     }
     return (
+      isColunaMetragem(col) ||
       c.includes("valor") ||
       c.includes("faturamento") ||
-      c.includes("metr") ||
-      c.includes("quantidade") ||
-      c.includes("qtd") ||
       c.includes("receita") ||
       c.includes("ticket")
     );
@@ -1120,12 +1163,7 @@ function TabelaSimples({ dados, titulo }) {
 
     if (typeof v === "number" || (!isNaN(Number(v)) && typeof v !== "string")) {
       const num = Number(v);
-      const isMeter = (
-        colLower.includes("metr") ||
-        colLower.includes("quantidade") ||
-        colLower.includes("qtd") ||
-        colLower.includes("metros")
-      );
+      const isMeter = isColunaMetragem(col);
       const isMoney = (
         colLower.includes("valor") ||
         colLower.includes("faturamento") ||
