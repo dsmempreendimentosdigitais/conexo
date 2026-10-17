@@ -247,13 +247,17 @@ def executar(intent: str, params: dict, ctx: dict | None = None):
             ) or "FALSE"
             art_where_pi = f"(TRIM(COALESCE(pi.cod_produto, '')) = '{art_code}' OR ({name_cond_pi}))"
             art_where_pt = f"(regexp_replace(COALESCE(item->>'referenceCode', ''), '[^0-9]', '', 'g') = '{art_code}' OR ({name_cond_pt}))"
+            art_label = f"{art_code} - {name_terms[0].upper()}" if name_terms else art_code
+            art_select_col = f"'{art_label}' AS artigo,"
         elif art_clean:
             safe_art = art_clean.replace("'", "''")
             art_where_pi = f"(pi.descricao_item ILIKE '%{safe_art}%' OR pi.cod_produto ILIKE '%{safe_art}%')"
             art_where_pt = f"(COALESCE(item->>'name', '') ILIKE '%{safe_art}%' OR COALESCE(item->>'referenceName', '') ILIKE '%{safe_art}%' OR COALESCE(item->>'referenceCode', '') ILIKE '%{safe_art}%')"
+            art_select_col = f"'{safe_art.upper()}' AS artigo,"
         else:
             art_where_pi = "1=1"
             art_where_pt = "1=1"
+            art_select_col = ""
 
         # Filtro de cor
         if cor:
@@ -416,6 +420,7 @@ def executar(intent: str, params: dict, ctx: dict | None = None):
             rep_codigo AS rep,
             pedido,
             cliente,
+            {art_select_col}
             tipo,
             lote_pedido,
             status,

@@ -191,6 +191,7 @@ def perguntar_stream(body: PerguntaIn, ctx: dict = Depends(get_contexto)):
                 totais_calculados[k] = sum(float(r.get(k) or 0) for r in dados if isinstance(r.get(k), (int, float, str)) and str(r.get(k)).replace('.','',1).replace('-','',1).isdigit())
           
           dados_para_prompt = {
+            "FILTROS_APLICADOS_NA_CONSULTA_SQL": params,
             "TOTAL_REGISTROS_GERAL_DA_BASE": int(total_registros_geral),
             "REGISTROS_EXIBIDOS_NA_TABELA": len(dados),
             "SOMA_TOTAL_EXATA_DO_BANCO": totais_calculados,

@@ -445,7 +445,8 @@ function abrirImpressaoUniversal(htmlContent, titulo = "Relatório CONEXO") {
   
   // Higieniza HTML limpando cores claras de modo escuro para garantir texto 100% PRETO e alto contraste no PDF
   const cleanedHtml = (htmlContent || "")
-    .replace(/color:\s*(#f8fafc|#cbd5e1|#94a3b8|#64748b|rgb\(248,\s*250,\s*252\)|rgb\(203,\s*213,\s*225\)|rgb\(148,\s*163,\s*184\)|rgb\(100,\s*116,\s*139\)|inherit)/gi, "color: #000000")
+    .replace(/color:\s*(#f8fafc|#cbd5e1|#94a3b8|#64748b|#38bdf8|rgb\(248,\s*250,\s*252\)|rgb\(203,\s*213,\s*225\)|rgb\(148,\s*163,\s*184\)|rgb\(100,\s*116,\s*139\)|rgb\(56,\s*189,\s*248\)|inherit)/gi, "color: #000000")
+    .replace(/background:\s*(#0f172a|rgb\(15,\s*23,\s*42\))/gi, "background: #e2e8f0")
     .replace(/background:\s*(#1e293b|rgb\(30,\s*41,\s*59\))/gi, "background: transparent")
     .replace(/border-bottom:\s*1px\s*solid\s*(#1e293b|#334155|rgb\(30,\s*41,\s*59\)|rgb\(51,\s*65,\s*85\))/gi, "border-bottom: 1px solid #cbd5e1");
 
@@ -479,11 +480,11 @@ function abrirImpressaoUniversal(htmlContent, titulo = "Relatório CONEXO") {
       .report-card .subtitulo { color: #334155 !important; font-size: 12px; font-weight: 600; margin-bottom: 20px; }
       .report-card .section-title, .report-card .chart-title { font-size: 14px !important; font-weight: 800 !important; color: #000000 !important; margin: 20px 0 10px !important; border-bottom: 2px solid #000000 !important; padding-bottom: 6px !important; text-transform: uppercase !important; }
       .report-card table { width: 100% !important; border-collapse: collapse !important; margin-bottom: 20px !important; font-size: 12px !important; }
-      .report-card th { text-align: left !important; padding: 8px 8px !important; background: #0f172a !important; color: #ffffff !important; font-size: 11px !important; font-weight: 700 !important; text-transform: uppercase !important; border-bottom: 2px solid #000000 !important; }
+      .report-card th { text-align: left !important; padding: 8px 8px !important; background: #e2e8f0 !important; color: #000000 !important; font-size: 11px !important; font-weight: 800 !important; text-transform: uppercase !important; border-bottom: 2px solid #0f172a !important; }
       .report-card td { padding: 8px 8px !important; border-bottom: 1px solid #cbd5e1 !important; color: #000000 !important; font-size: 12px !important; font-weight: 600 !important; }
       .report-card tr:nth-child(even) td { background: #f8fafc !important; }
       .report-card tr:nth-child(odd) td { background: #ffffff !important; }
-      .report-card tfoot tr td { background: #0f172a !important; color: #ffffff !important; font-weight: 700 !important; }
+      .report-card tfoot tr, .report-card tfoot tr td { background: #dbeafe !important; color: #000000 !important; font-weight: 800 !important; border-top: 2px solid #0284c7 !important; border-bottom: 2px solid #0284c7 !important; }
       .report-card .footer { margin-top: 28px !important; font-size: 11px !important; color: #475569 !important; border-top: 1px solid #cbd5e1 !important; padding-top: 10px !important; font-weight: 500 !important; }
       
       .kpi-grid { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 16px; }
@@ -493,7 +494,7 @@ function abrirImpressaoUniversal(htmlContent, titulo = "Relatório CONEXO") {
       
       @media print {
         .no-print { display: none !important; }
-        body { padding: 0; background: white; }
+        body { padding: 0; background: white; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
         .report-card { border: none; box-shadow: none; padding: 0; }
       }
     </style>
@@ -579,9 +580,10 @@ function PdfWrapper({ children, title = "Relatório CONEXO" }) {
       htmlLimpo = container.innerHTML;
     }
 
-    // Higieniza garantindo texto 100% preto
+    // Higieniza garantindo texto 100% preto e fundo claro de alto contraste no cabeçalho e no resumo/rodapé
     htmlLimpo = (htmlLimpo || "")
-      .replace(/color:\s*(#f8fafc|#cbd5e1|#94a3b8|#64748b|rgb\(248,\s*250,\s*252\)|rgb\(203,\s*213,\s*225\)|rgb\(148,\s*163,\s*184\)|rgb\(100,\s*116,\s*139\)|inherit)/gi, "color: #000000")
+      .replace(/color:\s*(#f8fafc|#cbd5e1|#94a3b8|#64748b|#38bdf8|rgb\(248,\s*250,\s*252\)|rgb\(203,\s*213,\s*225\)|rgb\(148,\s*163,\s*184\)|rgb\(100,\s*116,\s*139\)|rgb\(56,\s*189,\s*248\)|inherit)/gi, "color: #000000")
+      .replace(/background:\s*(#0f172a|rgb\(15,\s*23,\s*42\))/gi, "background: #dbeafe")
       .replace(/background:\s*(#1e293b|rgb\(30,\s*41,\s*59\))/gi, "background: transparent")
       .replace(/border-bottom:\s*1px\s*solid\s*(#1e293b|#334155|rgb\(30,\s*41,\s*59\)|rgb\(51,\s*65,\s*85\))/gi, "border-bottom: 1px solid #cbd5e1");
 
@@ -710,7 +712,7 @@ function PdfWrapper({ children, title = "Relatório CONEXO" }) {
 
             <div style={{ display: "flex", gap: 8 }}>
               <button
-                onClick={() => window.print()}
+                onClick={() => abrirImpressaoUniversal(modalData.html, modalData.titulo)}
                 style={{
                   background: "#10b981",
                   color: "#0f172a",
@@ -825,7 +827,7 @@ function PdfWrapper({ children, title = "Relatório CONEXO" }) {
                   ⬅️ Voltar ao CONEXO
                 </button>
                 <button
-                  onClick={() => window.print()}
+                  onClick={() => abrirImpressaoUniversal(modalData.html, modalData.titulo)}
                   style={{
                     flex: 1,
                     background: "#10b981",
@@ -1225,7 +1227,7 @@ function TabelaSimples({ dados, titulo }) {
               let footerVal = "";
               if (isIndexCol(c)) {
                 footerVal = String(dados[0][c] || dados.length);
-              } else if (i === 0 && !colunas.some(isIndexCol)) {
+              } else if (i === 0) {
                 footerVal = "TOTAL GERAL";
               } else if (totais[c] !== undefined) {
                 footerVal = fmt(totais[c], c);
