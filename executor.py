@@ -128,6 +128,313 @@ def executar(intent: str, params: dict, ctx: dict | None = None):
         resp = supabase.rpc("conexo_executar_leitura", {"query_str": sql}).execute()
         return resp.data
 
+    # Consulta e Relatório Unificado de Pedidos (Portal de Vendas + ERP TOTVS)
+    if intent == "conexo_consulta_pedidos":
+        import datetime
+        import re
+
+        ARTICLE_SYNONYMS = {
+            "1000": ["1000", "tricoline paris"],
+            "1001": ["1001", "verano flame"],
+            "1002": ["1002", "linho deluxe"],
+            "1003": ["1003", "verano chambrey", "verano chambray"],
+            "1004": ["1004", "fine flex jeans"],
+            "1005": ["1005", "rush peletizado", "tecido rush"],
+            "1006": ["1006", "sarja nature"],
+            "1008": ["1008", "botone color"],
+            "1010": ["1010", "tricoline havana"],
+            "1011": ["1011", "tricoline deluxe"],
+            "1013": ["1013", "royale fio tinto", "tecido royale"],
+            "1015": ["1015", "tricoline premium"],
+            "1016": ["1016", "veneto fio tinto"],
+            "1017": ["1017", "sarja caribe flex", "caribe flex"],
+            "1018": ["1018", "tessera rustic"],
+            "1019": ["1019", "tricoline londres"],
+            "1021": ["1021", "linho deluxe maquinetado"],
+            "1024": ["1024", "sarja caribe light", "caribe light"],
+            "1025": ["1025", "verano striped"],
+            "1028": ["1028", "tricoline top line", "top line"],
+            "1030": ["1030", "verano listrado elegance"],
+            "1031": ["1031", "rayon balli"],
+            "1032": ["1032", "chambray two tone"],
+            "1033": ["1033", "sarja flex"],
+            "1038": ["1038", "maqtton rustic"],
+            "1042": ["1042", "popeline primore"],
+            "1043": ["1043", "verano linho"],
+            "1044": ["1044", "linho panama"],
+            "1045": ["1045", "sarja zara"],
+            "1046": ["1046", "verano arizona"],
+            "1049": ["1049", "creta xadrez"],
+            "1052": ["1052", "panama c/ elas", "panama com elastano"],
+            "1053": ["1053", "linho ipanema"],
+            "1055": ["1055", "verano milano"],
+            "1057": ["1057", "arizona two toner"],
+            "1058": ["1058", "striped two toner"],
+            "1063": ["1063", "oxford linho"],
+            "1064": ["1064", "botone color plus"],
+            "1065": ["1065", "tricoline classic"],
+            "1071": ["1071", "mega soft"],
+            "1073": ["1073", "linho xadrez"],
+            "1074": ["1074", "linho blend"],
+            "1076": ["1076", "verano linho plus"],
+            "1078": ["1078", "linho maquinetado"],
+            "1082": ["1082", "viscose deluxe"],
+            "1084": ["1084", "amalfi rustic"],
+            "1087": ["1087", "mediterraneo"],
+            "1088": ["1088", "riviera"],
+            "1089": ["1089", "linho belga"],
+            "1090": ["1090", "havana confort"],
+            "1091": ["1091", "bari rustic"],
+            "1093": ["1093", "verano striped alvejado"],
+            "1095": ["1095", "linea rustic"],
+            "1096": ["1096", "sierra maquinetado"],
+            "1097": ["1097", "sarja byskay", "byskay flex"],
+            "1098": ["1098", "maqtton linho"],
+            "1099": ["1099", "verano flame 160"],
+            "1100": ["1100", "porto fino"],
+            "1101": ["1101", "sorrento"],
+            "1103": ["1103", "cierro linho"],
+            "1104": ["1104", "listrado medio"],
+            "1105": ["1105", "sierra linho"],
+            "1107": ["1107", "linho caraiva", "caraiva"],
+            "1109": ["1109", "provance flame"],
+            "1112": ["1112", "verano chambrey 160", "verano chambray 160"],
+            "1113": ["1113", "chambray two tone 160"],
+            "1114": ["1114", "sarja nature 170"],
+            "1117": ["1117", "sarja dakota", "sarja prowork"],
+            "1118": ["1118", "ilhabela rustic", "ilhabela"],
+            "1119": ["1119", "linho maragogi", "linho maragoggi", "maragogi", "maragoggi"],
+            "1120": ["1120", "capitolio rustic", "capitolio"],
+            "1121": ["1121", "chambray paraty", "paraty"],
+            "1122": ["1122", "sarja inhotim", "inhotim"],
+            "1123": ["1123", "linho atalaia", "atalaia"],
+            "1124": ["1124", "rush premium"],
+            "1126": ["1126", "sarja velvet"],
+            "1127": ["1127", "sarja prowork profissional"],
+            "1129": ["1129", "sarja urban flex"],
+            "1132": ["1132", "sarja street"],
+        }
+
+        artigo = (params.get("artigo") or "").strip()
+        cor = (params.get("cor") or "").strip()
+        status_filtro = (params.get("status_filtro") or "carteira").strip().lower()
+        cliente = (params.get("cliente") or "").strip()
+        representante = (params.get("representante") or "").strip()
+        inicio = (params.get("inicio") or "2026-01-01").strip()
+        fim = (params.get("fim") or datetime.date.today().strftime("%Y-%m-%d")).strip()
+
+        # Se o usuário for representante logado, restringe ao código dele
+        if ctx and ctx.get("rep"):
+            representante = str(ctx["rep"]).strip()
+
+        # Filtro de artigo (código + nomes sinônimos exatamente como no Portal)
+        art_clean = desacentuar(artigo)
+        code_match = re.search(r"\b(1\d{3})\b", art_clean)
+        art_code = code_match.group(1) if code_match else None
+        if not art_code and art_clean:
+            for k, syns in ARTICLE_SYNONYMS.items():
+                if any(s in art_clean for s in syns):
+                    art_code = k
+                    break
+
+        if art_code:
+            syns = ARTICLE_SYNONYMS.get(art_code, [art_code])
+            name_terms = [s for s in syns if not s.isdigit()]
+            name_cond_pi = " OR ".join(f"pi.descricao_item ILIKE '%{t}%'" for t in name_terms) or "FALSE"
+            name_cond_pt = " OR ".join(
+                f"COALESCE(item->>'name', '') ILIKE '%{t}%' OR COALESCE(item->>'referenceName', '') ILIKE '%{t}%'"
+                for t in name_terms
+            ) or "FALSE"
+            art_where_pi = f"(TRIM(COALESCE(pi.cod_produto, '')) = '{art_code}' OR ({name_cond_pi}))"
+            art_where_pt = f"(regexp_replace(COALESCE(item->>'referenceCode', ''), '[^0-9]', '', 'g') = '{art_code}' OR ({name_cond_pt}))"
+        elif art_clean:
+            safe_art = art_clean.replace("'", "''")
+            art_where_pi = f"(pi.descricao_item ILIKE '%{safe_art}%' OR pi.cod_produto ILIKE '%{safe_art}%')"
+            art_where_pt = f"(COALESCE(item->>'name', '') ILIKE '%{safe_art}%' OR COALESCE(item->>'referenceName', '') ILIKE '%{safe_art}%' OR COALESCE(item->>'referenceCode', '') ILIKE '%{safe_art}%')"
+        else:
+            art_where_pi = "1=1"
+            art_where_pt = "1=1"
+
+        # Filtro de cor
+        if cor:
+            safe_cor = cor.replace("'", "''")
+            cor_where_pi = f"COALESCE(pi.cor_item, '') ILIKE '%{safe_cor}%'"
+            cor_where_pt = f"(COALESCE(item->>'colorName', '') ILIKE '%{safe_cor}%' OR COALESCE(item->>'colorCode', '') ILIKE '%{safe_cor}%')"
+        else:
+            cor_where_pi = "1=1"
+            cor_where_pt = "1=1"
+
+        # Filtro de status
+        if status_filtro in ("bloqueado", "bloqueados"):
+            status_where = "status_norm = 'Bloqueado'"
+        elif status_filtro in ("em_andamento", "andamento"):
+            status_where = "status_norm = 'Em andamento'"
+        elif status_filtro in ("faturado", "faturados", "atendido", "atendidos"):
+            status_where = "status_norm IN ('Atendido', 'Parcialmente Atendido')"
+        elif status_filtro == "todos":
+            status_where = "status_norm <> 'Cancelado'"
+        else:
+            # 'carteira': exatamente o filtro padrão do Portal (Em andamento, Bloqueado, Em composição, Em análise)
+            status_where = "status_norm IN ('Em andamento', 'Bloqueado', 'Em composição', 'Em análise')"
+
+        extra_order_filters = [status_where]
+        if inicio:
+            extra_order_filters.append(f"data_pedido >= '{inicio}'::date")
+        if fim:
+            extra_order_filters.append(f"data_pedido <= '{fim}'::date")
+        if cliente:
+            safe_cli = cliente.replace("'", "''")
+            extra_order_filters.append(f"cliente ILIKE '%{safe_cli}%'")
+        if representante:
+            safe_rep = representante.replace("'", "''")
+            extra_order_filters.append(f"(rep_codigo = '{safe_rep}' OR rep_nome ILIKE '%{safe_rep}%')")
+
+        where_orders_sql = " AND ".join(extra_order_filters)
+
+        sql = f"""
+        WITH pedidos_unificados AS (
+            SELECT
+                p.id AS local_id,
+                COALESCE(pt.totvs_order_code, p.numero) AS pedido,
+                COALESCE(pt.representante_codigo, p.representante_codigo) AS rep_codigo,
+                COALESCE(pt.representante_nome, r.nome, '') AS rep_nome,
+                COALESCE(c.razao_social, c.nome_fantasia, pt.cliente_nome, p.payload_totvs->>'customerName', '-') AS cliente,
+                COALESCE(p.tipo_pedido, '-') AS tipo,
+                CASE
+                    WHEN p.tipo_pedido = 'OP' OR p.numero_op IS NOT NULL THEN COALESCE(p.numero_op, p.payload_totvs->>'batchOrder', NULLIF(pt.lote_pedido, 'PE'), 'OP')
+                    ELSE COALESCE(NULLIF(pt.lote_pedido, ''), p.payload_totvs->>'batchOrder', p.tipo_pedido, '-')
+                END AS lote_pedido,
+                CASE
+                    WHEN COALESCE(pt.status, p.status) IN ('InProgress', 'Em andamento', 'open', 'aberto', '1') THEN 'Em andamento'
+                    WHEN COALESCE(pt.status, p.status) IN ('Blocked', 'Bloqueado', '5') THEN 'Bloqueado'
+                    WHEN COALESCE(pt.status, p.status) IN ('InComposition', 'Em composição', 'Em composicao', '7') THEN 'Em composição'
+                    WHEN COALESCE(pt.status, p.status) IN ('Pending', 'InAnalysis', 'Em análise', 'Em analise', '8') THEN 'Em análise'
+                    WHEN COALESCE(pt.status, p.status) IN ('PartiallyAnswered', 'Parcialmente Atendido', '3') THEN 'Parcialmente Atendido'
+                    WHEN COALESCE(pt.status, p.status) IN ('Attended', 'Atendido', 'Faturado', '4') THEN 'Atendido'
+                    WHEN COALESCE(pt.status, p.status) IN ('Canceled', 'Cancelled', 'Cancelado', '6', '9') THEN 'Cancelado'
+                    ELSE COALESCE(pt.status, p.status)
+                END AS status_norm,
+                p.created_at::date AS data_pedido,
+                COALESCE(pt.valor_total, p.valor_total, 0)::numeric AS order_valor_total,
+                pt.items_json AS pt_items_json
+            FROM pedidos p
+            LEFT JOIN clientes c ON c.id = p.cliente_id
+            LEFT JOIN representantes r ON r.codigo = p.representante_codigo
+            LEFT JOIN LATERAL (
+                SELECT pt2.*
+                FROM pedidos_totvs pt2
+                WHERE pt2.representante_codigo = p.representante_codigo
+                  AND (
+                      pt2.totvs_order_code = p.numero
+                      OR (p.payload_totvs->>'orderId' IS NOT NULL AND pt2.totvs_order_id = p.payload_totvs->>'orderId')
+                  )
+                ORDER BY pt2.id DESC
+                LIMIT 1
+            ) pt ON true
+
+            UNION ALL
+
+            SELECT
+                NULL::bigint AS local_id,
+                pt.totvs_order_code AS pedido,
+                pt.representante_codigo AS rep_codigo,
+                COALESCE(pt.representante_nome, r.nome, '') AS rep_nome,
+                COALESCE(pt.cliente_nome, '-') AS cliente,
+                '-' AS tipo,
+                COALESCE(NULLIF(pt.lote_pedido, ''), '-') AS lote_pedido,
+                CASE
+                    WHEN pt.status IN ('InProgress', 'Em andamento', 'open', 'aberto', '1') THEN 'Em andamento'
+                    WHEN pt.status IN ('Blocked', 'Bloqueado', '5') THEN 'Bloqueado'
+                    WHEN pt.status IN ('InComposition', 'Em composição', 'Em composicao', '7') THEN 'Em composição'
+                    WHEN pt.status IN ('Pending', 'InAnalysis', 'Em análise', 'Em analise', '8') THEN 'Em análise'
+                    WHEN pt.status IN ('PartiallyAnswered', 'Parcialmente Atendido', '3') THEN 'Parcialmente Atendido'
+                    WHEN pt.status IN ('Attended', 'Atendido', 'Faturado', '4') THEN 'Atendido'
+                    WHEN pt.status IN ('Canceled', 'Cancelled', 'Cancelado', '6', '9') THEN 'Cancelado'
+                    ELSE pt.status
+                END AS status_norm,
+                pt.data_pedido::date AS data_pedido,
+                COALESCE(pt.valor_total, 0)::numeric AS order_valor_total,
+                pt.items_json AS pt_items_json
+            FROM pedidos_totvs pt
+            LEFT JOIN representantes r ON r.codigo = pt.representante_codigo
+            WHERE NOT EXISTS (
+                SELECT 1 FROM pedidos p
+                WHERE p.representante_codigo = pt.representante_codigo
+                  AND (
+                      p.numero = pt.totvs_order_code
+                      OR (p.payload_totvs->>'orderId' IS NOT NULL AND p.payload_totvs->>'orderId' = pt.totvs_order_id)
+                  )
+            )
+        ),
+        pedidos_filtrados AS (
+            SELECT *
+            FROM pedidos_unificados
+            WHERE {where_orders_sql}
+        ),
+        itens_resolvidos AS (
+            SELECT
+                pf.rep_codigo,
+                pf.pedido,
+                pf.cliente,
+                pf.tipo,
+                pf.lote_pedido,
+                pf.status_norm AS status,
+                pf.data_pedido,
+                COALESCE(pi.quantidade, 0)::numeric AS metros_item,
+                CASE
+                    WHEN COALESCE(pi.subtotal, 0) > 0 AND NOT (
+                        (SELECT COUNT(*) FROM pedido_itens pi2 WHERE pi2.pedido_id = pf.local_id) > 1
+                        AND pf.order_valor_total > 0
+                        AND COALESCE(pi.subtotal, 0) >= pf.order_valor_total
+                    ) THEN pi.subtotal::numeric
+                    ELSE ROUND((COALESCE(pi.quantidade, 0)::numeric * COALESCE(pi.preco_unitario, 0)::numeric), 2)
+                END AS valor_item
+            FROM pedidos_filtrados pf
+            JOIN pedido_itens pi ON pi.pedido_id = pf.local_id
+            WHERE {art_where_pi} AND {cor_where_pi}
+
+            UNION ALL
+
+            SELECT
+                pf.rep_codigo,
+                pf.pedido,
+                pf.cliente,
+                pf.tipo,
+                pf.lote_pedido,
+                pf.status_norm AS status,
+                pf.data_pedido,
+                COALESCE((item->>'quantity')::numeric, 0) AS metros_item,
+                ROUND((COALESCE((item->>'quantity')::numeric, 0) * COALESCE((item->>'price')::numeric, 0)), 2) AS valor_item
+            FROM pedidos_filtrados pf
+            CROSS JOIN LATERAL jsonb_array_elements(
+                CASE WHEN jsonb_typeof(pf.pt_items_json) = 'array' THEN pf.pt_items_json ELSE '[]'::jsonb END
+            ) AS item
+            WHERE (pf.local_id IS NULL OR NOT EXISTS (SELECT 1 FROM pedido_itens pi3 WHERE pi3.pedido_id = pf.local_id))
+              AND {art_where_pt} AND {cor_where_pt}
+        )
+        SELECT
+            rep_codigo AS rep,
+            pedido,
+            cliente,
+            tipo,
+            lote_pedido,
+            status,
+            data_pedido,
+            ROUND(SUM(metros_item), 2) AS metros,
+            ROUND(SUM(valor_item), 2) AS valor_total,
+            COUNT(*) OVER() AS total_pedidos_geral
+        FROM itens_resolvidos
+        GROUP BY rep_codigo, pedido, cliente, tipo, lote_pedido, status, data_pedido
+        HAVING SUM(metros_item) > 0 OR SUM(valor_item) > 0
+        ORDER BY
+            CASE WHEN pedido LIKE 'W%' THEN 0 ELSE 1 END,
+            CASE WHEN pedido LIKE 'W%' THEN data_pedido END DESC,
+            NULLIF(regexp_replace(pedido, '[^0-9]', '', 'g'), '')::bigint DESC NULLS LAST
+        """
+
+        resp = supabase.rpc("conexo_executar_leitura", {"query_str": sql}).execute()
+        return resp.data
+
     # Consulta geral dinâmica (Text-to-SQL)
     if intent == "conexo_consulta_geral":
         if ctx and ctx.get("perfil") != "gestor":

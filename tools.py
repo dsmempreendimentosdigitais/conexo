@@ -128,11 +128,29 @@ TOOLS = [
         }, "required": []}}},
 
     {"type": "function", "function": {
+        "name": "conexo_consulta_pedidos",
+        "description": (
+            "Consulta e gera relatório/PDF de pedidos unificando o Portal de Vendas (pedidos + pedido_itens, incluindo pedidos locais W... bloqueados) "
+            "com o ERP TOTVS (pedidos_totvs), com 100% de precisão na metragem e valor total por pedido. "
+            "Use SEMPRE para: 'liste todos os pedidos em andamento e bloqueados do artigo X', 'gere um pdf com os pedidos do artigo 1117 - sarja dakota', "
+            "'quais os pedidos bloqueados?', 'pedidos em andamento de tal tecido/cor/cliente/representante', 'relatório resumido de pedidos'."
+        ),
+        "parameters": {"type": "object", "properties": {
+            "artigo":        {"type": "string", "description": "Código ou nome do artigo/tecido (ex: '1117 - sarja dakota', '1117', 'sarja dakota', 'linho deluxe'). Vazio para todos."},
+            "cor":           {"type": "string", "description": "Código ou nome da cor/desenho (ex: '900', 'preto', 'off white'). Vazio para todas."},
+            "status_filtro": {"type": "string", "description": "Filtro de status: 'carteira' (Em andamento + Bloqueado + Em composição + Em análise, padrão para pedidos em andamento e bloqueados), 'bloqueados' (apenas Bloqueado), 'em_andamento' (apenas Em andamento), 'faturados' (Atendido + Parcialmente Atendido), ou 'todos'."},
+            "cliente":       {"type": "string", "description": "Nome ou razão social do cliente (opcional)."},
+            "representante": {"type": "string", "description": "Código ou nome do representante (opcional)."},
+            "inicio":        {"type": "string", "description": "Data inicial ISO AAAA-MM-DD (padrão '2026-01-01')."},
+            "fim":           {"type": "string", "description": "Data final ISO AAAA-MM-DD (padrão data atual)."}
+        }, "required": []}}},
+
+    {"type": "function", "function": {
         "name": "conexo_consulta_geral",
         "description": (
             "Use esta ferramenta para responder perguntas personalizadas ou detalhadas que não "
-            "se encaixam nas outras ferramentas pré-definidas. Exemplos: listar números de pedidos, "
-            "detalhes de transações de ontem, agrupamentos específicos de vendas por cliente, ou estoque detalhado. "
+            "se encaixam nas outras ferramentas pré-definidas. Exemplos: "
+            "detalhes de transações de ontem, agrupamentos específicos de vendas por cliente, ou cruzamento de estoque com vendas. "
             "Escreva uma consulta SQL PostgreSQL de leitura (SELECT) válida sobre as tabelas: "
             "- pedidos_totvs (id, totvs_order_code, totvs_order_id, data_pedido, data_faturamento, valor_total, valor_nf, quantidade_total, representante_codigo, representante_nome, cliente_nome, status, items_json) "
             "- pedidos (tabela do PORTAL DE VENDAS vendas.designtex.com.br — contém id, numero, status, valor_total, created_at, cliente_id, representante_codigo. Para pedidos BLOQUEADOS ou no FORÇA DE VENDAS, use esta tabela fazendo JOIN clientes c ON c.id = p.cliente_id e JOIN representantes r ON r.codigo = p.representante_codigo!) "

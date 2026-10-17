@@ -104,6 +104,9 @@ function getHexColor(row, fallbackIndex) {
 
 // Helper para formatar o nome completo do rótulo no gráfico
 function formatChartLabel(r, defaultKey) {
+  if (r.pedido && r.cliente) {
+    return `${r.pedido} - ${r.cliente}`;
+  }
   const codTecido = r.cod_tecido || r.cod_produto || "";
   const nomeTecido = r.nome_tecido || r.descricao || r.produto || "";
   const codCor = r.cod_cor || r.cor_codigo || "";
@@ -987,13 +990,14 @@ export default function Dashboard({ intent, dados, pergunta = "" }) {
     case "nexo_relatorio_periodo":
       return <RelatorioCompleto dados={dados} />;
 
+    case "nexo_consulta_pedidos":
     case "nexo_consulta_geral": {
       if (listaDados.length === 0) return null;
       const firstRow = listaDados[0];
       const keys = Object.keys(firstRow);
       
       const p = (pergunta || "").toLowerCase();
-      const hasOpOrPcp = "op" in firstRow || "quantidade_solicitada" in firstRow || "quantidade_reservada" in firstRow || p.includes("op") || p.includes("pcp") || p.includes("programacao") || p.includes("proporcao") || p.includes("pizza") || p.includes("artigo");
+      const hasOpOrPcp = "op" in firstRow || "quantidade_solicitada" in firstRow || "quantidade_reservada" in firstRow || p.includes("pcp") || p.includes("programacao") || p.includes("proporcao") || p.includes("pizza");
 
       const numericCandidates = [
         "vendas_valor_este_ano",
@@ -1031,7 +1035,7 @@ export default function Dashboard({ intent, dados, pergunta = "" }) {
         valKey = keys.find((k) => typeof firstRow[k] === "number");
       }
       
-      const textCandidates = ["nome_tecido", "descricao", "nome_cor", "cor", "totvs_order_code", "cliente_nome", "cliente", "representante_nome", "vendedor", "nome", "uf", "produto", "artigo", "op"];
+      const textCandidates = ["pedido", "nome_tecido", "descricao", "nome_cor", "cor", "totvs_order_code", "cliente_nome", "cliente", "representante_nome", "vendedor", "nome", "uf", "produto", "artigo", "op"];
       let nameKey = keys.find(k => textCandidates.includes(k.toLowerCase()));
       if (!nameKey) {
         nameKey = keys.find(k => typeof firstRow[k] === "string" && !k.toLowerCase().includes("data") && !k.toLowerCase().includes("created"));
@@ -1196,7 +1200,7 @@ function TabelaSimples({ dados, titulo }) {
           </tr>
         </thead>
         <tbody>
-          {dados.slice(0, 50).map((row, i) => {
+          {dados.slice(0, 500).map((row, i) => {
             const rowHex = getHexColor(row, i);
             return (
               <tr key={i} style={{ background: i % 2 === 0 ? "transparent" : "#1e293b" }}>
