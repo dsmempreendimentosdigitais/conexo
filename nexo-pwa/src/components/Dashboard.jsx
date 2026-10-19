@@ -440,52 +440,204 @@ function Fontes({ fontes }) {
 }
 
 // Função utilitária universal de visualização/download de PDF compatível com Celulares (iOS Safari / Android) e PCs
-function abrirImpressaoUniversal(htmlContent, titulo = "Relatório CONEXO") {
-  const dataHoje = new Date().toLocaleDateString("pt-BR", { day: "2-digit", month: "long", year: "numeric" });
+function abrirImpressaoUniversal(htmlContent, titulo = "Relatório CONEXO", subtituloConsulta = "") {
+  const agora = new Date();
+  const dataHoje = agora.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" });
+  const horaHoje = agora.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
   
-  // Higieniza HTML limpando cores claras de modo escuro para garantir texto 100% PRETO e alto contraste no PDF
+  // Higieniza HTML limpando cores de modo escuro para layout executivo claro no PDF
   const cleanedHtml = (htmlContent || "")
-    .replace(/color:\s*(#f8fafc|#cbd5e1|#94a3b8|#64748b|#38bdf8|rgb\(248,\s*250,\s*252\)|rgb\(203,\s*213,\s*225\)|rgb\(148,\s*163,\s*184\)|rgb\(100,\s*116,\s*139\)|rgb\(56,\s*189,\s*248\)|inherit)/gi, "color: #000000")
-    .replace(/background:\s*(#0f172a|rgb\(15,\s*23,\s*42\))/gi, "background: #e2e8f0")
+    .replace(/color:\s*(#f8fafc|#cbd5e1|#94a3b8|#64748b|#38bdf8|rgb\(248,\s*250,\s*252\)|rgb\(203,\s*213,\s*225\)|rgb\(148,\s*163,\s*184\)|rgb\(100,\s*116,\s*139\)|rgb\(56,\s*189,\s*248\)|inherit)/gi, "color: #0f172a")
+    .replace(/background:\s*(#0f172a|rgb\(15,\s*23,\s*42\))/gi, "background: #f1f5f9")
     .replace(/background:\s*(#1e293b|rgb\(30,\s*41,\s*59\))/gi, "background: transparent")
-    .replace(/border-bottom:\s*1px\s*solid\s*(#1e293b|#334155|rgb\(30,\s*41,\s*59\)|rgb\(51,\s*65,\s*85\))/gi, "border-bottom: 1px solid #cbd5e1");
+    .replace(/border-bottom:\s*1px\s*solid\s*(#1e293b|#334155|rgb\(30,\s*41,\s*59\)|rgb\(51,\s*65,\s*85\))/gi, "border-bottom: 1px solid #e2e8f0");
 
   const fullHtml = `<!DOCTYPE html><html lang="pt-BR"><head>
     <meta charset="UTF-8"/>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
-    <title>${titulo} — ${dataHoje}</title>
+    <title>${titulo} — Designtex Tecidos (${dataHoje})</title>
     <style>
-      body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; color: #000000; background: #f8fafc; padding: 16px; font-size: 12px; margin: 0; }
-      .header-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; background: #0f172a; color: white; padding: 12px 16px; border-radius: 10px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); gap: 12px; flex-wrap: wrap; }
-      .header-left { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
-      .btn-voltar { background: #1e293b; color: #ffffff; border: 1px solid #475569; padding: 10px 18px; border-radius: 8px; font-weight: 700; font-size: 13px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 2px 4px rgba(0,0,0,0.2); text-decoration: none; transition: background 0.2s; }
-      .btn-voltar:hover, .btn-voltar:active { background: #334155; border-color: #94a3b8; }
-      .btn-print { background: #0284c7; color: white; border: none; padding: 10px 18px; border-radius: 8px; font-weight: 700; font-size: 13px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
-      .btn-print:hover { background: #0369a1; }
-      .bottom-bar { display: flex; gap: 12px; margin-top: 20px; padding: 14px 16px; background: #0f172a; border-radius: 10px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); flex-wrap: wrap; }
-      .report-card { background: #ffffff; padding: 24px; border-radius: 12px; border: 1px solid #cbd5e1; box-shadow: 0 1px 4px rgba(0,0,0,0.06); }
-      
-      /* Regra estrita: Toda a tipografia de dados no relatório é PRETA (#000000) para máxima visibilidade e contraste */
-      .report-card, 
-      .report-card table, 
-      .report-card tbody, 
-      .report-card tr, 
-      .report-card td, 
-      .report-card p, 
-      .report-card span, 
-      .report-card div:not(.no-print) {
-        color: #000000 !important;
+      @page { size: A4 portrait; margin: 10mm 8mm; }
+      * { box-sizing: border-box; }
+      body {
+        font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+        color: #0f172a;
+        background: #f1f5f9;
+        padding: 16px;
+        font-size: 11px;
+        margin: 0;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
       }
-      .report-card h1 { font-size: 20px; font-weight: 800; color: #000000 !important; margin: 0 0 6px 0; }
-      .report-card .subtitulo { color: #334155 !important; font-size: 12px; font-weight: 600; margin-bottom: 20px; }
-      .report-card .section-title, .report-card .chart-title { font-size: 14px !important; font-weight: 800 !important; color: #000000 !important; margin: 20px 0 10px !important; border-bottom: 2px solid #000000 !important; padding-bottom: 6px !important; text-transform: uppercase !important; }
-      .report-card table { width: 100% !important; border-collapse: collapse !important; margin-bottom: 20px !important; font-size: 12px !important; }
-      .report-card th { text-align: left !important; padding: 8px 8px !important; background: #e2e8f0 !important; color: #000000 !important; font-size: 11px !important; font-weight: 800 !important; text-transform: uppercase !important; border-bottom: 2px solid #0f172a !important; }
-      .report-card td { padding: 8px 8px !important; border-bottom: 1px solid #cbd5e1 !important; color: #000000 !important; font-size: 12px !important; font-weight: 600 !important; }
-      .report-card tr:nth-child(even) td { background: #f8fafc !important; }
-      .report-card tr:nth-child(odd) td { background: #ffffff !important; }
-      .report-card tfoot tr, .report-card tfoot tr td { background: #dbeafe !important; color: #000000 !important; font-weight: 800 !important; border-top: 2px solid #0284c7 !important; border-bottom: 2px solid #0284c7 !important; }
-      .report-card .footer { margin-top: 28px !important; font-size: 11px !important; color: #475569 !important; border-top: 1px solid #cbd5e1 !important; padding-top: 10px !important; font-weight: 500 !important; }
+      .header-bar {
+        display: flex; justify-content: space-between; align-items: center;
+        margin: 0 auto 16px auto; max-width: 1050px;
+        background: #0f172a; color: white; padding: 12px 18px;
+        border-radius: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); gap: 12px; flex-wrap: wrap;
+      }
+      .header-left { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+      .btn-voltar {
+        background: #1e293b; color: #ffffff; border: 1px solid #475569;
+        padding: 10px 18px; border-radius: 8px; font-weight: 700; font-size: 13px;
+        cursor: pointer; display: inline-flex; align-items: center; gap: 6px;
+        text-decoration: none;
+      }
+      .btn-print {
+        background: #10b981; color: #0f172a; border: none;
+        padding: 10px 18px; border-radius: 8px; font-weight: 800; font-size: 13px;
+        cursor: pointer; display: inline-flex; align-items: center; gap: 6px;
+      }
+      .bottom-bar {
+        display: flex; gap: 12px; margin: 20px auto 0 auto; max-width: 1050px;
+        padding: 14px 18px; background: #0f172a; border-radius: 10px; flex-wrap: wrap;
+      }
+      .report-card {
+        background: #ffffff;
+        max-width: 1050px;
+        margin: 0 auto;
+        padding: 24px 28px;
+        border-radius: 12px;
+        border: 1px solid #cbd5e1;
+        box-shadow: 0 4px 20px rgba(15, 23, 42, 0.06);
+      }
+      .doc-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        border-bottom: 3px solid #0f172a;
+        padding-bottom: 14px;
+        margin-bottom: 18px;
+        gap: 16px;
+      }
+      .doc-brand {
+        font-size: 10px;
+        font-weight: 800;
+        letter-spacing: 1.2px;
+        text-transform: uppercase;
+        color: #0284c7 !important;
+        margin-bottom: 4px;
+      }
+      .doc-title {
+        font-size: 20px;
+        font-weight: 900;
+        color: #0f172a !important;
+        margin: 0;
+        letter-spacing: -0.3px;
+      }
+      .doc-query {
+        margin-top: 6px;
+        font-size: 11px;
+        color: #334155 !important;
+        background: #f1f5f9;
+        padding: 5px 10px;
+        border-radius: 6px;
+        border-left: 3px solid #0284c7;
+        display: inline-block;
+      }
+      .doc-meta {
+        text-align: right;
+        font-size: 11px;
+        color: #475569 !important;
+        line-height: 1.5;
+        white-space: nowrap;
+      }
+      .doc-meta strong { color: #0f172a !important; }
+
+      .report-card .section-title, .report-card .chart-title {
+        font-size: 12px !important;
+        font-weight: 800 !important;
+        color: #ffffff !important;
+        background: #0f172a !important;
+        margin: 16px 0 0 0 !important;
+        padding: 8px 12px !important;
+        border-radius: 6px 6px 0 0 !important;
+        text-transform: uppercase !important;
+        letter-spacing: 0.6px !important;
+      }
+      .report-card table {
+        width: 100% !important;
+        border-collapse: collapse !important;
+        margin-bottom: 16px !important;
+        font-size: 10.5px !important;
+        border: 1px solid #cbd5e1 !important;
+      }
+      .report-card thead { display: table-header-group; }
+      .report-card tfoot { display: table-row-group; }
+      .report-card tr { page-break-inside: avoid; }
+      .report-card th {
+        padding: 8px 7px !important;
+        background: #1e293b !important;
+        color: #ffffff !important;
+        font-size: 9.5px !important;
+        font-weight: 800 !important;
+        text-transform: uppercase !important;
+        letter-spacing: 0.4px !important;
+        border-bottom: 2px solid #0f172a !important;
+      }
+      .report-card td {
+        padding: 6px 7px !important;
+        border-bottom: 1px solid #e2e8f0 !important;
+        color: #0f172a !important;
+        font-size: 10.5px !important;
+        font-weight: 500 !important;
+        vertical-align: middle !important;
+      }
+      .report-card tbody tr:nth-child(even) td { background: #f8fafc !important; }
+      .report-card tbody tr:nth-child(odd) td { background: #ffffff !important; }
+      .report-card tfoot tr, .report-card tfoot tr td {
+        background: #dbeafe !important;
+        color: #0f172a !important;
+        font-weight: 800 !important;
+        font-size: 11px !important;
+        border-top: 2px solid #0284c7 !important;
+        border-bottom: 2px solid #0284c7 !important;
+        padding: 8px 7px !important;
+      }
+
+      /* Resumo Executivo no final do relatório (estilo Portal de Vendas) */
+      .conexo-summary-section {
+        margin-top: 18px !important;
+        page-break-inside: avoid !important;
+      }
+      .conexo-summary-title {
+        font-size: 12px !important;
+        font-weight: 900 !important;
+        color: #0f172a !important;
+        text-transform: uppercase !important;
+        letter-spacing: 0.5px !important;
+        margin-bottom: 8px !important;
+      }
+      .conexo-summary-table {
+        width: 100% !important;
+        border-collapse: collapse !important;
+        border: 1px solid #cbd5e1 !important;
+      }
+      .conexo-summary-table th {
+        background: #0f172a !important;
+        color: #ffffff !important;
+        padding: 8px 12px !important;
+        font-size: 10px !important;
+        font-weight: 800 !important;
+        text-transform: uppercase !important;
+      }
+      .conexo-summary-table td {
+        background: #dbeafe !important;
+        color: #0f172a !important;
+        padding: 10px 12px !important;
+        font-size: 12px !important;
+        font-weight: 800 !important;
+        border-top: 2px solid #0284c7 !important;
+      }
+
+      .report-card .footer {
+        margin-top: 24px !important;
+        font-size: 10px !important;
+        color: #64748b !important;
+        border-top: 1px solid #cbd5e1 !important;
+        padding-top: 10px !important;
+        display: flex !important;
+        justify-content: space-between !important;
+      }
       
       .kpi-grid { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 16px; }
       .kpi-card { border: 1px solid #cbd5e1; padding: 10px 14px; border-radius: 8px; min-width: 110px; flex: 1; background: #f8fafc; }
@@ -494,8 +646,8 @@ function abrirImpressaoUniversal(htmlContent, titulo = "Relatório CONEXO") {
       
       @media print {
         .no-print { display: none !important; }
-        body { padding: 0; background: white; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-        .report-card { border: none; box-shadow: none; padding: 0; }
+        body { padding: 0; background: white; }
+        .report-card { border: none; box-shadow: none; padding: 0; max-width: 100%; }
       }
     </style>
   </head><body>
@@ -503,17 +655,29 @@ function abrirImpressaoUniversal(htmlContent, titulo = "Relatório CONEXO") {
       <div class="header-left">
         <button class="btn-voltar" onclick="voltarAoConexo()">⬅️ Voltar ao CONEXO</button>
         <div>
-          <div style="font-size:14px; font-weight:700;">📄 Relatório Comercial CONEXO</div>
-          <div style="font-size:11px; opacity:0.85;">Visualização de Relatório</div>
+          <div style="font-size:14px; font-weight:700;">📄 ${titulo}</div>
+          <div style="font-size:11px; opacity:0.85;">Designtex Tecidos — Inteligência Comercial</div>
         </div>
       </div>
       <button class="btn-print" onclick="window.print()">🖨️ Salvar em PDF</button>
     </div>
     <div class="report-card">
-      <h1>📊 ${titulo}</h1>
-      <div class="subtitulo">Gerado em ${dataHoje} — Designtex Tecidos / CONEXO</div>
+      <div class="doc-header">
+        <div>
+          <div class="doc-brand">DESIGNTEX TECIDOS • CONEXO INTELIGÊNCIA COMERCIAL</div>
+          <h1 class="doc-title">${titulo}</h1>
+          ${subtituloConsulta ? `<div class="doc-query"><strong>Filtro / Consulta:</strong> ${subtituloConsulta}</div>` : ""}
+        </div>
+        <div class="doc-meta">
+          <div><strong>Emissão:</strong> ${dataHoje} às ${horaHoje}</div>
+          <div><strong>Sistema:</strong> CONEXO BI Oficial</div>
+        </div>
+      </div>
       ${cleanedHtml}
-      <div class="footer">Gerado automaticamente pelo CONEXO — Inteligência Comercial</div>
+      <div class="footer">
+        <span>Relatório Oficial — Designtex Tecidos</span>
+        <span>Gerado automaticamente pelo CONEXO em ${dataHoje} às ${horaHoje}</span>
+      </div>
     </div>
     <div class="bottom-bar no-print">
       <button class="btn-voltar" onclick="voltarAoConexo()" style="flex:1; justify-content:center;">⬅️ Voltar ao CONEXO</button>
@@ -537,9 +701,8 @@ function abrirImpressaoUniversal(htmlContent, titulo = "Relatório CONEXO") {
         }
       }
 
-      // No desktop dispara a caixa de impressão automaticamente
       if (!/Android|iPhone|iPad|iPod/i.test(navigator.userAgent)) {
-        setTimeout(function() { window.print(); }, 400);
+        setTimeout(function() { window.print(); }, 350);
       }
     </script>
   </body></html>`;
@@ -550,7 +713,6 @@ function abrirImpressaoUniversal(htmlContent, titulo = "Relatório CONEXO") {
     win.document.write(fullHtml);
     win.document.close();
   } else {
-    // Fallback se houver bloqueador de popup no celular
     const winLocation = window.open();
     if (winLocation) {
       winLocation.document.open();
@@ -561,7 +723,7 @@ function abrirImpressaoUniversal(htmlContent, titulo = "Relatório CONEXO") {
 }
 
 // Wrapper visual com botões de PDF (Relatório Completo e Apenas Gráficos)
-function PdfWrapper({ children, title = "Relatório CONEXO" }) {
+function PdfWrapper({ children, title = "Relatório CONEXO", pergunta = "" }) {
   const rawId = useId ? useId() : `pdf-${Math.random().toString(36).substring(2, 9)}`;
   const containerId = String(rawId).replace(/:/g, "");
   const [modalData, setModalData] = useState(null);
@@ -580,17 +742,19 @@ function PdfWrapper({ children, title = "Relatório CONEXO" }) {
       htmlLimpo = container.innerHTML;
     }
 
-    // Higieniza garantindo texto 100% preto e fundo claro de alto contraste no cabeçalho e no resumo/rodapé
+    // Higieniza garantindo texto escuro e cabeçalho/rodapé de alto contraste no modal
     htmlLimpo = (htmlLimpo || "")
-      .replace(/color:\s*(#f8fafc|#cbd5e1|#94a3b8|#64748b|#38bdf8|rgb\(248,\s*250,\s*252\)|rgb\(203,\s*213,\s*225\)|rgb\(148,\s*163,\s*184\)|rgb\(100,\s*116,\s*139\)|rgb\(56,\s*189,\s*248\)|inherit)/gi, "color: #000000")
+      .replace(/color:\s*(#f8fafc|#cbd5e1|#94a3b8|#64748b|#38bdf8|rgb\(248,\s*250,\s*252\)|rgb\(203,\s*213,\s*225\)|rgb\(148,\s*163,\s*184\)|rgb\(100,\s*116,\s*139\)|rgb\(56,\s*189,\s*248\)|inherit)/gi, "color: #0f172a")
       .replace(/background:\s*(#0f172a|rgb\(15,\s*23,\s*42\))/gi, "background: #dbeafe")
-      .replace(/background:\s*(#1e293b|rgb\(30,\s*41,\s*59\))/gi, "background: transparent")
+      .replace(/background:\s*(#1e293b|rgb\(30,\s*41,\s*59\))/gi, "background: #f8fafc")
       .replace(/border-bottom:\s*1px\s*solid\s*(#1e293b|#334155|rgb\(30,\s*41,\s*59\)|rgb\(51,\s*65,\s*85\))/gi, "border-bottom: 1px solid #cbd5e1");
 
+    const agora = new Date();
     setModalData({
       titulo: apenasGraficos ? `Gráficos — ${title}` : title,
+      subtituloConsulta: pergunta || "",
       html: htmlLimpo,
-      dataHoje: new Date().toLocaleDateString("pt-BR", { day: "2-digit", month: "long", year: "numeric" }),
+      dataHoje: `${agora.toLocaleDateString("pt-BR")} às ${agora.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}`,
     });
   }
 
@@ -600,21 +764,21 @@ function PdfWrapper({ children, title = "Relatório CONEXO" }) {
         <button
           onClick={() => abrirModalPDF(false)}
           style={{
-            background: "#38bdf8",
-            color: "#0f172a",
+            background: "linear-gradient(135deg, #0284c7, #0369a1)",
+            color: "#ffffff",
             border: "none",
             borderRadius: 8,
-            padding: "8px 16px",
+            padding: "9px 16px",
             fontWeight: 700,
             fontSize: 13,
             cursor: "pointer",
             display: "flex",
             alignItems: "center",
             gap: 6,
-            boxShadow: "0 2px 8px rgba(56, 189, 248, 0.25)"
+            boxShadow: "0 2px 8px rgba(2, 132, 199, 0.3)"
           }}
         >
-          📄 Baixar Relatório Completo (PDF)
+          📄 Visualizar / Baixar Relatório (PDF)
         </button>
         <button
           onClick={() => abrirModalPDF(true)}
@@ -623,7 +787,7 @@ function PdfWrapper({ children, title = "Relatório CONEXO" }) {
             color: "#0f172a",
             border: "none",
             borderRadius: 8,
-            padding: "8px 16px",
+            padding: "9px 16px",
             fontWeight: 700,
             fontSize: 13,
             cursor: "pointer",
@@ -641,7 +805,7 @@ function PdfWrapper({ children, title = "Relatório CONEXO" }) {
         {children}
       </div>
 
-      {/* MODAL IN-APP DE VISUALIZAÇÃO E DOWNLOAD DE PDF COM BOTÃO FECHAR 100% GARANTIDO */}
+      {/* MODAL IN-APP DE VISUALIZAÇÃO E DOWNLOAD DE PDF COM LAYOUT EXECUTIVO MODERNO */}
       {modalData && (
         <div
           style={{
@@ -652,21 +816,21 @@ function PdfWrapper({ children, title = "Relatório CONEXO" }) {
             bottom: 0,
             width: "100vw",
             height: "100vh",
-            backgroundColor: "#f1f5f9",
+            backgroundColor: "#e2e8f0",
             zIndex: 999999,
             display: "flex",
             flexDirection: "column",
             overflow: "hidden",
           }}
         >
-          {/* Top Bar com botão Voltar proeminente */}
+          {/* Top Bar com botão Voltar e Salvar PDF */}
           <div
             className="no-print"
             style={{
               display: "flex",
               justifyContent: "space-between",
               alignItems: "center",
-              padding: "12px 16px",
+              padding: "12px 20px",
               background: "#0f172a",
               color: "#ffffff",
               boxShadow: "0 4px 12px rgba(0,0,0,0.2)",
@@ -712,12 +876,12 @@ function PdfWrapper({ children, title = "Relatório CONEXO" }) {
 
             <div style={{ display: "flex", gap: 8 }}>
               <button
-                onClick={() => abrirImpressaoUniversal(modalData.html, modalData.titulo)}
+                onClick={() => abrirImpressaoUniversal(modalData.html, modalData.titulo, modalData.subtituloConsulta)}
                 style={{
                   background: "#10b981",
                   color: "#0f172a",
                   border: "none",
-                  padding: "10px 16px",
+                  padding: "10px 18px",
                   borderRadius: 8,
                   fontWeight: 800,
                   fontSize: 13,
@@ -727,7 +891,7 @@ function PdfWrapper({ children, title = "Relatório CONEXO" }) {
                   gap: 6,
                 }}
               >
-                🖨️ Salvar em PDF
+                🖨️ Imprimir / Salvar PDF
               </button>
               <button
                 onClick={() => setModalData(null)}
@@ -748,12 +912,12 @@ function PdfWrapper({ children, title = "Relatório CONEXO" }) {
             </div>
           </div>
 
-          {/* Área do Relatório Rolável com Alta Legibilidade */}
+          {/* Área do Relatório Rolável estilo Folha A4 Executiva */}
           <div
             style={{
               flex: 1,
               overflowY: "auto",
-              padding: "16px",
+              padding: "24px 16px",
               display: "flex",
               justifyContent: "center",
             }}
@@ -762,26 +926,50 @@ function PdfWrapper({ children, title = "Relatório CONEXO" }) {
               className="report-card"
               style={{
                 width: "100%",
-                maxWidth: "850px",
+                maxWidth: "1020px",
                 backgroundColor: "#ffffff",
-                padding: "24px",
+                padding: "28px 32px",
                 borderRadius: "12px",
                 border: "1px solid #cbd5e1",
-                boxShadow: "0 4px 15px rgba(0,0,0,0.06)",
-                color: "#000000",
+                boxShadow: "0 10px 25px rgba(15, 23, 42, 0.08)",
+                color: "#0f172a",
                 height: "fit-content",
                 marginBottom: "40px",
               }}
             >
-              <h1 style={{ fontSize: 22, fontWeight: 800, color: "#000000", margin: "0 0 6px 0" }}>
-                📊 {modalData.titulo}
-              </h1>
-              <div style={{ fontSize: 12, fontWeight: 600, color: "#475569", marginBottom: 20 }}>
-                Gerado em {modalData.dataHoje} — Designtex Tecidos / CONEXO
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "flex-start",
+                  borderBottom: "3px solid #0f172a",
+                  paddingBottom: 14,
+                  marginBottom: 20,
+                  gap: 16,
+                  flexWrap: "wrap",
+                }}
+              >
+                <div>
+                  <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: 1.2, color: "#0284c7", textTransform: "uppercase", marginBottom: 4 }}>
+                    DESIGNTEX TECIDOS • CONEXO INTELIGÊNCIA COMERCIAL
+                  </div>
+                  <h1 style={{ fontSize: 22, fontWeight: 900, color: "#0f172a", margin: 0 }}>
+                    📊 {modalData.titulo}
+                  </h1>
+                  {modalData.subtituloConsulta && (
+                    <div style={{ marginTop: 8, fontSize: 12, color: "#334155", background: "#f1f5f9", padding: "6px 10px", borderRadius: 6, borderLeft: "3px solid #0284c7" }}>
+                      <strong>Filtro / Consulta:</strong> {modalData.subtituloConsulta}
+                    </div>
+                  )}
+                </div>
+                <div style={{ textAlign: "right", fontSize: 12, color: "#475569", lineHeight: 1.5 }}>
+                  <div><strong style={{ color: "#0f172a" }}>Gerado em:</strong> {modalData.dataHoje}</div>
+                  <div><strong style={{ color: "#0f172a" }}>Fonte:</strong> Base Oficial ERP / Portal</div>
+                </div>
               </div>
 
               <div
-                style={{ color: "#000000" }}
+                style={{ color: "#0f172a" }}
                 dangerouslySetInnerHTML={{ __html: modalData.html }}
               />
 
@@ -793,12 +981,15 @@ function PdfWrapper({ children, title = "Relatório CONEXO" }) {
                   fontSize: 11,
                   color: "#64748b",
                   fontWeight: 500,
+                  display: "flex",
+                  justifyContent: "space-between",
                 }}
               >
-                Gerado automaticamente pelo CONEXO — Inteligência Comercial
+                <span>Relatório Oficial — Designtex Tecidos</span>
+                <span>Gerado automaticamente pelo CONEXO — Inteligência Comercial</span>
               </div>
 
-              {/* Botões de Rodapé na Visualização Mobile */}
+              {/* Botões de Rodapé */}
               <div
                 className="no-print"
                 style={{
@@ -827,7 +1018,7 @@ function PdfWrapper({ children, title = "Relatório CONEXO" }) {
                   ⬅️ Voltar ao CONEXO
                 </button>
                 <button
-                  onClick={() => abrirImpressaoUniversal(modalData.html, modalData.titulo)}
+                  onClick={() => abrirImpressaoUniversal(modalData.html, modalData.titulo, modalData.subtituloConsulta)}
                   style={{
                     flex: 1,
                     background: "#10b981",
@@ -840,7 +1031,7 @@ function PdfWrapper({ children, title = "Relatório CONEXO" }) {
                     cursor: "pointer",
                   }}
                 >
-                  🖨️ Salvar em PDF
+                  🖨️ Imprimir / Salvar PDF
                 </button>
               </div>
             </div>
@@ -1076,7 +1267,7 @@ export default function Dashboard({ intent, dados, pergunta = "" }) {
   }
 
   if (!content) return null;
-  return <PdfWrapper title={title}>{content}</PdfWrapper>;
+  return <PdfWrapper title={title} pergunta={pergunta}>{content}</PdfWrapper>;
 }
 
 // Helper para evitar duplicação
@@ -1188,17 +1379,49 @@ function TabelaSimples({ dados, titulo }) {
     return cLower.includes("total_pedidos") || cLower.includes("total_itens") || cLower === "index" || cLower === "nº";
   };
 
+  const isNoWrapCol = (c) => {
+    const cLower = c.toLowerCase();
+    return (
+      isIndexCol(c) ||
+      isSummableColumn(c) ||
+      cLower.includes("data") ||
+      cLower.includes("pedido") ||
+      cLower === "rep" ||
+      cLower === "tipo" ||
+      cLower.includes("lote") ||
+      cLower.includes("status")
+    );
+  };
+
+  const summableCols = colunas.filter(isSummableColumn);
+  const indexColName = colunas.find(isIndexCol);
+  const qtdTotalRegistros = indexColName ? (dados[0][indexColName] || dados.length) : dados.length;
+
   return (
     <div className="pdf-tabela" style={{ marginTop: 8 }}>
       {titulo && <div className="chart-title" style={{ fontSize: 13, fontWeight: 700, color: "#f8fafc", marginBottom: 6 }}>{titulo}</div>}
       <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12, color: "#cbd5e1" }}>
         <thead>
           <tr>
-            {colunas.map((c) => (
-              <th key={c} style={{ textAlign: isIndexCol(c) ? "center" : "left", padding: "6px 8px", borderBottom: "1px solid #334155", color: "#94a3b8", fontWeight: 600, background: "#0f172a" }}>
-                {isIndexCol(c) ? "Nº" : c.replace(/_/g, " ").toUpperCase()}
-              </th>
-            ))}
+            {colunas.map((c) => {
+              const align = isIndexCol(c) ? "center" : isSummableColumn(c) ? "right" : "left";
+              return (
+                <th
+                  key={c}
+                  style={{
+                    textAlign: align,
+                    padding: "7px 8px",
+                    borderBottom: "1px solid #334155",
+                    color: "#94a3b8",
+                    fontWeight: 700,
+                    background: "#0f172a",
+                    whiteSpace: isNoWrapCol(c) ? "nowrap" : "normal",
+                  }}
+                >
+                  {isIndexCol(c) ? "Nº" : c.replace(/_/g, " ").toUpperCase()}
+                </th>
+              );
+            })}
           </tr>
         </thead>
         <tbody>
@@ -1209,9 +1432,20 @@ function TabelaSimples({ dados, titulo }) {
                 {colunas.map((c) => {
                   const cLower = c.toLowerCase();
                   const isColorCol = cLower.includes("cor") || cLower.includes("color") || cLower === "hex_color";
+                  const align = isIndexCol(c) ? "center" : isSummableColumn(c) ? "right" : "left";
 
                   return (
-                    <td key={c} style={{ padding: "5px 8px", borderBottom: "1px solid #1e293b", textAlign: isIndexCol(c) ? "center" : "left", fontWeight: isIndexCol(c) ? 700 : 400, color: isIndexCol(c) ? "#38bdf8" : "inherit" }}>
+                    <td
+                      key={c}
+                      style={{
+                        padding: "6px 8px",
+                        borderBottom: "1px solid #1e293b",
+                        textAlign: align,
+                        fontWeight: isIndexCol(c) || isSummableColumn(c) ? 600 : 400,
+                        color: isIndexCol(c) ? "#38bdf8" : "inherit",
+                        whiteSpace: isNoWrapCol(c) ? "nowrap" : "normal",
+                      }}
+                    >
                       {isColorCol && <ColorSquare colorHex={rowHex} />}
                       {isIndexCol(c) ? i + 1 : cLower === "hex_color" ? rowHex : fmt(row[c], c)}
                     </td>
@@ -1225,15 +1459,26 @@ function TabelaSimples({ dados, titulo }) {
           <tr style={{ background: "#0f172a", borderTop: "2px solid #38bdf8", fontWeight: 700, color: "#f8fafc" }}>
             {colunas.map((c, i) => {
               let footerVal = "";
+              const align = isIndexCol(c) ? "center" : isSummableColumn(c) ? "right" : "left";
               if (isIndexCol(c)) {
-                footerVal = String(dados[0][c] || dados.length);
+                footerVal = String(qtdTotalRegistros);
               } else if (i === 0) {
                 footerVal = "TOTAL GERAL";
               } else if (totais[c] !== undefined) {
                 footerVal = fmt(totais[c], c);
               }
               return (
-                <td key={c} style={{ padding: "8px", borderBottom: "1px solid #38bdf8", textAlign: isIndexCol(c) ? "center" : "left", color: isIndexCol(c) ? "#38bdf8" : "#f8fafc" }}>
+                <td
+                  key={c}
+                  style={{
+                    padding: "8px",
+                    borderBottom: "1px solid #38bdf8",
+                    textAlign: align,
+                    color: isIndexCol(c) ? "#38bdf8" : "#f8fafc",
+                    whiteSpace: "nowrap",
+                    fontWeight: 800,
+                  }}
+                >
                   {footerVal}
                 </td>
               );
@@ -1241,6 +1486,39 @@ function TabelaSimples({ dados, titulo }) {
           </tr>
         </tfoot>
       </table>
+
+      {/* Quadro de Resumo e Total Geral do Relatório (idêntico ao padrão executivo do Portal) */}
+      {summableCols.length > 0 && (
+        <div className="conexo-summary-section" style={{ marginTop: 14 }}>
+          <div className="conexo-summary-title" style={{ fontSize: 12, fontWeight: 800, color: "#f8fafc", marginBottom: 6, textTransform: "uppercase", letterSpacing: 0.5 }}>
+            RESUMO E TOTAL GERAL DO RELATÓRIO
+          </div>
+          <table className="conexo-summary-table" style={{ width: "100%", borderCollapse: "collapse", fontSize: 12, border: "1px solid #334155" }}>
+            <thead>
+              <tr style={{ background: "#0f172a" }}>
+                <th style={{ textAlign: "left", padding: "8px 12px", color: "#94a3b8", fontWeight: 700 }}>RESUMO GERAL</th>
+                <th style={{ textAlign: "center", padding: "8px 12px", color: "#94a3b8", fontWeight: 700 }}>QTD. REGISTROS / PEDIDOS</th>
+                {summableCols.map((sc) => (
+                  <th key={sc} style={{ textAlign: "right", padding: "8px 12px", color: "#94a3b8", fontWeight: 700 }}>
+                    {sc.replace(/_/g, " ").toUpperCase()}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              <tr style={{ background: "#1e293b", fontWeight: 800, color: "#f8fafc" }}>
+                <td style={{ padding: "10px 12px", fontWeight: 800, color: "#38bdf8" }}>TOTAL GERAL DO RELATÓRIO</td>
+                <td style={{ padding: "10px 12px", textAlign: "center", fontWeight: 800 }}>{qtdTotalRegistros}</td>
+                {summableCols.map((sc) => (
+                  <td key={sc} style={{ padding: "10px 12px", textAlign: "right", fontWeight: 800, whiteSpace: "nowrap" }}>
+                    {fmt(totais[sc], sc)}
+                  </td>
+                ))}
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 }
