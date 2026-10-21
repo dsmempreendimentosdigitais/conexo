@@ -470,7 +470,27 @@ def executar(intent: str, params: dict, ctx: dict | None = None):
                     flags=re.IGNORECASE,
                 )
         resp = supabase.rpc("conexo_executar_leitura", {"query_str": sql}).execute()
-        return resp.data
+        data = resp.data or []
+
+        # Resiliência para busca de clientes (ex: 'foxs textil' no prompt vs 'FOXSTEXTIL' no banco):
+        if not data and sql:
+            match = re.search(r"((?:p\.)?(?:cliente_nome|razao_social|nome_fantasia))\s+ILIKE\s+'%([^%']+)%'", sql, re.IGNORECASE)
+            if match:
+                col, val = match.groups()
+                val_limpo = val.strip()
+                if " " in val_limpo:
+                    val_sem_espaco = val_limpo.replace(" ", "")
+                    termo_inicial = val_limpo.split()[0]
+                    cond_flex = f"(REPLACE(LOWER({col}), ' ', '') LIKE '%{val_sem_espaco.lower()}%' OR {col} ILIKE '%{termo_inicial}%')"
+                    sql_alt = sql.replace(f"{col} ILIKE '%{val}%'", cond_flex).replace(f"{col} ILIKE '%{val_limpo}%'", cond_flex)
+                    try:
+                        resp_alt = supabase.rpc("conexo_executar_leitura", {"query_str": sql_alt}).execute()
+                        if resp_alt.data:
+                            return resp_alt.data
+                    except Exception:
+                        pass
+
+        return data
 
     # Comparativo Inteligente Proporcional (MTD - Month-to-Date)
     if intent in ("conexo_comparativo_mes", "conexo_comparativo_ano"):

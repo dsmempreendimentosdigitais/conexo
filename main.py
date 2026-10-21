@@ -156,10 +156,16 @@ def perguntar_stream(body: PerguntaIn, ctx: dict = Depends(get_contexto)):
     def gerar():
         yield f"data: {json.dumps({'tipo':'dados','intent':intent,'dados':dados}, default=str)}\n\n"
 
+        # Se não houver dados, formata com contexto de filtros e regras de proatividade
+        dados_para_prompt = dados
         if not dados:
-            yield f"data: {json.dumps({'tipo':'texto','delta':'Não encontrei registros para esse período.'})}\n\n"
-            yield f"data: {json.dumps({'tipo':'fim'})}\n\n"
-            return
+            dados_para_prompt = {
+                "FILTROS_APLICADOS_NA_CONSULTA_SQL": params,
+                "TOTAL_REGISTROS_GERAL_DA_BASE": 0,
+                "REGISTROS_EXIBIDOS_NA_TABELA": 0,
+                "SOMA_TOTAL_EXATA_DO_BANCO": {},
+                "LISTA_REGISTROS": []
+            }
 
         if intent == "conexo_inteligencia_mercado" and isinstance(dados, dict):
             try:
@@ -263,13 +269,21 @@ async def transcrever(
             b64_audio = base64.b64encode(conteudo).decode("utf-8")
             url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={config.OPENAI_API_KEY}"
             payload = {
+                "systemInstruction": {
+                    "parts": [{
+                        "text": "Você é um transcritor estrito de fala para texto (Speech-to-Text). Sua função é transcrever com total fidelidade as palavras faladas no áudio em português. NUNCA responda à pergunta, NUNCA gere saudações, NUNCA converse. Se não houver fala humana inteligível no áudio (apenas silêncio, estalos ou ruído ambiente), retorne exatamente vazio."
+                    }]
+                },
                 "contents": [{
                     "parts": [
                         {"inline_data": {"mime_type": content_type, "data": b64_audio}},
-                        {"text": "Transcreva exatamente o que foi dito neste áudio em português. Retorne APENAS o texto falado transcrito. Se não houver fala clara ou for apenas ruído/silêncio, responda vazio."}
+                        {"text": "Transcreva o que foi falado no áudio:"}
                     ]
                 }],
-                "generationConfig": {"temperature": 0.0}
+                "generationConfig": {
+                    "temperature": 0.0,
+                    "thinkingConfig": {"thinkingBudget": 0}
+                }
             }
             resp = requests.post(url, json=payload, timeout=25)
             if resp.status_code != 200:
@@ -282,6 +296,11 @@ async def transcrever(
                 parts = candidates[0].get("content", {}).get("parts", [])
                 if parts:
                     texto = parts[0].get("text", "").strip()
+            
+            # Limpa eventuais marcadores ou prefixos que o modelo possa gerar
+            for prefixo in ["transcrição:", "áudio:", "texto:", "fala:"]:
+                if texto.lower().startswith(prefixo):
+                    texto = texto[len(prefixo):].strip()
             return {"texto": texto}
         else:
             resp = client_oa.audio.transcriptions.create(

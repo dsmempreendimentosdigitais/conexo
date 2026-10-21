@@ -7,7 +7,7 @@ const BOAS_VINDAS = {
   role: "conexo",
   conteudo:
     "Olá! Sou o **CONEXO**, seu analista comercial. Pergunte sobre vendas, " +
-    "clientes, produtos, metas ou mercado — por texto ou áudio. 🎙️",
+    "clientes, produtos, metas ou mercado — por texto ou voz.",
   ts: Date.now(),
 };
 
@@ -354,45 +354,52 @@ export default function Chat({ token, email, onLogout }) {
   async function toggleAudio() {
     if (gravando && recRef.current) {
       try {
-        if (recRef.current.state === "recording") {
-          recRef.current.requestData();
+        if (recRef.current.state !== "inactive") {
+          recRef.current.stop();
         }
       } catch (e) {
-        console.warn("requestData error:", e);
+        console.warn("stop error:", e);
       }
-      setTimeout(() => {
-        try {
-          if (recRef.current && recRef.current.state !== "inactive") {
-            recRef.current.stop();
-          }
-        } catch (e) {
-          console.warn("stop error:", e);
-        }
-      }, 100);
       setGravando(false);
       return;
     }
 
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+        },
+      });
+
+      const isIOS =
+        typeof navigator !== "undefined" &&
+        (/iPad|iPhone|iPod/.test(navigator.userAgent) ||
+          (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1));
+
       let options = {};
-      const preferredTypes = [
-        "audio/mp4",
-        "audio/aac",
-        "audio/webm;codecs=opus",
-        "audio/webm",
-        "audio/ogg",
-      ];
+      const preferredTypes = isIOS
+        ? ["audio/mp4", "audio/aac"]
+        : [
+            "audio/webm;codecs=opus",
+            "audio/webm",
+            "audio/ogg",
+            "audio/mp4",
+          ];
+
       for (const t of preferredTypes) {
-        if (typeof MediaRecorder !== "undefined" && MediaRecorder.isTypeSupported(t)) {
+        if (
+          typeof MediaRecorder !== "undefined" &&
+          MediaRecorder.isTypeSupported(t)
+        ) {
           options = { mimeType: t };
           break;
         }
       }
 
       const rec = new MediaRecorder(stream, options);
-      const actualType = rec.mimeType || options.mimeType || "audio/mp4";
+      const actualType = rec.mimeType || options.mimeType || (isIOS ? "audio/mp4" : "audio/webm");
       const chunks = [];
 
       rec.ondataavailable = (e) => {
@@ -408,7 +415,12 @@ export default function Chat({ token, email, onLogout }) {
         if (!blob || blob.size < 200) {
           setMsgs((m) => [
             ...m,
-            { role: "conexo", conteudo: "⚠️ Áudio muito curto ou não capturado pelo microfone. Por favor, fale novamente após clicar no microfone.", ts: Date.now() },
+            {
+              role: "conexo",
+              conteudo:
+                "⚠️ Áudio muito curto ou microfone sem sinal. Por favor, toque no botão de voz e fale sua pergunta com clareza.",
+              ts: Date.now(),
+            },
           ]);
           return;
         }
@@ -421,7 +433,12 @@ export default function Chat({ token, email, onLogout }) {
           } else {
             setMsgs((m) => [
               ...m,
-              { role: "conexo", conteudo: "⚠️ Não identifiquei fala audível no áudio. Por favor, fale mais próximo ao microfone e tente novamente.", ts: Date.now() },
+              {
+                role: "conexo",
+                conteudo:
+                  "⚠️ Não identifiquei fala audível no áudio. Fale mais próximo ao microfone do celular e tente novamente.",
+                ts: Date.now(),
+              },
             ]);
             setLoading(false);
           }
@@ -435,11 +452,13 @@ export default function Chat({ token, email, onLogout }) {
       };
 
       recRef.current = rec;
-      // Inicia com timeslice de 250ms para forçar ondataavailable no iOS Safari
+      // Inicia captura contínua com chunks de 250ms
       rec.start(250);
       setGravando(true);
     } catch (err) {
-      alert("Não foi possível acessar o microfone. Verifique se a permissão de microfone está liberada no seu navegador.");
+      alert(
+        "Não foi possível acessar o microfone. Verifique se a permissão de áudio está liberada no seu navegador (ícone de cadeado na barra de endereços)."
+      );
     }
   }
 
@@ -698,29 +717,38 @@ export default function Chat({ token, email, onLogout }) {
         {gravando && (
           <div
             style={{
-              padding: "6px 16px",
-              background: "#ef4444",
+              padding: "8px 16px",
+              background: "linear-gradient(135deg, #10a37f, #0d8a6a)",
               color: "#ffffff",
               fontSize: 12,
-              fontWeight: 700,
+              fontWeight: 600,
               display: "flex",
               alignItems: "center",
               justifyContent: "space-between",
               borderRadius: "8px 8px 0 0",
               margin: "0 16px -8px 16px",
-              animation: "pulse 1.5s infinite",
+              boxShadow: "0 4px 12px rgba(16, 163, 127, 0.25)",
             }}
           >
-            <span>🔴 Gravando sua voz... Fale sua pergunta e clique no microfone para enviar</span>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <span className="chatgpt-voice-icon" style={{ color: "#fff" }}>
+                <span className="wave-bar bar-1" />
+                <span className="wave-bar bar-2" />
+                <span className="wave-bar bar-3" />
+                <span className="wave-bar bar-4" />
+              </span>
+              <span>Ouvindo... Fale sua pergunta e toque no botão para enviar</span>
+            </div>
             <button
+              type="button"
               onClick={toggleAudio}
               style={{
                 background: "#ffffff",
-                color: "#ef4444",
+                color: "#0d8a6a",
                 border: "none",
                 borderRadius: 4,
-                padding: "2px 8px",
-                fontWeight: 800,
+                padding: "3px 10px",
+                fontWeight: 700,
                 cursor: "pointer",
                 fontSize: 11,
               }}
@@ -752,11 +780,18 @@ export default function Chat({ token, email, onLogout }) {
               }}
             />
             <button
+              type="button"
               className={`btn-icon btn-record ${gravando ? "recording" : ""}`}
               onClick={toggleAudio}
-              title={gravando ? "Parar gravação" : "Gravar áudio"}
+              title={gravando ? "Parar gravação e enviar" : "Gravar áudio (Voz estilo ChatGPT)"}
+              aria-label="Gravar áudio"
             >
-              🎙️
+              <span className="chatgpt-voice-icon" aria-hidden="true">
+                <span className="wave-bar bar-1" />
+                <span className="wave-bar bar-2" />
+                <span className="wave-bar bar-3" />
+                <span className="wave-bar bar-4" />
+              </span>
             </button>
             <button
               className="btn-icon btn-send"
@@ -768,7 +803,7 @@ export default function Chat({ token, email, onLogout }) {
             </button>
           </div>
           <div className="input-hint">
-            Shift+Enter para nova linha · 🎙️ para voz · dados sempre do seu banco
+            Shift+Enter para nova linha · Toque no ícone de voz para falar · Dados sempre do seu banco
           </div>
         </div>
       </div>
