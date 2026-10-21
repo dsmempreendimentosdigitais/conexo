@@ -469,7 +469,30 @@ def executar(intent: str, params: dict, ctx: dict | None = None):
                     sql,
                     flags=re.IGNORECASE,
                 )
-        resp = supabase.rpc("conexo_executar_leitura", {"query_str": sql}).execute()
+            # Sanitização preventiva para evitar erro 'column "uf" does not exist'
+            sql = re.sub(r"\b(?:r|representantes)\.uf\b", "TRIM(SPLIT_PART(r.cidade, '/', 2))", sql, flags=re.IGNORECASE)
+            if re.search(r"\b(?:p|pedidos_totvs)\.uf\b", sql, re.IGNORECASE):
+                if "clientes" in sql.lower():
+                    sql = re.sub(r"\b(?:p|pedidos_totvs)\.uf\b", "c.uf", sql, flags=re.IGNORECASE)
+                else:
+                    sql = re.sub(r"\b(?:p|pedidos_totvs)\.uf\b", "c.uf", sql, flags=re.IGNORECASE)
+                    sql = sql.replace("FROM pedidos_totvs p", "FROM pedidos_totvs p LEFT JOIN clientes c ON c.codigo = p.cliente_codigo")
+
+        try:
+            resp = supabase.rpc("conexo_executar_leitura", {"query_str": sql}).execute()
+        except Exception as err:
+            err_str = str(err)
+            if 'column "uf" does not exist' in err_str or '42703' in err_str:
+                sql_fixed = re.sub(r"\b(?:r|p|representantes|pedidos_totvs)\.uf\b", "c.uf", sql, flags=re.IGNORECASE)
+                if "JOIN clientes" not in sql_fixed and "FROM clientes" not in sql_fixed:
+                    sql_fixed = re.sub(r",\s*(?:[a-zA-Z_]+\.)?uf\b", "", sql_fixed)
+                    sql_fixed = re.sub(r"\b(?:[a-zA-Z_]+\.)?uf\s*=\s*'[^']*'\s*(?:AND|OR)?", "", sql_fixed, flags=re.IGNORECASE)
+                try:
+                    resp = supabase.rpc("conexo_executar_leitura", {"query_str": sql_fixed.strip().rstrip(";")}).execute()
+                except Exception:
+                    raise err
+            else:
+                raise err
         data = resp.data or []
 
         # Resiliência para busca de clientes (ex: 'foxs textil' no prompt vs 'FOXSTEXTIL' no banco):

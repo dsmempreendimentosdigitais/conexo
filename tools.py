@@ -153,8 +153,9 @@ TOOLS = [
             "detalhes de transações de ontem, agrupamentos específicos de vendas por cliente, ou cruzamento de estoque com vendas. "
             "Escreva uma consulta SQL PostgreSQL de leitura (SELECT) válida sobre as tabelas: "
             "- pedidos_totvs (id, totvs_order_code, totvs_order_id, data_pedido, data_faturamento, valor_total, valor_nf, quantidade_total, representante_codigo, representante_nome, cliente_nome, status, items_json) "
+            "- clientes (id, codigo, razao_social, nome_fantasia, representante_codigo, cidade, uf, limite_credito, saldo_disponivel, telefone, email, status_cliente) "
             "- pedidos (tabela do PORTAL DE VENDAS vendas.designtex.com.br — contém id, numero, status, valor_total, created_at, cliente_id, representante_codigo. Para pedidos BLOQUEADOS ou no FORÇA DE VENDAS, use esta tabela fazendo JOIN clientes c ON c.id = p.cliente_id e JOIN representantes r ON r.codigo = p.representante_codigo!) "
-            "- representantes (codigo, nome, meta, supervisor, ativo) "
+            "- representantes (codigo, nome, meta, supervisor, ativo, cidade) "
             "- estoque_pe (cod_produto, descricao, cor, cor_codigo, quantidade_disponivel, categoria, unidade) "
             "- programacoes (op, cod_tecido, nome_tecido, cod_cor, nome_cor, quantidade_solicitada, quantidade_disponivel, previsao_faturamento, tipo) "
             "ATENÇÃO IMPORTANTE PARA A CONSULTA SQL:\n"
@@ -176,7 +177,8 @@ TOOLS = [
             "   ATENÇÃO: NUNCA use `COUNT(DISTINCT ...) OVER()` pois o PostgreSQL não suporta DISTINCT em Window Functions (erro 0A000!). Use apenas `COUNT(*) OVER()`.\n"
             "8. REGRA CRÍTICA PARA REPRESENTANTES E VENDEDORES: Sempre que a consulta envolver representantes/vendedores, você DEVE obrigatoriamente fazer `INNER JOIN representantes rep ON rep.codigo = p.representante_codigo` e filtrar `rep.supervisor IS NOT NULL AND TRIM(rep.supervisor) <> '' AND rep.ativo IS TRUE`. NUNCA traga representantes inativos, sem supervisor ou códigos de apoio TOTVS ('REPRESENTANTE TOTVS #...').\n"
             "9. CONSULTAS PCP E PROGRAMAÇÃO DE PRODUÇÃO (programacoes): Sempre que consultar a tabela `programacoes`, selecione obrigatoriamente `op, cod_tecido, nome_tecido, cod_cor, nome_cor, quantidade_solicitada, quantidade_disponivel, GREATEST(0, quantidade_solicitada - quantidade_disponivel) AS quantidade_reservada, previsao_faturamento, tipo` para que a metragem reservada/vendida seja exibida corretamente no gráfico em pizza e na tabela.\n"
-            "10. ANÁLISES ESTRATÉGICAS, POTENCIAL DE CRESCIMENTO E PLANOS DE AÇÃO: Use SEMPRE esta ferramenta para perguntas estratégicas sobre representantes e vendedores (ex: 'potencial de crescimento do André', 'expectativa de vendas', 'nicho dos clientes e tamanho de carteira', 'plano de ação para a Designtex apoiar o representante'). Monte uma query rica agrupando por cliente e somando o faturamento total do representante no pedidos_totvs."
+            "10. ANÁLISES ESTRATÉGICAS, POTENCIAL DE CRESCIMENTO E PLANOS DE AÇÃO: Use SEMPRE esta ferramenta para perguntas estratégicas sobre representantes e vendedores (ex: 'potencial de crescimento do André', 'expectativa de vendas', 'nicho dos clientes e tamanho de carteira', 'plano de ação para a Designtex apoiar o representante'). Monte uma query rica agrupando por cliente e somando o faturamento total do representante no pedidos_totvs.\n"
+            "11. ATENÇÃO ABSOLUTA À COLUNA 'uf' E 'cidade': As colunas 'uf' e 'cidade' pertencem à tabela 'clientes'. As tabelas 'representantes' e 'pedidos_totvs' NÃO POSSUEM coluna 'uf' (a tabela 'representantes' tem apenas 'cidade' em formato 'CIDADE / UF', e 'pedidos_totvs' não possui nem 'uf' nem 'cidade'). NUNCA use 'p.uf' nem 'r.uf'. Para consultas por estado/UF ou cidades de clientes e prospecção de carteira, consulte a tabela 'clientes c' ou faça JOIN com 'clientes c'!"
         ),
         "parameters": {"type": "object", "properties": {
             "sql": {"type": "string", "description": "Consulta SQL PostgreSQL (SELECT) válida"}

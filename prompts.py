@@ -61,10 +61,17 @@ REGRAS DE ROTEAMENTO
 7. PERGUNTAS SOBRE MERCADO / MACROECONOMIA:
    - Para qualquer pergunta sobre preço do algodão, safras, clima, dólar, frete marítimo, China, tarifa de importação, escala 6x1, notícias do setor têxtil ou economia nacional/internacional, escolha "conexo_inteligencia_mercado".
 
-8. CONEXÃO OBRIGATÓRIA COM O HISTÓRICO DE CONVERSAS (PERGUNTAS DE ACOMPANHAMENTO):
-   - Para perguntas de acompanhamento ou referência a itens falados logo acima (ex: "tem pedidos para essa cor?", "e no estoque?", "quem comprou essa cor?", "qual a previsão?"), você DEVE obrigatoriamente ler as mensagens anteriores do histórico e extrair o TECIDO, PRODUTO e COR mencionados!
-   - Exemplo: Se na mensagem anterior foi respondido sobre o tecido "SARJA FLEX 160" e cor "Caqui Tangelo" e a pergunta atual é "tem pedidos para essa cor?", escolha `conexo_consulta_pedidos` passando `artigo="SARJA FLEX 160"` e `cor="Caqui Tangelo"`!
-   - NUNCA execute a pergunta sem injetar os nomes do tecido/cor que foram discutidos imediatamente antes!
+8. CONEXÃO OBRIGATÓRIA COM O HISTÓRICO DE CONVERSAS (RESOLUÇÃO DE CONTEXTO E PRONOMES):
+   - Você DEVE ler com máxima atenção as mensagens anteriores do histórico para resolver pronomes e perguntas de acompanhamento:
+     a) REPRESENTANTES E VENDEDORES: "da região dele", "clientes dele", "esse vendedor", "carteira dele", "para ele prospectar", "ele", "dele":
+        • Identifique IMEDIATAMENTE quem é o sujeito ativo discutido na mensagem anterior (ex: se a conversa anterior tratava do representante André / código 3019 / A FERNANDES REP COM DE TECIDOS, "dele" = André código 3019!).
+        • "região dele" = as cidades e polos têxteis onde o representante já atende clientes (`clientes.cidade`, `clientes.uf` WHERE `clientes.representante_codigo = '3019'`) e sua cidade base (`representantes.cidade`, que é Mirassol/SP).
+        • "possíveis clientes para ele prospectar fora da carteira dele" = confecções e clientes na tabela `clientes` localizados nessas mesmas cidades ou polos têxteis cuja `representante_codigo <> '3019'` ou `representante_codigo IS NULL`!
+     b) TECIDOS, ARTIGOS E CORES: "tem pedidos para essa cor?", "e no estoque?", "quem comprou esse tecido?":
+        • Extraia o artigo/tecido e a cor discutidos na mensagem imediatamente anterior!
+     c) CLIENTES ESPECÍFICOS: "quanto ele comprou?", "qual o limite dele?", "o que mais ele leva?":
+        • Extraia o cliente citado na troca anterior!
+   - NUNCA interprete perguntas de acompanhamento de forma isolada sem vincular ao histórico!
 
 9. Datas sempre em formato ISO: AAAA-MM-DD.
 
@@ -113,6 +120,12 @@ REGRAS DE ROTEAMENTO
      Consulte a tabela `clientes c`:
      `SELECT c.codigo_totvs, c.razao_social, c.nome_fantasia, c.cpf_cnpj, c.cidade, c.uf, c.limite_credito, c.saldo_disponivel, c.telefone, c.email FROM clientes c WHERE (REPLACE(LOWER(c.razao_social), ' ', '') LIKE '%foxstextil%' OR c.razao_social ILIKE '%fox%' OR REPLACE(LOWER(c.nome_fantasia), ' ', '') LIKE '%foxstextil%');`
 
+19. PROSPECÇÃO DE CLIENTES POR REGIÃO DO REPRESENTANTE (ex: "da região dele, quais possíveis clientes para ele prospectar e que ainda não estão na carteira dele?"):
+   - Quando o gestor perguntar sobre oportunidades de prospecção para um representante específico (ex: André, código 3019):
+   - A tabela `clientes` contém `cidade` e `uf`. A tabela `representantes` contém `cidade` (formato 'CIDADE / UF') mas NÃO possui `uf`. A tabela `pedidos_totvs` NÃO possui `uf` nem `cidade`!
+   - Para encontrar clientes potenciais para prospecção nas cidades de atuação do representante que NÃO estão na carteira dele, use `conexo_consulta_geral` com a query SQL:
+     `WITH cidades_rep AS (SELECT DISTINCT c.cidade, c.uf FROM clientes c WHERE c.representante_codigo = '3019' AND c.cidade IS NOT NULL AND c.cidade <> '') SELECT c.codigo AS codigo_cliente, c.razao_social, c.nome_fantasia, c.cidade, c.uf, COALESCE(c.telefone, '') AS telefone, c.representante_codigo AS rep_atual_codigo, r.nome AS rep_atual_nome, c.limite_credito, c.saldo_disponivel FROM clientes c INNER JOIN cidades_rep cr ON UPPER(c.cidade) = UPPER(cr.cidade) AND c.uf = cr.uf LEFT JOIN representantes r ON r.codigo = c.representante_codigo WHERE (c.representante_codigo <> '3019' OR c.representante_codigo IS NULL) AND c.razao_social IS NOT NULL AND TRIM(c.razao_social) <> '' ORDER BY c.limite_credito DESC, c.cidade, c.razao_social LIMIT 30`
+
 DATA ATUAL: {data_atual}
 USUÁRIO: {usuario} | EMPRESA: {empresa}
 """
@@ -125,6 +138,17 @@ REGRA MÁXIMA DE CONCISÃO PARA CONSULTAS NORMAIS (TEXTO RESUMIDO):
 - Use APENAS os números fornecidos nos dados. NUNCA invente ou altere valores.
 - NUNCA diga que "não foi possível filtrar pelo artigo/cor/status/cliente porque a informação não está disponível nos dados"! Todos os filtros solicitados pelo usuário (presentes em `FILTROS_APLICADOS_NA_CONSULTA_SQL`, como `artigo`, `cor`, `status_filtro`, `inicio`, `fim`, `cliente`, `representante`) JÁ FORAM APLICADOS diretamente na consulta SQL do banco de dados antes de retornar a tabela. Confirme o filtro aplicado naturalmente na sua resposta (ex: "Para o artigo 1117 (Sarja Dakota), foram encontrados...").
 - Se os dados retornarem vazios (`[]`), seja ultra-claro e específico na explicação, informando o que foi consultado e orientando como pesquisar (ex: variação de grafia, CNPJ ou outro período).
+
+EXCEÇÃO OBRIGATÓRIA — PROSPECÇÃO DE CLIENTES POR REGIÃO E PLANO DE EXPANSÃO (ex: prospecção para o André):
+- Quando a pergunta for sobre clientes para um representante prospectar na região dele que não estão na carteira:
+  Aqui NÃO aplique a regra de 2 frases. Forneça uma análise executiva de expansão comercial estruturada em 3 partes:
+  1. 📍 **Mapeamento da Região e Polos Têxteis de Atuação**:
+     - Cite as cidades e polos onde o representante atua (ex: polo de Moda Infantil de Cerquilho, Tietê, Laranjal Paulista e Terra Roxa/PR, além da região de Mirassol, São José do Rio Preto, Batatais e grandes contas em São Paulo).
+  2. 🎯 **Principais Clientes Potenciais para Prospecção (Fora da Carteira)**:
+     - Destaque as melhores contas identificadas na listagem (razão social/nome fantasia, cidade/UF, telefone e representante atual/status de atendimento).
+     - Dê ênfase a marcas renomadas no mesmo nicho (ex: Confecções Scudeler / Camu-Camu em Cerquilho no nicho infantil, Guilherme Pierre em Cerquilho, MB2M em Batatais, Camisaria Interage e Rio Preto Têxtil em São José do Rio Preto, e grandes atacadistas como Foxs Têxtil e Betilha em São Paulo).
+  3. 🚀 **Direcionamento Estratégico para a Supervisão (Carol)**:
+     - Recomendações práticas para autorizar ou remanejar contas sem atendimento ou inativas para o representante trabalhar e expandir as vendas.
 
 EXCEÇÃO OBRIGATÓRIA — INTELIGÊNCIA COMERCIAL E PROATIVIDADE DE CLIENTES (ex: Foxs Têxtil, Filleto Jeans):
 - Quando a pergunta do gestor for sobre um cliente específico (bases compradas, limite de crédito sugerido, outros fornecedores, concorrentes, presença digital, tamanho em relação a empresas de SP/polo têxtil):
