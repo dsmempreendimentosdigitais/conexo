@@ -1,4 +1,5 @@
 import Dashboard from "./Dashboard";
+import WhatsAppAudioBubble from "./WhatsAppAudioBubble";
 
 function hora(ts) {
   return new Date(ts).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
@@ -79,13 +80,32 @@ export default function Message({ msg, onEnviar, falandoTs, onToggleFala }) {
 
       <div style={{ display: "flex", flexDirection: "column", gap: 4, minWidth: 0 }}>
         <div className="msg-bubble">
+          {/* Áudio do Usuário no estilo WhatsApp */}
+          {isUser && msg.audioUrl && (
+            <WhatsAppAudioBubble
+              audioUrl={msg.audioUrl}
+              duracaoEstimada={msg.audioDuration}
+            />
+          )}
+
           {/* Prioridade #1: Gráfico e Tabela de dados no topo da resposta */}
           {!isUser && msg.dados && (
             <Dashboard intent={msg.intent || "nexo_consulta_geral"} dados={msg.dados} pergunta={msg.pergunta || ""} />
           )}
 
-          {/* Prioridade #2: Texto síntese ultra-resumido em poucas palavras */}
-          {msg.conteudo && <p style={{ marginTop: !isUser && msg.dados ? 12 : 0, whiteSpace: "pre-line" }}>{msg.conteudo}</p>}
+          {/* Prioridade #2: Texto da mensagem (com transcrição se veio por voz) */}
+          {msg.conteudo && (
+            <p
+              style={{
+                marginTop: !isUser && msg.dados ? 12 : (isUser && msg.audioUrl ? 8 : 0),
+                whiteSpace: "pre-line",
+                fontSize: isUser && msg.audioUrl ? 13 : undefined,
+                opacity: isUser && msg.audioUrl ? 0.95 : 1,
+              }}
+            >
+              {isUser && msg.audioUrl ? `🗣️ Transcrição: "${msg.conteudo}"` : msg.conteudo}
+            </p>
+          )}
 
           {/* Botão de Áudio (Text-to-Speech) */}
           {!isUser && msg.conteudo && (

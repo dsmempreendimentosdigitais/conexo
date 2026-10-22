@@ -354,11 +354,11 @@ def falar(body: FalaIn, ctx: dict = Depends(get_contexto)):
             url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key={config.OPENAI_API_KEY}"
             payload = {
                 "contents": [{"parts": [{
-                    "text": "Leia em português do Brasil, com tom de executivo comercial: confiante, calmo, claro e profissional.\n\n" + texto
+                    "text": "Fale estritamente em português do Brasil (pt-BR), com sotaque brasileiro natural e paulista, sem chiar e sem nenhum sotaque de Portugal. O tom é de um executivo comercial sênior: masculino, calmo, firme, seguro e profissional:\n\n" + texto
                 }]}],
                 "generationConfig": {
                     "responseModalities": ["AUDIO"],
-                    "speechConfig": {"voiceConfig": {"prebuiltVoiceConfig": {"voiceName": "Charon"}}},
+                    "speechConfig": {"voiceConfig": {"prebuiltVoiceConfig": {"voiceName": "Fenrir"}}},
                 },
             }
             resp = httpx.post(url, json=payload, timeout=60)

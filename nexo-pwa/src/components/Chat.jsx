@@ -81,6 +81,8 @@ export default function Chat({ token, email, onLogout }) {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [gravando, setGravando] = useState(false);
+  const [gravandoPausado, setGravandoPausado] = useState(false);
+  const [segundosGravacao, setSegundosGravacao] = useState(0);
   const [alertas, setAlertas] = useState([]);
   const [showAlerts, setShowAlerts] = useState(false);
   const [openGroups, setOpenGroups] = useState([0, 1, 2, 3, 4]); // Todas as 5 categorias abertas por padrão
@@ -94,6 +96,28 @@ export default function Chat({ token, email, onLogout }) {
   const recRef = useRef(null);
   const fimRef = useRef(null);
   const inputRef = useRef(null);
+  const timerRef = useRef(null);
+  const canceladoRef = useRef(false);
+  const streamRef = useRef(null);
+  const segundosGravacaoRef = useRef(0);
+
+  // Formata segundos para formato mm:ss do WhatsApp
+  const formatarTempo = (segundos) => {
+    if (!segundos || isNaN(segundos) || segundos < 0) return "0:00";
+    const m = Math.floor(segundos / 60);
+    const s = Math.floor(segundos % 60);
+    return `${m}:${s < 10 ? "0" : ""}${s}`;
+  };
+
+  // Limpeza de recursos e timers ao desmontar o componente
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach((t) => t.stop());
+      }
+    };
+  }, []);
 
   // Carrega histórico de chats do localStorage ao iniciar
   useEffect(() => {
@@ -318,6 +342,8 @@ export default function Chat({ token, email, onLogout }) {
     async (textoPronto, opcoes = {}) => {
       const texto = (textoPronto ?? input).trim();
       const veioPorAudio = opcoes?.veioPorAudio || false;
+      const audioUrl = opcoes?.audioUrl || null;
+      const audioDuration = opcoes?.audioDuration || null;
       if (!texto || loading) return;
       setInput("");
       if (inputRef.current) {
@@ -328,7 +354,13 @@ export default function Chat({ token, email, onLogout }) {
       pararFala();
 
       const now = Date.now();
-      const msgUser = { role: "user", conteudo: texto, ts: now };
+      const msgUser = {
+        role: "user",
+        conteudo: texto,
+        ts: now,
+        audioUrl,
+        audioDuration,
+      };
       setMsgs((m) => [...m, msgUser]);
       setLoading(true);
 
@@ -389,20 +421,8 @@ export default function Chat({ token, email, onLogout }) {
     [input, loading, historico, token, pararFala, falarTexto]
   );
 
-  // Gravar / parar áudio com compatibilidade mobile universal (iOS Safari / Android Chrome / Desktop)
-  async function toggleAudio() {
-    if (gravando && recRef.current) {
-      try {
-        if (recRef.current.state !== "inactive") {
-          recRef.current.stop();
-        }
-      } catch (e) {
-        console.warn("stop error:", e);
-      }
-      setGravando(false);
-      return;
-    }
-
+  // Iniciar gravação de áudio no estilo WhatsApp
+  const iniciarGravacao = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: {
@@ -411,6 +431,8 @@ export default function Chat({ token, email, onLogout }) {
           autoGainControl: true,
         },
       });
+
+      streamRef.current = stream;
 
       const isIOS =
         typeof navigator !== "undefined" &&
@@ -441,6 +463,17 @@ export default function Chat({ token, email, onLogout }) {
       const actualType = rec.mimeType || options.mimeType || (isIOS ? "audio/mp4" : "audio/webm");
       const chunks = [];
 
+      canceladoRef.current = false;
+      segundosGravacaoRef.current = 0;
+      setSegundosGravacao(0);
+      setGravandoPausado(false);
+
+      if (timerRef.current) clearInterval(timerRef.current);
+      timerRef.current = setInterval(() => {
+        segundosGravacaoRef.current += 1;
+        setSegundosGravacao((s) => s + 1);
+      }, 1000);
+
       rec.ondataavailable = (e) => {
         if (e.data && e.data.size > 0) {
           chunks.push(e.data);
@@ -448,7 +481,19 @@ export default function Chat({ token, email, onLogout }) {
       };
 
       rec.onstop = async () => {
+        if (timerRef.current) {
+          clearInterval(timerRef.current);
+          timerRef.current = null;
+        }
         stream.getTracks().forEach((t) => t.stop());
+        streamRef.current = null;
+
+        // Se o usuário cancelou na lixeira, descarta o áudio
+        if (canceladoRef.current) {
+          return;
+        }
+
+        const duracaoGravada = Math.max(1, segundosGravacaoRef.current);
         const blob = new Blob(chunks, { type: actualType });
 
         if (!blob || blob.size < 200) {
@@ -457,25 +502,31 @@ export default function Chat({ token, email, onLogout }) {
             {
               role: "conexo",
               conteudo:
-                "⚠️ Áudio muito curto ou microfone sem sinal. Por favor, toque no botão de voz e fale sua pergunta com clareza.",
+                "⚠️ Áudio muito curto ou microfone sem sinal. Por favor, grave novamente com clareza.",
               ts: Date.now(),
             },
           ]);
           return;
         }
 
+        const localAudioUrl = URL.createObjectURL(blob);
+
         setLoading(true);
         try {
           const texto = await transcrever(blob, token);
           if (texto && texto.trim()) {
-            await enviar(texto, { veioPorAudio: true });
+            await enviar(texto, {
+              veioPorAudio: true,
+              audioUrl: localAudioUrl,
+              audioDuration: duracaoGravada,
+            });
           } else {
             setMsgs((m) => [
               ...m,
               {
                 role: "conexo",
                 conteudo:
-                  "⚠️ Não identifiquei fala audível no áudio. Fale mais próximo ao microfone do celular e tente novamente.",
+                  "⚠️ Não identifiquei fala audível no áudio. Fale mais próximo ao microfone e tente novamente.",
                 ts: Date.now(),
               },
             ]);
@@ -491,15 +542,85 @@ export default function Chat({ token, email, onLogout }) {
       };
 
       recRef.current = rec;
-      // Inicia captura contínua com chunks de 250ms
       rec.start(250);
       setGravando(true);
     } catch (err) {
+      console.error("Erro ao acessar microfone:", err);
       alert(
         "Não foi possível acessar o microfone. Verifique se a permissão de áudio está liberada no seu navegador (ícone de cadeado na barra de endereços)."
       );
     }
-  }
+  };
+
+  // Pausar / Retomar gravação no estilo WhatsApp
+  const pausarRetomarGravacao = () => {
+    if (!recRef.current) return;
+    if (gravandoPausado) {
+      try {
+        recRef.current.resume();
+      } catch (e) {
+        console.warn("resume error:", e);
+      }
+      setGravandoPausado(false);
+      if (timerRef.current) clearInterval(timerRef.current);
+      timerRef.current = setInterval(() => {
+        segundosGravacaoRef.current += 1;
+        setSegundosGravacao((s) => s + 1);
+      }, 1000);
+    } else {
+      try {
+        recRef.current.pause();
+      } catch (e) {
+        console.warn("pause error:", e);
+      }
+      setGravandoPausado(true);
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
+    }
+  };
+
+  // Cancelar e excluir áudio gravado (Lixeira do WhatsApp)
+  const cancelarGravacao = () => {
+    canceladoRef.current = true;
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
+    }
+    if (recRef.current && recRef.current.state !== "inactive") {
+      try {
+        recRef.current.stop();
+      } catch (e) {
+        console.warn("cancel stop error:", e);
+      }
+    }
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((t) => t.stop());
+      streamRef.current = null;
+    }
+    setGravando(false);
+    setGravandoPausado(false);
+    setSegundosGravacao(0);
+  };
+
+  // Concluir e enviar o áudio gravado para transcrição e resposta
+  const concluirEnviarGravacao = () => {
+    canceladoRef.current = false;
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
+    }
+    if (recRef.current && recRef.current.state !== "inactive") {
+      try {
+        recRef.current.stop();
+      } catch (e) {
+        console.warn("finish stop error:", e);
+      }
+    }
+    setGravando(false);
+    setGravandoPausado(false);
+  };
 
   const initials = email ? email[0].toUpperCase() : "U";
 
@@ -752,97 +873,113 @@ export default function Chat({ token, email, onLogout }) {
           ))}
         </div>
 
-        {/* Indicador de gravação de áudio */}
-        {gravando && (
-          <div
-            style={{
-              padding: "8px 16px",
-              background: "linear-gradient(135deg, #10a37f, #0d8a6a)",
-              color: "#ffffff",
-              fontSize: 12,
-              fontWeight: 600,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              borderRadius: "8px 8px 0 0",
-              margin: "0 16px -8px 16px",
-              boxShadow: "0 4px 12px rgba(16, 163, 127, 0.25)",
-            }}
-          >
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <span className="chatgpt-voice-icon" style={{ color: "#fff" }}>
-                <span className="wave-bar bar-1" />
-                <span className="wave-bar bar-2" />
-                <span className="wave-bar bar-3" />
-                <span className="wave-bar bar-4" />
-              </span>
-              <span>Ouvindo... Fale sua pergunta e toque no botão para enviar</span>
-            </div>
-            <button
-              type="button"
-              onClick={toggleAudio}
-              style={{
-                background: "#ffffff",
-                color: "#0d8a6a",
-                border: "none",
-                borderRadius: 4,
-                padding: "3px 10px",
-                fontWeight: 700,
-                cursor: "pointer",
-                fontSize: 11,
-              }}
-            >
-              Concluir e Enviar
-            </button>
-          </div>
-        )}
-
         {/* Input */}
         <div className="input-area">
           <div className="input-wrapper">
-            <textarea
-              ref={inputRef}
-              className="chat-input"
-              rows={2}
-              placeholder="Pergunte ao CONEXO… (Enter para enviar)"
-              value={input}
-              onChange={(e) => {
-                setInput(e.target.value);
-                e.target.style.height = "auto";
-                e.target.style.height = `${Math.min(e.target.scrollHeight, 140)}px`;
-              }}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && !e.shiftKey) {
-                  e.preventDefault();
-                  enviar();
-                }
-              }}
-            />
-            <button
-              type="button"
-              className={`btn-icon btn-record ${gravando ? "recording" : ""}`}
-              onClick={toggleAudio}
-              title={gravando ? "Parar gravação e enviar" : "Gravar áudio (Voz estilo ChatGPT)"}
-              aria-label="Gravar áudio"
-            >
-              <span className="chatgpt-voice-icon" aria-hidden="true">
-                <span className="wave-bar bar-1" />
-                <span className="wave-bar bar-2" />
-                <span className="wave-bar bar-3" />
-                <span className="wave-bar bar-4" />
-              </span>
-            </button>
-            <button
-              className="btn-icon btn-send"
-              onClick={() => enviar()}
-              disabled={loading || !input.trim()}
-              title="Enviar"
-            >
-              ➤
-            </button>
+            {gravando ? (
+              <div className="whatsapp-recording-dock">
+                {/* Lixeira / Cancelar gravação sem enviar */}
+                <button
+                  type="button"
+                  className="btn-whatsapp-trash"
+                  onClick={cancelarGravacao}
+                  title="Cancelar e excluir áudio"
+                  aria-label="Cancelar gravação"
+                >
+                  <span className="wa-trash-icon">🗑️</span>
+                </button>
+
+                {/* Status e Cronômetro em tempo real */}
+                <div className="whatsapp-recording-status">
+                  <span className={`wa-rec-dot ${gravandoPausado ? "paused" : "pulsing"}`} />
+                  <span className="wa-rec-timer">{formatarTempo(segundosGravacao)}</span>
+                </div>
+
+                {/* Trilha de ondas ao vivo (estilo WhatsApp) */}
+                <div className="whatsapp-live-waveform">
+                  {[6, 12, 18, 24, 14, 8, 16, 22, 12, 6, 16, 20, 12, 18, 8, 14, 22, 10, 16, 6].map((h, i) => (
+                    <span
+                      key={i}
+                      className={`wa-live-bar ${gravandoPausado ? "paused" : ""}`}
+                      style={{
+                        height: `${gravandoPausado ? Math.max(4, h * 0.4) : h}px`,
+                        animationDelay: `${(i % 5) * 0.12}s`,
+                      }}
+                    />
+                  ))}
+                </div>
+
+                {/* Pausar / Retomar gravação */}
+                <button
+                  type="button"
+                  className={`btn-whatsapp-pause ${gravandoPausado ? "is-paused" : ""}`}
+                  onClick={pausarRetomarGravacao}
+                  title={gravandoPausado ? "Retomar gravação" : "Pausar gravação"}
+                  aria-label={gravandoPausado ? "Retomar gravação" : "Pausar gravação"}
+                >
+                  {gravandoPausado ? "▶" : "⏸"}
+                </button>
+
+                {/* Concluir e Enviar áudio */}
+                <button
+                  type="button"
+                  className="btn-whatsapp-send"
+                  onClick={concluirEnviarGravacao}
+                  title="Concluir e Enviar Áudio"
+                  aria-label="Concluir e Enviar Áudio"
+                >
+                  ➤
+                </button>
+              </div>
+            ) : (
+              <>
+                <textarea
+                  ref={inputRef}
+                  className="chat-input"
+                  rows={2}
+                  placeholder="Pergunte ao CONEXO… (Enter para enviar)"
+                  value={input}
+                  onChange={(e) => {
+                    setInput(e.target.value);
+                    e.target.style.height = "auto";
+                    e.target.style.height = `${Math.min(e.target.scrollHeight, 140)}px`;
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && !e.shiftKey) {
+                      e.preventDefault();
+                      enviar();
+                    }
+                  }}
+                />
+                <button
+                  type="button"
+                  className="btn-icon btn-record"
+                  onClick={iniciarGravacao}
+                  title="Gravar áudio (estilo WhatsApp)"
+                  aria-label="Gravar áudio"
+                >
+                  <span className="chatgpt-voice-icon" aria-hidden="true">
+                    <span className="wave-bar bar-1" />
+                    <span className="wave-bar bar-2" />
+                    <span className="wave-bar bar-3" />
+                    <span className="wave-bar bar-4" />
+                  </span>
+                </button>
+                <button
+                  className="btn-icon btn-send"
+                  onClick={() => enviar()}
+                  disabled={loading || !input.trim()}
+                  title="Enviar"
+                >
+                  ➤
+                </button>
+              </>
+            )}
           </div>
           <div className="input-hint">
-            Shift+Enter para nova linha · Toque no ícone de voz para falar · Dados sempre do seu banco
+            {gravando
+              ? "🔴 Gravando áudio estilo WhatsApp · Clique em ⏸ para pausar ou 🗑️ para cancelar"
+              : "Shift+Enter para nova linha · Toque no ícone de voz para falar · Dados sempre do seu banco"}
           </div>
         </div>
       </div>
