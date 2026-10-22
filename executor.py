@@ -51,6 +51,143 @@ def executar(intent: str, params: dict, ctx: dict | None = None):
         from mercado.motor import analisar_mercado
         return analisar_mercado(params, ctx or {})
 
+    # Consulta Financeira e de Crédito ao vivo no ERP TOTVS Moda
+    if intent == "conexo_consulta_financeiro_cliente":
+        termo = (params.get("cliente") or "").strip()
+        if not termo:
+            raise ValueError("Nome ou código do cliente não fornecido.")
+
+        termo_limpo = desacentuar(termo)
+        termo_sem_espaco = termo_limpo.replace(" ", "")
+
+        if termo.isdigit():
+            sql_cli = f"SELECT id, codigo, razao_social, nome_fantasia, limite_credito, saldo_disponivel, saldo_atraso FROM clientes WHERE codigo = '{termo}' LIMIT 1"
+        else:
+            sql_cli = f"""
+            SELECT id, codigo, razao_social, nome_fantasia, limite_credito, saldo_disponivel, saldo_atraso 
+            FROM clientes 
+            WHERE REPLACE(LOWER(razao_social), ' ', '') LIKE '%{termo_sem_espaco}%'
+               OR razao_social ILIKE '%{termo}%'
+               OR REPLACE(LOWER(nome_fantasia), ' ', '') LIKE '%{termo_sem_espaco}%'
+               OR nome_fantasia ILIKE '%{termo}%'
+               OR codigo ILIKE '%{termo}%'
+            LIMIT 1
+            """
+        resp_cli = supabase.rpc("conexo_executar_leitura", {"query_str": sql_cli.strip().rstrip(";")}).execute()
+        cli_rows = resp_cli.data or []
+        if not cli_rows:
+            return [{"mensagem": f"Cliente '{termo}' não localizado no cadastro da Designtex."}]
+
+        cli = cli_rows[0]
+        cod_cliente = str(cli.get("codigo") or "").strip()
+        razao_social = cli.get("razao_social") or termo
+
+        from totvs_client import TotvsClient
+        import datetime
+
+        hoje = datetime.date.today().strftime("%Y-%m-%d")
+        stats = {}
+        boletos_raw = []
+        try:
+            stats = TotvsClient.consultar_estatisticas(cod_cliente)
+            boletos_raw = TotvsClient.consultar_boletos(cod_cliente)
+        except Exception as e:
+            print(f"[TotvsClient] Erro ao consultar TOTVS para {cod_cliente}: {e}")
+
+        qtd_atrasadas = int(stats.get("quantityInstallmentsDelayed") or 0)
+        valor_atrasado = float(stats.get("totalInstallmentsDelayed") or 0)
+        atraso_medio = int(stats.get("averageDelay") or 0)
+        maior_atraso = int(stats.get("maximumDelay") or 0)
+
+        qtd_abertas = int(stats.get("quantityInstallmentsOpen") or 0)
+        saldo_utilizado = float(stats.get("totalInstallmentsOpen") or 0)
+        limite_credito = float(cli.get("limite_credito") or 0)
+        saldo_disponivel = limite_credito - saldo_utilizado
+
+        titulos_atrasados = []
+        for b in boletos_raw:
+            venc = (b.get("expiredDate") or "")[:10]
+            val = float(b.get("installmentValue") or 0)
+            if venc and venc < hoje:
+                try:
+                    d_venc = datetime.date.fromisoformat(venc)
+                    d_hoje = datetime.date.fromisoformat(hoje)
+                    dias = (d_hoje - d_venc).days
+                except Exception:
+                    dias = 0
+                titulos_atrasados.append({
+                    "vencimento": datetime.date.fromisoformat(venc).strftime("%d/%m/%Y") if "-" in venc else venc,
+                    "valor": val,
+                    "dias_atraso": dias,
+                    "documento": b.get("documentCode") or b.get("number") or "Duplicata",
+                    "parcela": b.get("installmentNumber") or 1,
+                })
+
+        # Sincroniza a tabela clientes no Supabase em segundo plano
+        try:
+            now_iso = datetime.datetime.now(datetime.timezone.utc).isoformat()
+            supabase.table("clientes").update({
+                "saldo_atraso": valor_atrasado,
+                "saldo_disponivel": saldo_disponivel,
+                "sincronizado_totvs_em": now_iso,
+                "updated_at": now_iso,
+            }).eq("codigo", cod_cliente).execute()
+        except Exception as sync_err:
+            print(f"[Sync] Erro ao atualizar clientes no Supabase: {sync_err}")
+
+        linhas_resumo = [
+            {
+                "indicador": "Faturas em Atraso",
+                "quantidade": f"{qtd_atrasadas} fatura(s)",
+                "valor_total": valor_atrasado,
+                "status": "EM ATRASO / INADIMPLENTE" if qtd_atrasadas > 0 else "EM DIA",
+                "detalhe": f"Atraso médio: {atraso_medio} dias | Maior atraso: {maior_atraso} dias" if qtd_atrasadas > 0 else "Nenhum atraso registrado",
+                "razao_social": razao_social,
+                "codigo": cod_cliente,
+            },
+            {
+                "indicador": "Faturas em Aberto (Total Utilizado)",
+                "quantidade": f"{qtd_abertas} fatura(s)",
+                "valor_total": saldo_utilizado,
+                "status": "Total a Vencer + Vencido",
+                "detalhe": "Soma de todos os títulos ativos no TOTVS",
+                "razao_social": razao_social,
+                "codigo": cod_cliente,
+            },
+            {
+                "indicador": "Limite de Crédito Aprovado",
+                "quantidade": "-",
+                "valor_total": limite_credito,
+                "status": "Definido no TOTVS",
+                "detalhe": "Limite concedido para faturamento a prazo",
+                "razao_social": razao_social,
+                "codigo": cod_cliente,
+            },
+            {
+                "indicador": "Saldo Disponível para Novos Pedidos",
+                "quantidade": "-",
+                "valor_total": saldo_disponivel,
+                "status": "ESTOURADO" if saldo_disponivel < 0 else "LIBERADO",
+                "detalhe": f"Margem de crédito ({round((saldo_utilizado / limite_credito * 100), 1) if limite_credito > 0 else 100}% consumido)",
+                "razao_social": razao_social,
+                "codigo": cod_cliente,
+            },
+        ]
+
+        if titulos_atrasados:
+            for idx, t in enumerate(titulos_atrasados, 1):
+                linhas_resumo.append({
+                    "indicador": f"Boleto Vencido #{idx}",
+                    "quantidade": f"{t['dias_atraso']} dias de atraso",
+                    "valor_total": t["valor"],
+                    "status": f"Venceu em {t['vencimento']}",
+                    "detalhe": f"Doc {t['documento']} (Parc {t['parcela']})",
+                    "razao_social": razao_social,
+                    "codigo": cod_cliente,
+                })
+
+        return linhas_resumo
+
     # Consulta de Estoque de Pronto-Entrega
     if intent == "conexo_consulta_estoque":
         produto = params.get("produto", "").strip()
@@ -477,6 +614,30 @@ def executar(intent: str, params: dict, ctx: dict | None = None):
                 else:
                     sql = re.sub(r"\b(?:p|pedidos_totvs)\.uf\b", "c.uf", sql, flags=re.IGNORECASE)
                     sql = sql.replace("FROM pedidos_totvs p", "FROM pedidos_totvs p LEFT JOIN clientes c ON c.codigo = p.cliente_codigo")
+
+            # Se a consulta for sobre saldo_atraso de cliente específico, sincroniza ao vivo do TOTVS antes de rodar
+            if "saldo_atraso" in sql.lower() and "clientes" in sql.lower():
+                match_cli = re.search(r"(?:razao_social|nome_fantasia|codigo)\s+(?:ILIKE|=)\s+'%?([^%']+)%?'", sql, re.IGNORECASE)
+                if match_cli:
+                    t_cli = match_cli.group(1).strip()
+                    try:
+                        res_c = supabase.rpc("conexo_executar_leitura", {
+                            "query_str": f"SELECT codigo FROM clientes WHERE razao_social ILIKE '%{t_cli}%' OR nome_fantasia ILIKE '%{t_cli}%' OR codigo = '{t_cli}' LIMIT 1"
+                        }).execute()
+                        if res_c.data and res_c.data[0].get("codigo"):
+                            cod_totvs = str(res_c.data[0]["codigo"])
+                            from totvs_client import TotvsClient
+                            import datetime
+                            st = TotvsClient.consultar_estatisticas(cod_totvs)
+                            val_atraso = float(st.get("totalInstallmentsDelayed") or 0)
+                            now_sync = datetime.datetime.now(datetime.timezone.utc).isoformat()
+                            supabase.table("clientes").update({
+                                "saldo_atraso": val_atraso,
+                                "sincronizado_totvs_em": now_sync,
+                                "updated_at": now_sync
+                            }).eq("codigo", cod_totvs).execute()
+                    except Exception as ex_sync:
+                        print(f"[AutoSync] Aviso ao sincronizar TOTVS: {ex_sync}")
 
         try:
             resp = supabase.rpc("conexo_executar_leitura", {"query_str": sql}).execute()

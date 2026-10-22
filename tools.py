@@ -128,6 +128,19 @@ TOOLS = [
         }, "required": []}}},
 
     {"type": "function", "function": {
+        "name": "conexo_consulta_financeiro_cliente",
+        "description": (
+            "Consulta a situação financeira completa, limite de crédito e boletos/títulos em atraso de um cliente específico em TEMPO REAL no ERP TOTVS Moda: "
+            "traz quantidade de faturas atrasadas, valor total vencido, atraso médio em dias, maior atraso (pico), faturas em aberto (saldo utilizado), "
+            "limite total concedido e saldo disponível. "
+            "Use OBRIGATORIAMENTE para: 'o cliente X tem boletos em atraso?', 'situação financeira do cliente X', 'títulos vencidos da miks jeans', "
+            "'quanto o cliente X tem de limite de crédito?', 'qual a inadimplência do cliente X?', 'o cliente X está atrasado?', 'boletos da miks jeans'."
+        ),
+        "parameters": {"type": "object", "properties": {
+            "cliente": {"type": "string", "description": "Nome, razão social ou código do cliente (ex: 'MIKS JEANS', '4212', 'ECXO JEANS')"}
+        }, "required": ["cliente"]}}},
+
+    {"type": "function", "function": {
         "name": "conexo_consulta_pedidos",
         "description": (
             "Consulta e gera relatório/PDF de pedidos unificando o Portal de Vendas (pedidos + pedido_itens, incluindo pedidos locais W... bloqueados) "
