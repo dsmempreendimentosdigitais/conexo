@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import { perguntarStream, transcrever, buscarAlertas } from "../api";
+import { perguntarStream, transcrever, buscarAlertas, falar } from "../api";
 import Message from "./Message";
 import AlertPanel from "./AlertPanel";
 
@@ -228,44 +228,83 @@ export default function Chat({ token, email, onLogout }) {
 
   const [falandoTs, setFalandoTs] = useState(null);
 
+  const audioRef = useRef(null);
+
   const pararFala = useCallback(() => {
     if (typeof window !== "undefined" && "speechSynthesis" in window) {
       window.speechSynthesis.cancel();
     }
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current = null;
+    }
     setFalandoTs(null);
   }, []);
 
-  const falarTexto = useCallback((texto, ts) => {
-    if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
-    window.speechSynthesis.cancel();
-
-    // Remove markdown, links e sugestões para leitura fluida e natural
-    const textoLimpo = (texto || "")
-      .replace(/[*#_`~]/g, "")
-      .replace(/https?:\/\/\S+/g, "")
-      .replace(/💡\s*Sugestões.*$/is, "")
-      .replace(/[^\w\s\d.,!?;:áàâãéèêíïóôõöúçñÁÀÂÃÉÈÊÍÏÓÔÕÖÚÇÑ-]/g, " ")
-      .trim();
-
-    if (!textoLimpo) return;
-
+  // Fallback: voz do navegador, priorizando vozes masculinas pt-BR
+  const falarNavegador = useCallback((textoLimpo, ts) => {
+    if (typeof window === "undefined" || !("speechSynthesis" in window)) {
+      setFalandoTs(null);
+      return;
+    }
     const utterance = new SpeechSynthesisUtterance(textoLimpo);
     utterance.lang = "pt-BR";
-    utterance.rate = 1.05;
-
-    const voices = window.speechSynthesis.getVoices();
-    const ptVoice = voices.find(
-      (v) => v.lang === "pt-BR" || v.lang.startsWith("pt") || v.lang.includes("BR")
-    );
-    if (ptVoice) utterance.voice = ptVoice;
-
-    setFalandoTs(ts || true);
-
+    utterance.rate = 1.0;
+    utterance.pitch = 0.85;
+    const voices = window.speechSynthesis.getVoices().filter((v) => v.lang?.toLowerCase().startsWith("pt"));
+    const masculinas = /(daniel|ricardo|antonio|antônio|felipe|thiago|male|masculin|google português do brasil)/i;
+    const voz = voices.find((v) => masculinas.test(v.name)) || voices[0];
+    if (voz) utterance.voice = voz;
     utterance.onend = () => setFalandoTs(null);
     utterance.onerror = () => setFalandoTs(null);
-
+    setFalandoTs(ts || true);
     window.speechSynthesis.speak(utterance);
   }, []);
+
+  const falarTexto = useCallback(async (texto, ts) => {
+    pararFala();
+
+    // Remove markdown, links, tabelas e sugestões para leitura fluida e natural
+    const textoLimpo = (texto || "")
+      .replace(/💡\s*\*{0,2}Sugestões.*$/is, "")
+      .replace(/\|/g, " ")
+      .replace(/[*#_`~>]/g, "")
+      .replace(/https?:\/\/\S+/g, "")
+      .replace(/[^\w\s\d.,!?;:%$áàâãéèêíïóôõöúçñÁÀÂÃÉÈÊÍÏÓÔÕÖÚÇÑ-]/g, " ")
+      .replace(/\s+/g, " ")
+      .trim()
+      .slice(0, 4500);
+
+    if (!textoLimpo) return;
+    setFalandoTs(ts || true);
+
+    // Cria e "destrava" o elemento de áudio ainda dentro do toque do usuário (exigência do iOS Safari)
+    const audio = new Audio();
+    audio.src = "data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAIA+AAACABAAZGF0YQAAAAA=";
+    audio.play().catch(() => {});
+    audioRef.current = audio;
+
+    try {
+      const blob = await falar(textoLimpo, token);
+      if (audioRef.current !== audio) return; // usuário parou/trocou durante o carregamento
+      const url = URL.createObjectURL(blob);
+      audio.onended = () => {
+        URL.revokeObjectURL(url);
+        audioRef.current = null;
+        setFalandoTs(null);
+      };
+      audio.onerror = () => {
+        URL.revokeObjectURL(url);
+        falarNavegador(textoLimpo, ts);
+      };
+      audio.src = url;
+      await audio.play();
+    } catch (e) {
+      if (audioRef.current !== audio) return;
+      console.warn("TTS servidor indisponível, usando voz do navegador:", e);
+      falarNavegador(textoLimpo, ts);
+    }
+  }, [token, pararFala, falarNavegador]);
 
   const toggleFalaMsg = useCallback((m) => {
     if (falandoTs === m.ts) {

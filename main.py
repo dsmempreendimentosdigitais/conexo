@@ -272,7 +272,7 @@ async def transcrever(
 
         if config.IS_GEMINI:
             import base64
-            import requests
+            import httpx as requests  # httpx já está no requirements; 'requests' não está instalado no servidor
 
             b64_audio = base64.b64encode(conteudo).decode("utf-8")
             url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={config.OPENAI_API_KEY}"
@@ -321,6 +321,62 @@ async def transcrever(
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Erro ao processar transcrição de áudio: {str(e)}")
+
+
+# ─────────────────────────────────────────────────
+# Síntese de voz (TTS) — voz masculina profissional
+# ─────────────────────────────────────────────────
+
+class FalaIn(BaseModel):
+    texto: str = Field(..., max_length=6000)
+
+
+def _pcm_para_wav(pcm: bytes, sample_rate: int = 24000, canais: int = 1, bits: int = 16) -> bytes:
+    import struct
+    byte_rate = sample_rate * canais * bits // 8
+    block_align = canais * bits // 8
+    header = b"RIFF" + struct.pack("<I", 36 + len(pcm)) + b"WAVE"
+    header += b"fmt " + struct.pack("<IHHIIHH", 16, 1, canais, sample_rate, byte_rate, block_align, bits)
+    header += b"data" + struct.pack("<I", len(pcm))
+    return header + pcm
+
+
+@app.post("/conexo/falar")
+def falar(body: FalaIn, ctx: dict = Depends(get_contexto)):
+    from fastapi.responses import Response
+    texto = (body.texto or "").strip()
+    if not texto:
+        raise HTTPException(status_code=400, detail="Texto vazio")
+    try:
+        if config.IS_GEMINI:
+            import base64
+            import httpx
+            url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key={config.OPENAI_API_KEY}"
+            payload = {
+                "contents": [{"parts": [{
+                    "text": "Leia em português do Brasil, com tom de executivo comercial: confiante, calmo, claro e profissional.\n\n" + texto
+                }]}],
+                "generationConfig": {
+                    "responseModalities": ["AUDIO"],
+                    "speechConfig": {"voiceConfig": {"prebuiltVoiceConfig": {"voiceName": "Charon"}}},
+                },
+            }
+            resp = httpx.post(url, json=payload, timeout=60)
+            if resp.status_code != 200:
+                raise HTTPException(status_code=502, detail=f"Erro no serviço de voz: {resp.text[:300]}")
+            parts = resp.json().get("candidates", [{}])[0].get("content", {}).get("parts", [])
+            dado = next((p.get("inlineData") or p.get("inline_data") for p in parts if p.get("inlineData") or p.get("inline_data")), None)
+            if not dado:
+                raise HTTPException(status_code=502, detail="Serviço de voz não retornou áudio")
+            pcm = base64.b64decode(dado["data"])
+            return Response(content=_pcm_para_wav(pcm), media_type="audio/wav")
+        else:
+            audio = client_oa.audio.speech.create(model="tts-1", voice="onyx", input=texto)
+            return Response(content=audio.content, media_type="audio/mpeg")
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erro ao gerar voz: {str(e)}")
 
 
 # ─────────────────────────────────────────────────

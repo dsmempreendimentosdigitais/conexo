@@ -106,6 +106,19 @@ export async function transcrever(blob, token) {
 }
 
 // ── Alertas ─────────────────────────────────────────────────
+export async function falar(texto, token) {
+  const r = await fetch(`${BASE}/conexo/falar`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ texto }),
+  });
+  if (!r.ok) throw new Error("Falha ao gerar voz");
+  return r.blob();
+}
+
 export async function buscarAlertas(token) {
   const r = await fetch(`${BASE}/conexo/alertas`, {
     headers: { Authorization: `Bearer ${token}` },
