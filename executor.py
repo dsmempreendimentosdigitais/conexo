@@ -491,6 +491,12 @@ def executar(intent: str, params: dict, ctx: dict | None = None):
                     resp = supabase.rpc("conexo_executar_leitura", {"query_str": sql_fixed.strip().rstrip(";")}).execute()
                 except Exception:
                     raise err
+            elif '42804' in err_str or 'UNION types' in err_str:
+                primeiro_select = re.split(r"\bUNION\s+(?:ALL\s+)?", sql, flags=re.IGNORECASE)[0].strip()
+                try:
+                    resp = supabase.rpc("conexo_executar_leitura", {"query_str": primeiro_select.rstrip(";")}).execute()
+                except Exception:
+                    raise err
             else:
                 raise err
         data = resp.data or []

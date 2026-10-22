@@ -208,22 +208,30 @@ def perguntar_stream(body: PerguntaIn, ctx: dict = Depends(get_contexto)):
             empresa=config.EMPRESA, pergunta=pergunta, intent=intent,
             dados=json.dumps(dados_para_prompt, ensure_ascii=False, default=str),
         )
-        try:
-            stream = client_oa.chat.completions.create(
-                model=config.MODEL_FORMATTER,
-                messages=[{"role": "user", "content": prompt}],
-                temperature=0.3,
-                stream=True,
-            )
-            for chunk in stream:
-                delta = chunk.choices[0].delta.content
-                if delta:
-                    yield f"data: {json.dumps({'tipo':'texto','delta':delta})}\n\n"
-        except Exception as e:
-            error_msg = "\n\n⚠️ Erro ao formatar a análise de resposta (Gemini temporariamente indisponível). Por favor, tente novamente em instantes."
-            if "quota" in str(e).lower() or "limit" in str(e).lower() or "429" in str(e):
-                error_msg = "\n\n⚠️ Limite de requisições excedido ao formatar a análise. Por favor, aguarde de 15 a 30 segundos e envie a mensagem novamente."
-            yield f"data: {json.dumps({'tipo':'texto','delta':error_msg})}\n\n"
+        import time
+        stream = None
+        for tentativa in range(3):
+            try:
+                stream = client_oa.chat.completions.create(
+                    model=config.MODEL_FORMATTER,
+                    messages=[{"role": "user", "content": prompt}],
+                    temperature=0.3,
+                    stream=True,
+                )
+                for chunk in stream:
+                    delta = chunk.choices[0].delta.content
+                    if delta:
+                        yield f"data: {json.dumps({'tipo':'texto','delta':delta})}\n\n"
+                break
+            except Exception as e:
+                if tentativa < 2 and any(k in str(e).lower() for k in ["429", "quota", "rate", "limit", "resourceexhausted"]):
+                    time.sleep(2.0 * (tentativa + 1))
+                    continue
+                error_msg = "\n\n⚠️ Erro ao formatar a análise de resposta (Gemini temporariamente indisponível). Por favor, tente novamente em instantes."
+                if "quota" in str(e).lower() or "limit" in str(e).lower() or "429" in str(e) or "resourceexhausted" in str(e).lower():
+                    error_msg = "\n\n⚠️ Limite de requisições excedido no Gemini (Plano Gratuito). Para uso corporativo e apresentações sem interrupção, recomenda-se ativar o plano pago Pay-As-You-Go no Google AI Studio (custo médio de ~R$ 15 a R$ 30/mês)."
+                yield f"data: {json.dumps({'tipo':'texto','delta':error_msg})}\n\n"
+                break
             
         yield f"data: {json.dumps({'tipo':'fim'})}\n\n"
 
