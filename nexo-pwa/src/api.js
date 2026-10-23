@@ -144,3 +144,144 @@ export async function cadastrar(cnpj, email, senha, setor) {
   if (!r.ok) throw new Error((await r.json()).detail || "Erro no cadastro");
   return r.json();
 }
+
+// ── Funções Administrativas Master (/admin) ───────────────────
+function getAdminHeaders(token, adminKey) {
+  const headers = { "Content-Type": "application/json" };
+  if (adminKey) {
+    headers["X-Admin-Key"] = adminKey;
+  }
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
+  return headers;
+}
+
+export async function getAdminOverview(token, adminKey) {
+  const r = await fetch(`${BASE}/conexo/admin/overview`, {
+    headers: getAdminHeaders(token, adminKey),
+  });
+  if (!r.ok) throw new Error((await r.json()).detail || "Erro ao carregar dados do painel admin");
+  return r.json();
+}
+
+export async function getAdminTenants(token, adminKey) {
+  const r = await fetch(`${BASE}/conexo/admin/tenants`, {
+    headers: getAdminHeaders(token, adminKey),
+  });
+  if (!r.ok) throw new Error((await r.json()).detail || "Erro ao listar empresas");
+  return r.json();
+}
+
+export async function createAdminTenant(dados, token, adminKey) {
+  const r = await fetch(`${BASE}/conexo/admin/tenants`, {
+    method: "POST",
+    headers: getAdminHeaders(token, adminKey),
+    body: JSON.stringify(dados),
+  });
+  if (!r.ok) throw new Error((await r.json()).detail || "Erro ao criar empresa");
+  return r.json();
+}
+
+export async function updateAdminTenant(tenantId, dados, token, adminKey) {
+  const r = await fetch(`${BASE}/conexo/admin/tenants/${tenantId}`, {
+    method: "PUT",
+    headers: getAdminHeaders(token, adminKey),
+    body: JSON.stringify(dados),
+  });
+  if (!r.ok) throw new Error((await r.json()).detail || "Erro ao atualizar empresa");
+  return r.json();
+}
+
+export async function getAdminConnectors(tenantId, token, adminKey) {
+  const r = await fetch(`${BASE}/conexo/admin/tenants/${tenantId}/connectors`, {
+    headers: getAdminHeaders(token, adminKey),
+  });
+  if (!r.ok) throw new Error((await r.json()).detail || "Erro ao carregar conectores");
+  return r.json();
+}
+
+export async function saveAdminConnectors(tenantId, conectores, token, adminKey) {
+  const r = await fetch(`${BASE}/conexo/admin/tenants/${tenantId}/connectors`, {
+    method: "POST",
+    headers: getAdminHeaders(token, adminKey),
+    body: JSON.stringify({ conectores }),
+  });
+  if (!r.ok) throw new Error((await r.json()).detail || "Erro ao salvar conectores");
+  return r.json();
+}
+
+export async function testAdminConnector(tipo, config, token, adminKey) {
+  const r = await fetch(`${BASE}/conexo/admin/connectors/test`, {
+    method: "POST",
+    headers: getAdminHeaders(token, adminKey),
+    body: JSON.stringify({ tipo, config }),
+  });
+  if (!r.ok) throw new Error((await r.json()).detail || "Erro ao testar conector");
+  return r.json();
+}
+
+export async function getAdminUsers(tenantId, token, adminKey) {
+  const url = tenantId ? `${BASE}/conexo/admin/users?tenant_id=${tenantId}` : `${BASE}/conexo/admin/users`;
+  const r = await fetch(url, {
+    headers: getAdminHeaders(token, adminKey),
+  });
+  if (!r.ok) throw new Error((await r.json()).detail || "Erro ao listar usuários");
+  return r.json();
+}
+
+export async function createAdminUser(dados, token, adminKey) {
+  const r = await fetch(`${BASE}/conexo/admin/users`, {
+    method: "POST",
+    headers: getAdminHeaders(token, adminKey),
+    body: JSON.stringify(dados),
+  });
+  if (!r.ok) throw new Error((await r.json()).detail || "Erro ao criar usuário");
+  return r.json();
+}
+
+export async function resetAdminUserPassword(userId, novaSenha, token, adminKey) {
+  const r = await fetch(`${BASE}/conexo/admin/users/${userId}/reset-password`, {
+    method: "POST",
+    headers: getAdminHeaders(token, adminKey),
+    body: JSON.stringify({ nova_senha: novaSenha }),
+  });
+  if (!r.ok) throw new Error((await r.json()).detail || "Erro ao redefinir senha");
+  return r.json();
+}
+
+export async function updateAdminUser(userId, dados, token, adminKey) {
+  const r = await fetch(`${BASE}/conexo/admin/users/${userId}`, {
+    method: "PUT",
+    headers: getAdminHeaders(token, adminKey),
+    body: JSON.stringify(dados),
+  });
+  if (!r.ok) throw new Error((await r.json()).detail || "Erro ao atualizar usuário");
+  return r.json();
+}
+
+export async function deleteAdminUser(userId, token, adminKey) {
+  const r = await fetch(`${BASE}/conexo/admin/users/${userId}`, {
+    method: "DELETE",
+    headers: getAdminHeaders(token, adminKey),
+  });
+  if (!r.ok) throw new Error((await r.json()).detail || "Erro ao excluir usuário");
+  return r.json();
+}
+
+export async function getAdminLogs(params, token, adminKey) {
+  const qs = new URLSearchParams(params || {}).toString();
+  const r = await fetch(`${BASE}/conexo/admin/logs?${qs}`, {
+    headers: getAdminHeaders(token, adminKey),
+  });
+  if (!r.ok) throw new Error((await r.json()).detail || "Erro ao carregar logs");
+  return r.json();
+}
+
+export async function getAdminFinanceiro(token, adminKey) {
+  const r = await fetch(`${BASE}/conexo/admin/financeiro`, {
+    headers: getAdminHeaders(token, adminKey),
+  });
+  if (!r.ok) throw new Error((await r.json()).detail || "Erro ao carregar dados financeiros SaaS");
+  return r.json();
+}

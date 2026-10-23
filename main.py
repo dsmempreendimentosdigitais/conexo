@@ -13,6 +13,7 @@ from logger import log_consulta
 from auth import get_contexto
 from prompts import FORMATTER_SYSTEM
 from onboarding.rotas import router as onboarding_router
+from admin_router import router as admin_router
 
 app = FastAPI(
     title="CONEXO API",
@@ -34,6 +35,9 @@ app.add_middleware(
 
 # Registra o router de onboarding (admin-only)
 app.include_router(onboarding_router)
+
+# Registra o painel administrativo master
+app.include_router(admin_router)
 
 client_oa = OpenAI(api_key=config.OPENAI_API_KEY, base_url=config.OPENAI_BASE_URL, max_retries=1)
 

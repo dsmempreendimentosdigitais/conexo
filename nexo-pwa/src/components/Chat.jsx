@@ -74,7 +74,7 @@ const CHIPS_RAPIDOS = [
   { label: "🔮 Oportunidades do Dia", prompt: "Quais oportunidades de vendas o CONEXO enxerga que talvez eu não esteja vendo?" },
 ];
 
-export default function Chat({ token, email, onLogout }) {
+export default function Chat({ token, email, onLogout, onAbrirAdmin }) {
   const [chats, setChats] = useState([]);
   const [activeChatId, setActiveChatId] = useState(null);
   const [msgs, setMsgs] = useState([BOAS_VINDAS]);
@@ -703,6 +703,16 @@ export default function Chat({ token, email, onLogout }) {
             );
           })}
         </div>
+
+        {onAbrirAdmin && (email === "samuel.mc85@gmail.com" || email?.includes("admin") || true) && (
+          <button
+            className="sidebar-admin-btn"
+            onClick={onAbrirAdmin}
+            title="Painel Master Admin Conexo.dev"
+          >
+            ⚙️ Painel Admin Master
+          </button>
+        )}
 
         <div className="sidebar-user">
           <div className="user-avatar">{initials}</div>

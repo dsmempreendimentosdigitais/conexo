@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import supabase, { login, logout, getSession } from "./auth";
 import { cadastrar } from "./api";
 import Chat from "./components/Chat";
+import AdminPanel from "./components/AdminPanel";
 
 export default function App() {
   const [session,  setSession]  = useState(null);
@@ -10,6 +11,27 @@ export default function App() {
   const [enviando, setEnviando] = useState(false);
   const [erro,     setErro]     = useState("");
   const [sucesso,  setSucesso]  = useState("");
+  const [viewMode, setViewMode] = useState(() => {
+    if (typeof window !== "undefined") {
+      return window.location.pathname.startsWith("/admin") || window.location.hash.includes("admin")
+        ? "admin"
+        : "chat";
+    }
+    return "chat";
+  });
+
+  // Listener para sincronização de rota/hash
+  useEffect(() => {
+    const handleHash = () => {
+      if (window.location.hash.includes("admin") || window.location.pathname.startsWith("/admin")) {
+        setViewMode("admin");
+      } else {
+        setViewMode("chat");
+      }
+    };
+    window.addEventListener("hashchange", handleHash);
+    return () => window.removeEventListener("hashchange", handleHash);
+  }, []);
 
   // Campos de login
   const [email, setEmail]     = useState("");
@@ -80,11 +102,28 @@ export default function App() {
   }
 
   if (session) {
+    if (viewMode === "admin") {
+      return (
+        <AdminPanel
+          token={session.access_token}
+          onVoltarChat={() => {
+            setViewMode("chat");
+            window.location.hash = "";
+          }}
+          onLogout={handleLogout}
+        />
+      );
+    }
+
     return (
       <Chat
         token={session.access_token}
         email={session.user?.email}
         onLogout={handleLogout}
+        onAbrirAdmin={() => {
+          setViewMode("admin");
+          window.location.hash = "admin";
+        }}
       />
     );
   }
