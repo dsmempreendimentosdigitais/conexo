@@ -2,7 +2,7 @@ import time
 import secrets
 import string
 import datetime
-import requests
+import httpx
 from fastapi import APIRouter, Header, HTTPException, Depends
 from pydantic import BaseModel, Field
 from typing import Optional, Dict, Any, List
@@ -22,30 +22,35 @@ def require_admin(
     x_admin_key: Optional[str] = Header(None, alias="X-Admin-Key"),
 ) -> dict:
     # 1. Autenticação via Chave Master de Administrador
-    if x_admin_key and x_admin_key.strip() == config.ADMIN_KEY:
+    if x_admin_key and isinstance(x_admin_key, str) and x_admin_key.strip() == config.ADMIN_KEY:
         return {"is_admin": True, "email": "master@conexo.dev", "perfil": "admin"}
 
     # 2. Autenticação via Token Supabase com perfil 'admin'
-    if not authorization:
+    if not authorization or not isinstance(authorization, str):
         raise HTTPException(401, "Acesso restrito. Forneça o token de login ou a chave X-Admin-Key.")
 
     token = authorization.replace("Bearer ", "").strip()
     try:
-        user = supabase.auth.get_user(token).user
+        user_res = supabase.auth.get_user(token)
+        user = user_res.user
+        if not user:
+            raise ValueError("Usuário não retornado pelo Supabase")
     except Exception:
         raise HTTPException(401, "Sessão inválida ou expirada.")
 
     try:
+        # Busca no conexo_usuarios pelo auth_user_id ou pelo id ou pelo email
         res = (
             supabase.table("conexo_usuarios")
-            .select("id, email, perfil, tenant_id, ativo")
-            .eq("auth_user_id", user.id)
-            .single()
+            .select("id, email, perfil, tenant_id, ativo, auth_user_id")
+            .or_(f"auth_user_id.eq.{user.id},id.eq.{user.id},email.eq.{user.email}")
             .execute()
         )
-        u = res.data
+        users = res.data or []
+        u = users[0] if users else None
+
         if not u or not u.get("ativo"):
-            raise HTTPException(403, "Usuário desativado ou sem acesso.")
+            raise HTTPException(403, "Usuário desativado ou sem acesso ao CONEXO.")
         if u.get("perfil") != "admin":
             raise HTTPException(403, "Apenas administradores têm permissão para acessar o painel master.")
         return u
@@ -306,7 +311,7 @@ def test_connector(dados: ConnectorTestIn, admin=Depends(require_admin)):
             }
 
         try:
-            resp = requests.post(
+            resp = httpx.post(
                 f"{base_url}/authorization/v2/token",
                 data={
                     "grant_type": "password",
@@ -316,7 +321,7 @@ def test_connector(dados: ConnectorTestIn, admin=Depends(require_admin)):
                     "password": password,
                 },
                 verify=False,
-                timeout=12,
+                timeout=12.0,
             )
             latencia = int((time.time() - t0) * 1000)
             if resp.status_code == 200 and resp.json().get("access_token"):
@@ -366,11 +371,11 @@ def test_connector(dados: ConnectorTestIn, admin=Depends(require_admin)):
                     "KEEPCONNECTED": {"$": "S"}
                 }
             }
-            resp = requests.post(
+            resp = httpx.post(
                 f"{base_url}/service.sbr?serviceName=MobileLoginSP.login&outputType=json",
                 json=payload,
                 headers=headers,
-                timeout=12,
+                timeout=12.0,
             )
             latencia = int((time.time() - t0) * 1000)
             if resp.status_code == 200:

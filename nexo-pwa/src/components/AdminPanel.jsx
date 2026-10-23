@@ -68,24 +68,29 @@ export default function AdminPanel({ token, onVoltarChat, onLogout }) {
   async function carregarTudo() {
     setLoading(true);
     setErro("");
+    let falhaMsg = "";
     try {
       const [ov, tnts, usrs, fin, lgs] = await Promise.all([
-        getAdminOverview(token).catch(() => null),
-        getAdminTenants(token).catch(() => []),
+        getAdminOverview(token).catch((err) => { falhaMsg = err.message; return null; }),
+        getAdminTenants(token).catch((err) => { falhaMsg = err.message; return []; }),
         getAdminUsers(null, token).catch(() => []),
         getAdminFinanceiro(token).catch(() => null),
         getAdminLogs({ limit: 40 }, token).catch(() => []),
       ]);
 
       setOverview(ov);
-      setTenants(tnts);
-      setUsers(usrs);
+      setTenants(tnts || []);
+      setUsers(usrs || []);
       setFinanceiro(fin);
-      setLogs(lgs);
+      setLogs(lgs || []);
 
-      if (tnts.length > 0 && !selectedTenantId) {
-        setSelectedTenantId(tnts[0].id);
-        carregarConectores(tnts[0].id);
+      if (tnts && tnts.length > 0) {
+        if (!selectedTenantId) {
+          setSelectedTenantId(tnts[0].id);
+          carregarConectores(tnts[0].id);
+        }
+      } else if (falhaMsg) {
+        setErro("Aguardando inicialização do servidor ou permissão: " + falhaMsg);
       }
     } catch (e) {
       setErro("Falha ao carregar dados do painel master: " + e.message);
@@ -234,6 +239,9 @@ export default function AdminPanel({ token, onVoltarChat, onLogout }) {
         </div>
 
         <div className="admin-header-right">
+          <button className="btn-admin-action" onClick={carregarTudo} title="Atualizar dados do servidor" style={{ background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.15)", color: "#f8fafc", padding: "6px 12px", borderRadius: "8px", cursor: "pointer", fontSize: "12px", display: "flex", alignItems: "center", gap: "5px" }}>
+            🔄 Atualizar
+          </button>
           <button className="btn-admin-action btn-back-chat" onClick={onVoltarChat} title="Voltar para a IA Comercial">
             💬 Voltar ao Chat
           </button>
