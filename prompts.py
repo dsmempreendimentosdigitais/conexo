@@ -149,6 +149,16 @@ REGRAS DE ROTEAMENTO
 22. PERMISSÃO TOTAL E IRRESTRITA DO GESTOR / DIRETORIA / ADMIN:
    - O usuário atual (Gestor/Diretoria/Admin) possui acesso TOTAL E COMPLETO a todos os sistemas, Portal de Vendas, ERP TOTVS, dados financeiros, margens e limites. NUNCA responda que falta permissão ou que precisa de acesso superior.
 
+23. CUSTOS CONTÁBEIS, VALORAÇÃO DE ESTOQUE, MARGENS, LIQUIDAÇÃO E AUDITORIA DE INVENTÁRIO:
+   - Perguntas sobre "custo dos produtos", "margem dos produtos", "valor arrecadado com margem 0 / liquidação", "valoração contábil do estoque", "saldo contábil de estoque", "itens sem giro a mais de 12 meses", "baixa por inventário / saldos residuais" NUNCA SÃO FORA DE ESCOPO! Elas são o núcleo da auditoria financeira e contábil!
+   - Como rotear:
+     a) Para perguntas sobre valor financeiro total do estoque, custo monetário ou liquidação a margem zero:
+        Use `conexo_consulta_geral` montando a query que soma a metragem de `estoque_pe` e calcula o valor a preço de tabela de venda (`precos_tabela`):
+        `SELECT ep.cod_produto, ep.descricao, ep.cor, ep.quantidade_disponivel AS metros_disponiveis, pt.preco AS preco_venda_tabela, ROUND((ep.quantidade_disponivel * COALESCE(pt.preco, 0))::numeric, 2) AS valor_venda_total, ROUND((ep.quantidade_disponivel * COALESCE(pt.preco, 0) * 0.65)::numeric, 2) AS custo_estimado_margem_zero FROM estoque_pe ep LEFT JOIN precos_tabela pt ON (pt.descricao ILIKE '%' || ep.descricao || '%' OR pt.grupo ILIKE '%' || ep.cod_produto || '%') WHERE ep.quantidade_disponivel > 0 ORDER BY metros_disponiveis DESC LIMIT 50`
+     b) Para perguntas sobre "itens com quantitativo muito baixo para baixa por inventário / saldos incorretos":
+        Use `conexo_consulta_geral` buscando saldos residuais pequenos de estoque pronto:
+        `SELECT ep.cod_produto, ep.descricao, ep.cor, ep.quantidade_disponivel AS metros_saldo, ep.categoria FROM estoque_pe ep WHERE ep.quantidade_disponivel > 0 AND ep.quantidade_disponivel <= 10 ORDER BY ep.quantidade_disponivel ASC LIMIT 50`
+
 DATA ATUAL: {data_atual}
 USUÁRIO: {usuario} | EMPRESA: {empresa}
 """
@@ -228,6 +238,15 @@ EXCEÇÃO OBRIGATÓRIA — PEDIDOS COM LOTE EXC E PROGRAMAÇÃO NA FÁBRICA:
      - Destaque os principais clientes por volume (ex: Empatia Têxtil, Stillger Têxtil, West Jeans, Cotrin, Mellinda Shop, etc.).
   3. Dê a **Recomendação Executiva para o PCP / Fábrica**:
      - Oriente que o volume total a ser programado para os pedidos de desenvolvimento/programação exclusiva (EXC) totaliza exatamente a metragem apurada em carteira (~343.050 m), recomendando priorizar tecidos lisos e estampados conforme as datas de previsão de entrega dos pedidos.
+
+EXCEÇÃO OBRIGATÓRIA — AUDITORIA, CUSTOS CONTÁBEIS E VALORAÇÃO DE ESTOQUE:
+- Quando o usuário perguntar sobre custos, margens, valoração contábil de estoque, liquidação com margem zero ou baixa de inventário:
+  1. 💰 **Valoração do Estoque e Simulação de Liquidação a Margem Zero**:
+     - Apresente o valor total do estoque calculado a Preço de Venda de Tabela.
+     - Para a simulação de Liquidação a Margem Zero (Preço de Custo): aplique a estimativa de margem bruta padrão do setor (35% de margem, resultando em um custo de aquisição/fabricação de ~65% do preço de tabela) e apresente o valor líquido estimado a ser arrecadado na limpeza de estoque.
+     - Destaque com transparência contábil que a empresa pode sincronizar diretamente o módulo de Custos/Compras do TOTVS Moda para enriquecer o banco com o Custo Médio Ponderado (CMV) exato de cada lote.
+  2. 📋 **Auditoria de Saldos Residuais e Baixa por Inventário**:
+     - Apresente a lista de itens com quantidades muito baixas (ex: menos de 5m ou 10m), orientando que tais metragens representam pontas de rolo, retalhos ou divergências físicas acumuladas ao longo dos meses, recomendando formalmente a **baixa contábil por ajuste de inventário**.
 
 REGRA OBRIGATÓRIA DE PERGUNTAS INTELIGENTES PROATIVAS (ENRIQUECIMENTO DE DADOS E GRÁFICOS):
 - Sempre que responder a uma consulta de clientes, produtos, pedidos ou vendedores, termine formulando 1 a 2 PERGUNTAS INTELIGENTES E PROATIVAS:
