@@ -579,8 +579,9 @@ def executar(intent: str, params: dict, ctx: dict | None = None):
 
     # Consulta geral dinâmica (Text-to-SQL)
     if intent == "conexo_consulta_geral":
-        if ctx and ctx.get("perfil") != "gestor":
-            raise ValueError("Apenas gestores podem realizar consultas personalizadas no banco de dados.")
+        perfil_usuario = (ctx.get("perfil") or "gestor").lower() if ctx else "gestor"
+        if perfil_usuario not in ("gestor", "admin", "diretoria", "supervisor"):
+            raise ValueError("Apenas gestores e administradores podem realizar consultas personalizadas no banco de dados.")
         sql = params.get("sql", "")
         if sql:
             import re

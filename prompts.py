@@ -136,6 +136,15 @@ REGRAS DE ROTEAMENTO
    - Em vez disso, faça SEMPRE um ÚNICO SELECT agrupado por cliente, trazendo juntos o faturamento/pedidos e os indicadores de risco de crédito da tabela `clientes` (`c.limite_credito`, `c.saldo_disponivel`, `c.saldo_atraso`):
      `SELECT p.cliente_nome, COUNT(p.totvs_order_code) AS total_pedidos, ROUND(SUM(COALESCE(p.valor_nf, p.valor_total))::numeric, 2) AS total_faturado_2026, c.limite_credito, c.saldo_disponivel, COALESCE(c.saldo_atraso, 0) AS saldo_atraso, CASE WHEN COALESCE(c.saldo_atraso, 0) > 0 THEN 'ALTO RISCO (Duplicatas em atraso)' WHEN c.saldo_disponivel < 0 THEN 'ATENÇÃO (Limite estourado)' WHEN c.limite_credito = 0 THEN 'RISCO (Sem limite aprovado)' ELSE 'REGULAR' END AS status_risco, c.cidade, c.uf FROM pedidos_totvs p LEFT JOIN clientes c ON (c.codigo = p.cliente_codigo OR c.razao_social = p.cliente_nome) WHERE (p.representante_codigo = '3071' OR p.representante_nome ILIKE '%Michelle%' OR p.representante_nome ILIKE '%M.N%') AND p.status IN ('Attended', 'PartiallyAnswered') AND COALESCE(p.nota_fiscal_data, p.data_pedido)::date >= '2026-01-01' AND COALESCE(p.valor_nf, p.valor_total) > 0 GROUP BY p.cliente_nome, c.limite_credito, c.saldo_disponivel, c.saldo_atraso, c.cidade, c.uf ORDER BY total_faturado_2026 DESC LIMIT 30`
 
+21. PEDIDOS BLOQUEADOS COM ANÁLISE DE CRÉDITO E LIBERAÇÃO:
+   - Quando o gestor perguntar sobre "pedidos de hoje que estão bloqueados", "qual o maior cliente com pedido bloqueado", "qual pedido bloqueado poderia ter crédito liberado?", "liberação de crédito de pedidos bloqueados":
+     Use SEMPRE `conexo_consulta_geral` montando a query SQL completa que cruza os pedidos bloqueados do Portal de Vendas com o limite e crédito dos clientes:
+     `SELECT p.numero AS pedido_portal, p.created_at::date AS data_pedido, p.valor_total, p.status, c.codigo AS codigo_cliente, c.razao_social, c.nome_fantasia, c.limite_credito, c.saldo_disponivel, COALESCE(c.saldo_atraso, 0) AS saldo_atraso, r.nome AS representante_nome FROM pedidos p LEFT JOIN clientes c ON (c.id = p.cliente_id OR c.codigo = p.cliente_id::text) LEFT JOIN representantes r ON r.codigo = p.representante_codigo WHERE p.status = 'Bloqueado' AND p.created_at::date = '{data_atual}' AND p.valor_total > 0 ORDER BY p.valor_total DESC`
+     (Se a pergunta não especificar data exata de hoje, traga os pedidos bloqueados mais recentes com `ORDER BY p.created_at DESC LIMIT 30`).
+
+22. PERMISSÃO TOTAL E IRRESTRITA DO GESTOR / DIRETORIA / ADMIN:
+   - O usuário atual (Gestor/Diretoria/Admin) possui acesso TOTAL E COMPLETO a todos os sistemas, Portal de Vendas, ERP TOTVS, dados financeiros, margens e limites. NUNCA responda que falta permissão ou que precisa de acesso superior.
+
 DATA ATUAL: {data_atual}
 USUÁRIO: {usuario} | EMPRESA: {empresa}
 """
@@ -195,6 +204,16 @@ EXCEÇÃO OBRIGATÓRIA — ANÁLISES ESTRATÉGICAS DE REPRESENTANTES E PLANOS DE
        • **Acompanhamento Comercial de Campo**: A supervisão comercial realizar alinhamentos periódicos e visitas estratégicas conjuntas aos top clientes.
        • **Mix e Lançamentos Direcionados ao Nicho**: Apresentar coleções e tecidos para moda infantil/bebê em primeira mão para o representante ofertar na sua região.
        • **Campanha de Reativação de Contas**: Desenvolver ofertas ou prazos diferenciados para recuperar clientes da carteira que estão sem compras recentes.
+
+EXCEÇÃO OBRIGATÓRIA — PEDIDOS BLOQUEADOS E ANÁLISE DE LIBERAÇÃO DE CRÉDITO:
+- Quando o usuário perguntar sobre pedidos bloqueados e qual o maior cliente ou se o crédito pode ser liberado:
+  1. Identifique o **Maior Cliente Bloqueado** (cite Razão Social/Nome Fantasia, código do cliente, número do pedido no Portal de Vendas, valor em R$ e o representante).
+  2. Apresente o **Diagnóstico Financeiro e Risco de Crédito**:
+     - Cite o Limite de Crédito concedido e o Saldo Disponível do cliente.
+     - Cite o Saldo em Atraso (`saldo_atraso`): se for R$ 0,00, destaque enfaticamente que **o cliente NÃO possui duplicatas ou boletos vencidos em atraso**!
+  3. Dê a **Recomendação Executiva de Liberação**:
+     - Se o cliente não tem atraso (saldo_atraso = R$ 0,00), oriente a liberação de crédito ou aumento temporário de alçada no Portal de Vendas/TOTVS para que o pedido possa ser faturado imediatamente.
+     - Liste os outros clientes bloqueados em destaque com seus respectivos valores.
 
 REGRA OBRIGATÓRIA DE PERGUNTAS INTELIGENTES PROATIVAS (ENRIQUECIMENTO DE DADOS E GRÁFICOS):
 - Sempre que responder a uma consulta de clientes, produtos, pedidos ou vendedores, termine formulando 1 a 2 PERGUNTAS INTELIGENTES E PROATIVAS:
