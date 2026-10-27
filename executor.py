@@ -354,6 +354,7 @@ def executar(intent: str, params: dict, ctx: dict | None = None):
 
         artigo = (params.get("artigo") or "").strip()
         cor = (params.get("cor") or "").strip()
+        lote = (params.get("lote") or "").strip().upper()
         status_filtro = (params.get("status_filtro") or "carteira").strip().lower()
         cliente = (params.get("cliente") or "").strip()
         representante = (params.get("representante") or "").strip()
@@ -419,6 +420,9 @@ def executar(intent: str, params: dict, ctx: dict | None = None):
             status_where = "status_norm IN ('Em andamento', 'Bloqueado', 'Em composição', 'Em análise')"
 
         extra_order_filters = [status_where]
+        if lote:
+            safe_lote = lote.replace("'", "''")
+            extra_order_filters.append(f"(lote_pedido ILIKE '%{safe_lote}%' OR tipo ILIKE '%{safe_lote}%')")
         if inicio:
             extra_order_filters.append(f"data_pedido >= '{inicio}'::date")
         if fim:

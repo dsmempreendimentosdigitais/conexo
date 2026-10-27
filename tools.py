@@ -145,12 +145,14 @@ TOOLS = [
         "description": (
             "Consulta e gera relatório/PDF de pedidos unificando o Portal de Vendas (pedidos + pedido_itens, incluindo pedidos locais W... bloqueados) "
             "com o ERP TOTVS (pedidos_totvs), com 100% de precisão na metragem e valor total por pedido. "
-            "Use SEMPRE para: 'liste todos os pedidos em andamento e bloqueados do artigo X', 'gere um pdf com os pedidos do artigo 1117 - sarja dakota', "
+            "Use SEMPRE para: 'pedidos com lote pedido EXC', 'quanto preciso programar na fábrica para o lote EXC', "
+            "'liste todos os pedidos em andamento e bloqueados do artigo X', 'gere um pdf com os pedidos do artigo 1117 - sarja dakota', "
             "'quais os pedidos bloqueados?', 'pedidos em andamento de tal tecido/cor/cliente/representante', 'relatório resumido de pedidos'."
         ),
         "parameters": {"type": "object", "properties": {
             "artigo":        {"type": "string", "description": "Código ou nome do artigo/tecido (ex: '1117 - sarja dakota', '1117', 'sarja dakota', 'linho deluxe'). Vazio para todos."},
             "cor":           {"type": "string", "description": "Código ou nome da cor/desenho (ex: '900', 'preto', 'off white'). Vazio para todas."},
+            "lote":          {"type": "string", "description": "Filtro pelo lote do pedido ou tipo de entrega: 'EXC' (Desenvolvimento Exclusivo / Programação Exclusiva), 'PE' (Pronta Entrega), 'DIG' (Estamparia Digital), 'OP' (Ordem de Produção), 'PIL' (Pilotagem), ou número de OP. Use SEMPRE que o usuário mencionar 'lote pedido EXC', 'lote EXC', 'pedidos EXC', 'programar EXC na fábrica', 'lote PE', etc."},
             "status_filtro": {"type": "string", "description": "Filtro de status: 'carteira' (Em andamento + Bloqueado + Em composição + Em análise, padrão para pedidos em andamento e bloqueados), 'bloqueados' (apenas Bloqueado), 'em_andamento' (apenas Em andamento), 'faturados' (Atendido + Parcialmente Atendido), ou 'todos'."},
             "cliente":       {"type": "string", "description": "Nome ou razão social do cliente (opcional)."},
             "representante": {"type": "string", "description": "Código ou nome do representante (opcional)."},
