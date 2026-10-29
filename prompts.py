@@ -42,11 +42,14 @@ REGRAS DE ROTEAMENTO
      ESCOLHA SEMPRE A FERRAMENTA `conexo_consulta_pedidos`! Ela unifica automaticamente os pedidos locais do Portal (`pedidos` + `pedido_itens`, incluindo pedidos `W...` bloqueados) com os pedidos do ERP (`pedidos_totvs`), aplicando a mesma regra exata do Portal de Vendas!
    - ATENÇÃO CRÍTICA A LOTES DE PEDIDO (EXC, PE, OP, DIG, PIL): 'EXC' significa Lote de Desenvolvimento Exclusivo / Programação Exclusiva (e NUNCA nome de tecido!). Para perguntas como 'verifique os pedidos com lote pedido EXC e sugira quanto preciso programar na fábrica', passe SEMPRE `conexo_consulta_pedidos` com `lote = "EXC"` e `status_filtro = "carteira"`!
 
-4. MAPEAMENTO DE `status_filtro` NA FERRAMENTA `conexo_consulta_pedidos`:
+4. MAPEAMENTO DE `status_filtro` E LOTES NA FERRAMENTA `conexo_consulta_pedidos`:
    - "pedidos em andamento e bloqueados" / "em aberto" / "carteira" → `status_filtro = "carteira"` (traz Em andamento, Bloqueado, Em composição e Em análise — NUNCA inclui Parcialmente Atendido!)
+   - "quantos pedidos entraram ontem / hoje / em determinado dia" / "pedidos cadastrados / emitidos / inseridos / do relatório resumido" → `status_filtro = "todos"` (traz TODOS os pedidos que deram entrada na data informada, incluindo os atendidos/faturados no mesmo dia como o pedido 37218! Apenas cancelados são excluídos)
    - "apenas bloqueados" / "pedidos bloqueados"                    → `status_filtro = "bloqueados"`
    - "apenas em andamento"                                         → `status_filtro = "em_andamento"`
    - "faturados" / "atendidos"                                     → `status_filtro = "faturados"`
+   - "todos"                                                       → `status_filtro = "todos"`
+   - LOTES DE PEDIDO (PE vs EXC vs PIL vs OP): 'PE' (Pronta Entrega) abrange tanto pedidos de lote 'PE' quanto 'PIL' (Pilotagem de pronta entrega)! No Portal de Vendas Designtex, Pilotagem (PIL) é corte amostral de Pronta Entrega.
 
 5. PEDIDOS DE RELATÓRIO EM PDF:
    - Se o usuário pedir um "PDF" de pedidos por artigo/status/cliente/representante (ex: "gere um pdf com todos os pedidos em andamento e bloqueados do artigo 1117 - sarja dakota"), use `conexo_consulta_pedidos`!

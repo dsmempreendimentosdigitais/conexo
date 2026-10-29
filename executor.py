@@ -422,7 +422,14 @@ def executar(intent: str, params: dict, ctx: dict | None = None):
         extra_order_filters = [status_where]
         if lote:
             safe_lote = lote.replace("'", "''")
-            extra_order_filters.append(f"(lote_pedido ILIKE '%{safe_lote}%' OR tipo ILIKE '%{safe_lote}%')")
+            if safe_lote in ("PE", "PRONTA ENTREGA"):
+                extra_order_filters.append("(lote_pedido IN ('PE', 'PIL') OR lote_pedido ILIKE '%PE%' OR lote_pedido ILIKE '%PIL%' OR tipo IN ('PE', 'PIL') OR tipo ILIKE '%PE%' OR tipo ILIKE '%Pronta Entrega%')")
+            elif safe_lote in ("PROG", "PROGRAMACAO", "PROGRAMAÇÃO"):
+                extra_order_filters.append("(lote_pedido IN ('EXC', 'DIG') OR lote_pedido ILIKE '%EXC%' OR lote_pedido ILIKE '%DIG%' OR tipo ILIKE '%Program%' OR tipo ILIKE '%EXC%')")
+            elif safe_lote == "PIL":
+                extra_order_filters.append("(lote_pedido ILIKE '%PIL%' OR tipo ILIKE '%PIL%')")
+            else:
+                extra_order_filters.append(f"(lote_pedido ILIKE '%{safe_lote}%' OR tipo ILIKE '%{safe_lote}%')")
         if inicio:
             extra_order_filters.append(f"data_pedido >= '{inicio}'::date")
         if fim:
@@ -527,11 +534,9 @@ def executar(intent: str, params: dict, ctx: dict | None = None):
                 pf.data_pedido,
                 COALESCE(pi.quantidade, 0)::numeric AS metros_item,
                 CASE
-                    WHEN COALESCE(pi.subtotal, 0) > 0 AND NOT (
-                        (SELECT COUNT(*) FROM pedido_itens pi2 WHERE pi2.pedido_id = pf.local_id) > 1
-                        AND pf.order_valor_total > 0
-                        AND COALESCE(pi.subtotal, 0) >= pf.order_valor_total
-                    ) THEN pi.subtotal::numeric
+                    WHEN COALESCE(pi.preco_unitario, 0) > 0 AND COALESCE(pi.quantidade, 0) > 0 THEN
+                        ROUND((COALESCE(pi.quantidade, 0)::numeric * COALESCE(pi.preco_unitario, 0)::numeric), 2)
+                    WHEN COALESCE(pi.subtotal, 0) > 0 THEN pi.subtotal::numeric
                     ELSE ROUND((COALESCE(pi.quantidade, 0)::numeric * COALESCE(pi.preco_unitario, 0)::numeric), 2)
                 END AS valor_item
             FROM pedidos_filtrados pf
