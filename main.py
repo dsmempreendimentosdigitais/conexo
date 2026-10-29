@@ -442,6 +442,96 @@ def cadastrar(body: CadastroIn):
 
 
 # ─────────────────────────────────────────────────
+# Configurações do Gestor: Minha Empresa, Suporte e Senha
+# ─────────────────────────────────────────────────
+
+class SuporteIn(BaseModel):
+    assunto: str
+    categoria: str = "Geral"  # Duvida | Erro | Integracao | Financeiro
+    mensagem: str
+
+class AlterarSenhaIn(BaseModel):
+    nova_senha: str
+
+@app.get("/conexo/minha-empresa")
+def get_minha_empresa(ctx: dict = Depends(get_contexto)):
+    tenant_id = ctx.get("tenant_id")
+    if not tenant_id:
+        raise HTTPException(400, "Usuário não vinculado a uma empresa.")
+    
+    t_res = supabase.table("tenants").select("*").eq("id", tenant_id).single().execute()
+    if not t_res.data:
+        raise HTTPException(404, "Empresa não encontrada.")
+    t = t_res.data
+
+    users_res = supabase.table("conexo_usuarios").select("id, ativo").eq("tenant_id", tenant_id).execute()
+    total_users = len(users_res.data or [])
+
+    conns = t.get("conectores") or {}
+    total_conns_ativos = sum(1 for c in conns.values() if isinstance(c, dict) and c.get("ativo"))
+
+    return {
+        "tenant_id": t["id"],
+        "nome": t.get("nome"),
+        "nome_fantasia": t.get("nome_fantasia") or t.get("nome"),
+        "cnpj": t.get("cnpj"),
+        "plano": t.get("plano") or "Enterprise",
+        "valor_mensal": t.get("valor_mensal") or 3500.0,
+        "dia_vencimento": t.get("dia_vencimento") or 10,
+        "status_pagamento": t.get("status_pagamento") or "em_dia",
+        "total_usuarios": total_users,
+        "total_conectores_ativos": total_conns_ativos,
+        "contrato": t.get("contrato") or {},
+        "usuario_logado": {
+            "email": ctx.get("email"),
+            "perfil": ctx.get("perfil")
+        }
+    }
+
+@app.post("/conexo/suporte")
+def abrir_suporte(body: SuporteIn, ctx: dict = Depends(get_contexto)):
+    import secrets
+    import datetime
+    protocolo = f"SUP-{datetime.date.today().strftime('%Y%m%d')}-{secrets.token_hex(2).upper()}"
+    
+    try:
+        supabase.table("conexo_logs").insert({
+            "usuario": ctx.get("email"),
+            "pergunta": f"[SUPORTE {protocolo}] {body.assunto}",
+            "intent": "suporte_cliente",
+            "parametros": {
+                "protocolo": protocolo,
+                "categoria": body.categoria,
+                "mensagem": body.mensagem,
+                "tenant_id": ctx.get("tenant_id")
+            },
+            "sucesso": True
+        }).execute()
+    except Exception as e:
+        print("Aviso ao registrar log de suporte:", e)
+
+    return {
+        "sucesso": True,
+        "protocolo": protocolo,
+        "mensagem": f"Solicitação recebida com sucesso! Protocolo: {protocolo}. A equipe técnica da DSM Empreendimentos Digitais entrará em contato."
+    }
+
+@app.post("/conexo/alterar-senha")
+def alterar_minha_senha(body: AlterarSenhaIn, ctx: dict = Depends(get_contexto)):
+    if len(body.nova_senha) < 6:
+        raise HTTPException(400, "A nova senha deve ter no mínimo 6 caracteres.")
+    
+    email = ctx.get("email")
+    try:
+        res_u = supabase.table("conexo_usuarios").select("auth_user_id, id").eq("email", email).single().execute()
+        uid = res_u.data.get("auth_user_id") or res_u.data.get("id")
+        supabase.auth.admin.update_user_by_id(uid, {"password": body.nova_senha})
+        return {"sucesso": True, "mensagem": "Senha alterada com sucesso!"}
+    except Exception as e:
+        raise HTTPException(500, f"Erro ao atualizar senha: {str(e)}")
+
+
+# ─────────────────────────────────────────────────
 # Health check
 # ─────────────────────────────────────────────────
 

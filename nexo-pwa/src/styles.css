@@ -1212,3 +1212,440 @@ input:checked + .slider:before {
   box-shadow: 0 4px 12px rgba(37, 211, 102, 0.3);
   transform: translateY(-1px);
 }
+
+/* ── Botão e Modal de Configurações do Gestor ── */
+.sidebar-client-settings-btn {
+  width: calc(100% - 24px);
+  margin: 8px 12px 12px;
+  padding: 10px 14px;
+  background: rgba(56, 189, 248, 0.08);
+  color: #38bdf8;
+  border: 1px solid rgba(56, 189, 248, 0.3);
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: all 0.2s ease;
+}
+.sidebar-client-settings-btn:hover {
+  background: rgba(56, 189, 248, 0.16);
+  border-color: #38bdf8;
+  box-shadow: 0 2px 10px rgba(56, 189, 248, 0.2);
+}
+
+.client-settings-modal {
+  max-width: 760px !important;
+  width: 95% !important;
+}
+
+.client-settings-tabs {
+  display: flex;
+  gap: 8px;
+  padding: 12px 24px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(15, 23, 42, 0.4);
+}
+.client-tab-btn {
+  padding: 10px 18px;
+  background: transparent;
+  color: #94a3b8;
+  border: none;
+  border-bottom: 2px solid transparent;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.client-tab-btn:hover {
+  color: #f1f5f9;
+}
+.client-tab-btn.active {
+  color: #38bdf8;
+  border-bottom-color: #38bdf8;
+}
+
+.plan-hero-card {
+  background: linear-gradient(135deg, rgba(30, 41, 59, 0.9) 0%, rgba(15, 23, 42, 0.9) 100%);
+  border: 1px solid rgba(56, 189, 248, 0.3);
+  border-radius: 14px;
+  padding: 24px;
+  margin-bottom: 20px;
+}
+.plan-hero-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+.plan-badge-tag {
+  display: inline-block;
+  background: rgba(56, 189, 248, 0.15);
+  color: #38bdf8;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+.plan-company-title {
+  margin: 0 0 4px;
+  font-size: 20px;
+  font-weight: 700;
+  color: #f8fafc;
+}
+.plan-cnpj {
+  font-size: 12px;
+  color: #94a3b8;
+}
+.plan-price-block {
+  text-align: right;
+}
+.plan-price-val {
+  font-size: 26px;
+  font-weight: 800;
+  color: #38bdf8;
+}
+.plan-price-sub {
+  font-size: 13px;
+  color: #94a3b8;
+  margin-left: 4px;
+}
+.plan-status-pill {
+  margin-top: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 12px;
+}
+.plan-status-pill.online {
+  background: rgba(34, 197, 94, 0.15);
+  color: #4ade80;
+  border: 1px solid rgba(34, 197, 94, 0.3);
+}
+
+.plan-specs-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 12px;
+  padding-top: 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+.plan-spec-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.spec-label {
+  font-size: 11px;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.spec-val {
+  font-size: 14px;
+  font-weight: 700;
+  color: #f1f5f9;
+}
+.spec-val.highlight {
+  color: #38bdf8;
+}
+
+.contract-summary-card {
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 20px;
+}
+.contract-summary-card h5 {
+  margin: 0 0 14px;
+  font-size: 15px;
+  color: #f1f5f9;
+}
+.contract-details-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+  font-size: 13px;
+  color: #cbd5e1;
+  margin-bottom: 14px;
+}
+.contract-lgpd-note {
+  font-size: 12px;
+  color: #94a3b8;
+  margin: 0;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  line-height: 1.5;
+}
+
+.form-info-tip {
+  background: rgba(56, 189, 248, 0.08);
+  border-left: 3px solid #38bdf8;
+  padding: 10px 14px;
+  border-radius: 6px;
+  font-size: 13px;
+  color: #94a3b8;
+  margin-bottom: 16px;
+}
+
+.support-whatsapp-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+  background: rgba(37, 211, 102, 0.08);
+  border: 1px solid rgba(37, 211, 102, 0.25);
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 20px;
+}
+.support-wa-info {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.support-wa-info .wa-icon {
+  font-size: 32px;
+}
+.support-wa-info h4 {
+  margin: 0 0 4px;
+  font-size: 16px;
+  color: #4ade80;
+}
+.support-wa-info p {
+  margin: 0;
+  font-size: 13px;
+  color: #94a3b8;
+}
+.btn-whatsapp-direct {
+  background: #25D366;
+  color: #064e21;
+  font-weight: 700;
+  font-size: 14px;
+  padding: 10px 20px;
+  border-radius: 10px;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.2s;
+}
+.btn-whatsapp-direct:hover {
+  background: #20ba5a;
+  box-shadow: 0 4px 14px rgba(37, 211, 102, 0.35);
+  transform: translateY(-1px);
+}
+
+.support-ticket-card {
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 20px;
+}
+.support-ticket-card h5 {
+  margin: 0 0 16px;
+  font-size: 15px;
+  color: #f1f5f9;
+}
+.protocolo-badge-box {
+  margin-top: 16px;
+  padding: 12px;
+  background: rgba(34, 197, 94, 0.1);
+  border: 1px solid rgba(34, 197, 94, 0.3);
+  border-radius: 8px;
+  color: #4ade80;
+  font-size: 13px;
+}
+
+/* ── Modal de Catálogo de Sistemas & Conectores Dinâmicos ── */
+.system-search-bar {
+  position: relative;
+  margin-bottom: 20px;
+}
+.system-search-input {
+  width: 100%;
+  padding: 14px 20px 14px 44px;
+  background: rgba(15, 23, 42, 0.9);
+  border: 1px solid rgba(56, 189, 248, 0.3);
+  border-radius: 12px;
+  color: #f8fafc;
+  font-size: 15px;
+  outline: none;
+  transition: all 0.2s;
+}
+.system-search-input:focus {
+  border-color: #38bdf8;
+  box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.15);
+}
+.system-search-icon {
+  position: absolute;
+  left: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 18px;
+  color: #64748b;
+}
+
+.system-category-section {
+  margin-bottom: 24px;
+}
+.system-category-title {
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: #94a3b8;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.system-catalog-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 12px;
+}
+
+.system-catalog-card {
+  background: rgba(30, 41, 59, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 16px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  transition: all 0.2s ease;
+  position: relative;
+  text-align: left;
+}
+.system-catalog-card:hover {
+  background: rgba(56, 189, 248, 0.1);
+  border-color: rgba(56, 189, 248, 0.4);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.3);
+}
+.system-card-top {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.system-card-icon {
+  font-size: 26px;
+}
+.system-card-name {
+  font-size: 15px;
+  font-weight: 700;
+  color: #f8fafc;
+}
+.system-card-sub {
+  font-size: 11px;
+  color: #94a3b8;
+  line-height: 1.4;
+}
+
+.connector-action-bar {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+  flex-wrap: wrap;
+}
+.btn-conn-action {
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid transparent;
+  transition: all 0.2s;
+}
+.btn-conn-action.test {
+  background: rgba(56, 189, 248, 0.15);
+  color: #38bdf8;
+  border-color: rgba(56, 189, 248, 0.3);
+}
+.btn-conn-action.test:hover {
+  background: rgba(56, 189, 248, 0.25);
+}
+.btn-conn-action.delete {
+  background: rgba(239, 68, 68, 0.12);
+  color: #f87171;
+  border-color: rgba(239, 68, 68, 0.25);
+  margin-left: auto;
+}
+.btn-conn-action.delete:hover {
+  background: rgba(239, 68, 68, 0.22);
+}
+
+/* ── Modal Minuta Formal de Contrato ── */
+.minuta-contrato-doc {
+  background: #ffffff;
+  color: #1e293b;
+  padding: 36px 44px;
+  border-radius: 8px;
+  font-family: "Georgia", serif;
+  line-height: 1.7;
+  max-height: 70vh;
+  overflow-y: auto;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+}
+.minuta-header {
+  border-bottom: 2px solid #0f172a;
+  padding-bottom: 16px;
+  margin-bottom: 24px;
+  text-align: center;
+}
+.minuta-header h2 {
+  font-size: 20px;
+  margin: 0 0 6px;
+  color: #0f172a;
+}
+.minuta-header p {
+  margin: 0;
+  font-size: 13px;
+  color: #475569;
+}
+.minuta-clausula {
+  margin-bottom: 18px;
+}
+.minuta-clausula h4 {
+  font-size: 14px;
+  margin: 0 0 6px;
+  color: #0f172a;
+  text-transform: uppercase;
+}
+.minuta-clausula p {
+  margin: 0;
+  font-size: 13px;
+  color: #334155;
+  text-align: justify;
+}
+.minuta-assinaturas {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 40px;
+  margin-top: 40px;
+  padding-top: 30px;
+  border-top: 1px solid #cbd5e1;
+  text-align: center;
+}
+.linha-assinatura {
+  border-top: 1px solid #0f172a;
+  padding-top: 8px;
+  font-size: 12px;
+  color: #1e293b;
+}
+

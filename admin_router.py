@@ -76,6 +76,8 @@ class TenantCreateIn(BaseModel):
     logo_url: Optional[str] = None
     nicho: Optional[str] = None
     setor: Optional[str] = None
+    contrato: Optional[Dict[str, Any]] = None
+    conectores: Optional[Dict[str, Any]] = None
 
 class TenantUpdateIn(BaseModel):
     nome: Optional[str] = None
@@ -88,6 +90,8 @@ class TenantUpdateIn(BaseModel):
     cor_primaria: Optional[str] = None
     logo_url: Optional[str] = None
     ativo: Optional[bool] = None
+    contrato: Optional[Dict[str, Any]] = None
+    conectores: Optional[Dict[str, Any]] = None
 
 class ConnectorsSaveIn(BaseModel):
     conectores: Dict[str, Any]
@@ -232,11 +236,20 @@ def create_tenant(dados: TenantCreateIn, admin=Depends(require_admin)):
         "logo_url": dados.logo_url,
         "perfil_mercado": perfil_mercado,
         "ativo": True,
-        "conectores": {
-            "totvs_moda": {"ativo": False, "tipo": "totvs_moda", "nome": "TOTVS Moda"},
-            "sankhya": {"ativo": False, "tipo": "sankhya", "nome": "Sankhya ERP"},
-            "database": {"ativo": False, "tipo": "postgresql", "nome": "Banco de Dados"},
-        }
+        "contrato": dados.contrato or {
+            "numero_contrato": f"DSM-CNX-{datetime.date.today().strftime('%Y')}/{secrets.token_hex(2).upper()}",
+            "contratada_razao": "DSM Empreendimentos Digitais Ltda",
+            "produto": "CONEXO.dev - Inteligência Comercial com IA",
+            "data_inicio": datetime.date.today().strftime("%Y-%m-%d"),
+            "vigencia_meses": 12,
+            "renovacao_automatica": True,
+            "valor_mensal": dados.valor_mensal or 3500.00,
+            "dia_vencimento": dados.dia_vencimento or 10,
+            "sla_garantido": "99.5%",
+            "termos_lgpd": True,
+            "suporte_nivel": "Prioritário WhatsApp + Chamados",
+        },
+        "conectores": dados.conectores or {}
     }
     
     res = supabase.table("tenants").insert(payload).execute()
@@ -405,8 +418,117 @@ def test_connector(dados: ConnectorTestIn, admin=Depends(require_admin)):
                 "latencia_ms": int((time.time() - t0) * 1000),
             }
 
-    # 3. Teste Banco de Dados SQL
-    if tipo in ("database", "postgresql", "mysql"):
+    # 3. Teste Omie ERP
+    if tipo == "omie":
+        app_key = cfg.get("app_key") or cfg.get("client_id")
+        app_secret = cfg.get("app_secret") or cfg.get("client_secret")
+        if not app_key or not app_secret:
+            return {"sucesso": False, "mensagem": "App Key e App Secret da Omie são obrigatórios."}
+        try:
+            resp = httpx.post(
+                "https://app.omie.com.br/api/v1/geral/clientes/",
+                json={
+                    "call": "ListarClientes",
+                    "app_key": app_key,
+                    "app_secret": app_secret,
+                    "param": [{"pagina": 1, "registros_por_pagina": 1, "apenas_importado_api": "N"}]
+                },
+                timeout=12.0
+            )
+            latencia = int((time.time() - t0) * 1000)
+            if resp.status_code == 200:
+                return {
+                    "sucesso": True,
+                    "mensagem": f"Conexão com Omie ERP autenticada com sucesso! Resposta em {latencia}ms.",
+                    "latencia_ms": latencia,
+                    "status_code": 200
+                }
+            return {
+                "sucesso": False,
+                "mensagem": f"Omie respondeu ({resp.status_code}): {resp.text[:250]}",
+                "latencia_ms": latencia
+            }
+        except Exception as e:
+            return {"sucesso": False, "mensagem": f"Erro de conexão com a Omie: {e}", "latencia_ms": int((time.time() - t0) * 1000)}
+
+    # 4. Teste Bling ERP (API v3)
+    if tipo == "bling":
+        api_token = cfg.get("api_token") or cfg.get("token") or cfg.get("client_secret")
+        if not api_token:
+            return {"sucesso": False, "mensagem": "API Key / Token de acesso do Bling é obrigatório."}
+        try:
+            resp = httpx.get(
+                "https://api.bling.com.br/v3/contatos?limite=1",
+                headers={"Authorization": f"Bearer {api_token}"},
+                timeout=12.0
+            )
+            latencia = int((time.time() - t0) * 1000)
+            if resp.status_code in (200, 201):
+                return {"sucesso": True, "mensagem": f"Conexão com Bling ERP autenticada com sucesso ({latencia}ms)!", "latencia_ms": latencia}
+            return {"sucesso": False, "mensagem": f"Bling respondeu ({resp.status_code}): {resp.text[:200]}", "latencia_ms": latencia}
+        except Exception as e:
+            return {"sucesso": False, "mensagem": f"Erro ao conectar com Bling: {e}"}
+
+    # 5. Teste Tiny ERP
+    if tipo == "tiny":
+        token = cfg.get("token") or cfg.get("api_token")
+        if not token:
+            return {"sucesso": False, "mensagem": "Token API do Tiny é obrigatório."}
+        try:
+            resp = httpx.post(
+                "https://api.tiny.com.br/api2/info.php",
+                data={"token": token, "formato": "json"},
+                timeout=12.0
+            )
+            latencia = int((time.time() - t0) * 1000)
+            if resp.status_code == 200 and resp.json().get("retorno", {}).get("status") != "Erro":
+                return {"sucesso": True, "mensagem": f"Conexão com Tiny ERP validada com sucesso ({latencia}ms)!", "latencia_ms": latencia}
+            return {"sucesso": False, "mensagem": f"Tiny retornou erro: {resp.text[:200]}", "latencia_ms": latencia}
+        except Exception as e:
+            return {"sucesso": False, "mensagem": f"Erro ao conectar com Tiny: {e}"}
+
+    # 6. Teste Conta Azul
+    if tipo == "conta_azul":
+        token = cfg.get("token") or cfg.get("client_secret")
+        if not token:
+            return {"sucesso": False, "mensagem": "Token / Access Token do Conta Azul não informado."}
+        try:
+            resp = httpx.get(
+                "https://api.contaazul.com/v1/customers?page=1&size=1",
+                headers={"Authorization": f"Bearer {token}"},
+                timeout=12.0
+            )
+            latencia = int((time.time() - t0) * 1000)
+            if resp.status_code == 200:
+                return {"sucesso": True, "mensagem": f"Conta Azul conectado com sucesso ({latencia}ms)!", "latencia_ms": latencia}
+            return {"sucesso": False, "mensagem": f"Conta Azul respondeu ({resp.status_code}): {resp.text[:200]}", "latencia_ms": latencia}
+        except Exception as e:
+            return {"sucesso": False, "mensagem": f"Erro ao conectar ao Conta Azul: {e}"}
+
+    # 7. Teste Senior Sistemas / SAP / Generic REST
+    if tipo in ("senior", "sap_b1", "sap_s4hana", "oracle_netsuite", "oracle_cloud", "generic_rest", "totvs_protheus", "cigam", "wk_radar", "linx", "millenium"):
+        base_url = (cfg.get("base_url") or "").rstrip("/")
+        if not base_url:
+            return {"sucesso": False, "mensagem": f"Base URL / Endpoint do conector '{tipo}' não informado."}
+        try:
+            headers = {}
+            if cfg.get("token") or cfg.get("client_secret"):
+                headers["Authorization"] = f"Bearer {cfg.get('token') or cfg.get('client_secret')}"
+            resp = httpx.get(base_url, headers=headers, verify=False, timeout=10.0)
+            latencia = int((time.time() - t0) * 1000)
+            if resp.status_code in (200, 201, 204, 301, 302, 401, 403):
+                return {
+                    "sucesso": True,
+                    "mensagem": f"Endpoint do sistema alcançado com sucesso ({latencia}ms, HTTP {resp.status_code}). Servidor online!",
+                    "latencia_ms": latencia,
+                    "status_code": resp.status_code
+                }
+            return {"sucesso": False, "mensagem": f"Endpoint retornou status HTTP {resp.status_code}.", "latencia_ms": latencia}
+        except Exception as e:
+            return {"sucesso": False, "mensagem": f"Não foi possível conectar ao endpoint: {e}"}
+
+    # 8. Teste Banco de Dados SQL
+    if tipo in ("database", "postgresql", "mysql", "sqlserver", "oracle_db"):
         host = cfg.get("host")
         port = int(cfg.get("port") or 5432)
         if not host:

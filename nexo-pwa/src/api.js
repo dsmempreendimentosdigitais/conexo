@@ -285,3 +285,38 @@ export async function getAdminFinanceiro(token, adminKey) {
   if (!r.ok) throw new Error((await r.json()).detail || "Erro ao carregar dados financeiros SaaS");
   return r.json();
 }
+
+// ── Área do Gestor: Minha Empresa, Suporte e Alteração de Senha ──
+export async function getMinhaEmpresa(token) {
+  const r = await fetch(`${BASE}/conexo/minha-empresa`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!r.ok) throw new Error((await r.json()).detail || "Erro ao carregar dados da empresa");
+  return r.json();
+}
+
+export async function abrirSuporte(dados, token) {
+  const r = await fetch(`${BASE}/conexo/suporte`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(dados),
+  });
+  if (!r.ok) throw new Error((await r.json()).detail || "Erro ao abrir chamado de suporte");
+  return r.json();
+}
+
+export async function alterarMinhaSenha(novaSenha, token) {
+  const r = await fetch(`${BASE}/conexo/alterar-senha`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ nova_senha: novaSenha }),
+  });
+  if (!r.ok) throw new Error((await r.json()).detail || "Erro ao alterar senha");
+  return r.json();
+}

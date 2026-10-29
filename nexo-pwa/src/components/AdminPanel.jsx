@@ -1,4 +1,6 @@
 import { useState, useEffect } from "react";
+import AddConnectorModal from "./AddConnectorModal";
+import ContractModal from "./ContractModal";
 import {
   getAdminOverview,
   getAdminTenants,
@@ -17,7 +19,7 @@ import {
 } from "../api";
 
 export default function AdminPanel({ token, onVoltarChat, onLogout }) {
-  const [tab, setTab] = useState("overview"); // overview | tenants | connectors | users | financeiro | logs
+  const [tab, setTab] = useState("overview"); // overview | tenants | connectors | contratos | users | financeiro | logs
   const [loading, setLoading] = useState(true);
   const [erro, setErro] = useState("");
   const [sucesso, setSucesso] = useState("");
@@ -59,6 +61,10 @@ export default function AdminPanel({ token, onVoltarChat, onLogout }) {
   const [modalSenhaGerada, setModalSenhaGerada] = useState(null); // { email, senha, mensagem }
   const [testandoConector, setTestandoConector] = useState("");
   const [resultadoTeste, setResultadoTeste] = useState(null);
+
+  // Modais de Conectores Flexíveis e Contrato DSM
+  const [modalAddConector, setModalAddConector] = useState(false);
+  const [modalContratoTenant, setModalContratoTenant] = useState(null);
 
   // Carrega visão geral ao abrir
   useEffect(() => {
@@ -130,19 +136,59 @@ export default function AdminPanel({ token, onVoltarChat, onLogout }) {
   }
 
   // ── Testar Conexão ao Vivo ──
-  async function handleTestarConector(tipo) {
-    setTestandoConector(tipo);
+  async function handleTestarConector(chave, conectorCustom) {
+    const conn = conectorCustom || connectorsData[chave] || {};
+    const tipo = conn.tipo || chave;
+    setTestandoConector(chave);
     setResultadoTeste(null);
     setErro("");
     try {
-      const cfg = connectorsData[tipo] || {};
-      const res = await testAdminConnector(tipo, cfg, token);
-      setResultadoTeste({ tipo, ...res });
+      const res = await testAdminConnector(tipo, conn, token);
+      setResultadoTeste({ chave, tipo, ...res });
     } catch (e) {
-      setResultadoTeste({ tipo, sucesso: false, mensagem: e.message });
+      setResultadoTeste({ chave, tipo, sucesso: false, mensagem: e.message });
     } finally {
       setTestandoConector("");
     }
+  }
+
+  // ── Adicionar Conector Dinâmico à Empresa ──
+  async function handleAdicionarConector(chave, novoConector) {
+    const atualizados = {
+      ...(connectorsData || {}),
+      [chave]: novoConector,
+    };
+    setConnectorsData(atualizados);
+    try {
+      await saveAdminConnectors(selectedTenantId, atualizados, token);
+      setSucesso(`Sistema "${novoConector.nome}" adicionado e salvo com sucesso!`);
+      setTimeout(() => setSucesso(""), 4000);
+    } catch (e) {
+      setErro("Erro ao salvar conector no servidor: " + e.message);
+    }
+  }
+
+  // ── Remover Conector da Empresa ──
+  async function handleRemoverConector(chave) {
+    const nomeSis = connectorsData[chave]?.nome || chave;
+    if (!window.confirm(`Deseja realmente remover o sistema "${nomeSis}" desta empresa?`)) return;
+    const atualizados = { ...connectorsData };
+    delete atualizados[chave];
+    setConnectorsData(atualizados);
+    try {
+      await saveAdminConnectors(selectedTenantId, atualizados, token);
+      setSucesso(`Sistema "${nomeSis}" removido com sucesso.`);
+      setTimeout(() => setSucesso(""), 3500);
+    } catch (e) {
+      setErro("Erro ao remover conector: " + e.message);
+    }
+  }
+
+  // ── Atualizar Contrato no Estado Local ──
+  function handleAtualizarContratoLocal(tid, contratoAtualizado) {
+    setTenants((prev) =>
+      prev.map((t) => (t.id === tid ? { ...t, contrato: contratoAtualizado } : t))
+    );
   }
 
   // ── Criar Nova Empresa ──
@@ -261,6 +307,9 @@ export default function AdminPanel({ token, onVoltarChat, onLogout }) {
         </button>
         <button className={`admin-tab-btn ${tab === "connectors" ? "active" : ""}`} onClick={() => setTab("connectors")}>
           🔌 Conectores & APIs (ERP)
+        </button>
+        <button className={`admin-tab-btn ${tab === "contratos" ? "active" : ""}`} onClick={() => setTab("contratos")}>
+          📜 Contratos DSM ({tenants.length})
         </button>
         <button className={`admin-tab-btn ${tab === "users" ? "active" : ""}`} onClick={() => setTab("users")}>
           👥 Usuários & Senhas ({users.length})
@@ -431,23 +480,35 @@ export default function AdminPanel({ token, onVoltarChat, onLogout }) {
             )}
 
             {/* ══════════════════════════════════════════════════════════
-                3. TAB: HUB DE CONECTORES & APIS (TOTVS, SANKHYA, DB)
+                3. TAB: HUB DE MULTISSISTEMAS & CONECTORES ERP (TOTVS, SANKHYA, OMIE, SENIOR, BLING...)
                ══════════════════════════════════════════════════════════ */}
             {tab === "connectors" && (
               <div className="admin-tab-content">
-                <div className="admin-tenant-selector-bar">
-                  <label>Empresa Selecionada para Configuração:</label>
-                  <select
-                    value={selectedTenantId}
-                    onChange={(e) => handleTrocarTenantConectores(e.target.value)}
-                    className="admin-select"
+                <div className="admin-tenant-selector-bar" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "14px" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
+                    <label style={{ fontWeight: 600, color: "#f8fafc" }}>Empresa Selecionada:</label>
+                    <select
+                      value={selectedTenantId}
+                      onChange={(e) => handleTrocarTenantConectores(e.target.value)}
+                      className="admin-select"
+                      style={{ minWidth: "260px" }}
+                    >
+                      {tenants.map((t) => (
+                        <option key={t.id} value={t.id}>
+                          {t.nome_fantasia || t.nome} ({t.cnpj})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <button
+                    type="button"
+                    className="btn-primary-admin"
+                    onClick={() => setModalAddConector(true)}
+                    style={{ background: "#0284c7", display: "inline-flex", alignItems: "center", gap: "8px" }}
                   >
-                    {tenants.map((t) => (
-                      <option key={t.id} value={t.id}>
-                        {t.nome_fantasia || t.nome} ({t.cnpj})
-                      </option>
-                    ))}
-                  </select>
+                    ➕ Adicionar Novo Sistema / ERP
+                  </button>
                 </div>
 
                 {resultadoTeste && (
@@ -457,317 +518,189 @@ export default function AdminPanel({ token, onVoltarChat, onLogout }) {
                   </div>
                 )}
 
-                {connectorsData && (
+                {connectorsData && Object.keys(connectorsData).length > 0 ? (
                   <form onSubmit={handleSalvarConectores} className="connectors-form">
-                    {/* CARD 1: TOTVS MODA */}
-                    <div className="connector-card">
-                      <div className="connector-card-header">
-                        <div className="connector-title">
-                          <span className="connector-icon">🔴</span>
-                          <div>
-                            <h4>TOTVS Moda (Bhan / API Rest)</h4>
-                            <p>Vendas, faturamento, pedidos bloqueados e títulos em atraso</p>
-                          </div>
-                        </div>
-                        <label className="switch">
-                          <input
-                            type="checkbox"
-                            checked={connectorsData.totvs_moda?.ativo || false}
-                            onChange={(e) =>
-                              setConnectorsData({
-                                ...connectorsData,
-                                totvs_moda: { ...connectorsData.totvs_moda, ativo: e.target.checked },
-                              })
-                            }
-                          />
-                          <span className="slider round" />
-                        </label>
-                      </div>
+                    <div className="connector-grid">
+                      {Object.entries(connectorsData).map(([chave, conn]) => {
+                        const isAtivo = conn?.ativo !== false;
+                        const icone = conn?.icone || (chave.includes("totvs") ? "🧵" : chave.includes("sankhya") ? "🟢" : chave.includes("omie") ? "🟠" : chave.includes("senior") ? "🟦" : chave.includes("bling") ? "🟡" : chave.includes("tiny") ? "🟢" : chave.includes("conta_azul") ? "🔵" : "🔌");
+                        return (
+                          <div key={chave} className={`connector-card ${isAtivo ? "active-border" : ""}`}>
+                            <div className="connector-card-header">
+                              <div className="connector-title">
+                                <span className="connector-icon">{icone}</span>
+                                <div>
+                                  <h4>{conn?.nome || chave}</h4>
+                                  <p style={{ fontSize: "11px", color: "#94a3b8", margin: "2px 0 0" }}>
+                                    ID do conector: <code>{chave}</code> · Tipo: <strong>{conn?.tipo || chave}</strong>
+                                  </p>
+                                </div>
+                              </div>
+                              <label className="switch">
+                                <input
+                                  type="checkbox"
+                                  checked={isAtivo}
+                                  onChange={(e) =>
+                                    setConnectorsData({
+                                      ...connectorsData,
+                                      [chave]: { ...conn, ativo: e.target.checked },
+                                    })
+                                  }
+                                />
+                                <span className="slider round" />
+                              </label>
+                            </div>
 
-                      <div className="connector-fields">
-                        <div className="form-group-admin">
-                          <label>Endpoint Base URL</label>
-                          <input
-                            type="text"
-                            value={connectorsData.totvs_moda?.base_url || ""}
-                            onChange={(e) =>
-                              setConnectorsData({
-                                ...connectorsData,
-                                totvs_moda: { ...connectorsData.totvs_moda, base_url: e.target.value },
-                              })
-                            }
-                            placeholder="https://www30.bhan.com.br:9443/api/totvsmoda"
-                          />
-                        </div>
+                            {/* Campos editáveis do conector */}
+                            <div className="connector-fields">
+                              {Object.entries(conn || {})
+                                .filter(([k]) => !["tipo", "icone", "ativo", "adicionado_em", "status"].includes(k))
+                                .map(([k, v]) => {
+                                  const isPass = k.toLowerCase().includes("pass") || k.toLowerCase().includes("secret") || k.toLowerCase().includes("token");
+                                  const labelStr = k.replace(/_/g, " ").toUpperCase();
+                                  return (
+                                    <div key={k} className="form-group-admin" style={{ marginBottom: "10px" }}>
+                                      <label style={{ fontSize: "11px" }}>{labelStr}</label>
+                                      <input
+                                        type={isPass ? "password" : "text"}
+                                        value={v !== undefined && v !== null ? v : ""}
+                                        onChange={(e) =>
+                                          setConnectorsData({
+                                            ...connectorsData,
+                                            [chave]: { ...conn, [k]: e.target.value },
+                                          })
+                                        }
+                                        placeholder={`Informe ${labelStr.toLowerCase()}`}
+                                      />
+                                    </div>
+                                  );
+                                })}
+                            </div>
 
-                        <div className="grid-2-cols">
-                          <div className="form-group-admin">
-                            <label>Client ID</label>
-                            <input
-                              type="text"
-                              value={connectorsData.totvs_moda?.client_id || ""}
-                              onChange={(e) =>
-                                setConnectorsData({
-                                  ...connectorsData,
-                                  totvs_moda: { ...connectorsData.totvs_moda, client_id: e.target.value },
-                                })
-                              }
-                              placeholder="designtexapiv2"
-                            />
+                            {/* Ações do Conector */}
+                            <div className="connector-action-bar">
+                              <button
+                                type="button"
+                                className="btn-conn-action test"
+                                onClick={() => handleTestarConector(chave, conn)}
+                                disabled={testandoConector === chave}
+                              >
+                                {testandoConector === chave ? "⏳ Testando..." : "⚡ Testar Conexão"}
+                              </button>
+                              <button
+                                type="button"
+                                className="btn-conn-action delete"
+                                onClick={() => handleRemoverConector(chave)}
+                                title="Remover este sistema da empresa"
+                              >
+                                🗑️ Remover Sistema
+                              </button>
+                            </div>
                           </div>
-                          <div className="form-group-admin">
-                            <label>Client Secret</label>
-                            <input
-                              type="password"
-                              value={connectorsData.totvs_moda?.client_secret || ""}
-                              onChange={(e) =>
-                                setConnectorsData({
-                                  ...connectorsData,
-                                  totvs_moda: { ...connectorsData.totvs_moda, client_secret: e.target.value },
-                                })
-                              }
-                              placeholder="••••••••••"
-                            />
-                          </div>
-                        </div>
-
-                        <div className="grid-2-cols">
-                          <div className="form-group-admin">
-                            <label>Usuário TOTVS</label>
-                            <input
-                              type="text"
-                              value={connectorsData.totvs_moda?.username || ""}
-                              onChange={(e) =>
-                                setConnectorsData({
-                                  ...connectorsData,
-                                  totvs_moda: { ...connectorsData.totvs_moda, username: e.target.value },
-                                })
-                              }
-                              placeholder="samuel"
-                            />
-                          </div>
-                          <div className="form-group-admin">
-                            <label>Senha TOTVS</label>
-                            <input
-                              type="password"
-                              value={connectorsData.totvs_moda?.password || ""}
-                              onChange={(e) =>
-                                setConnectorsData({
-                                  ...connectorsData,
-                                  totvs_moda: { ...connectorsData.totvs_moda, password: e.target.value },
-                                })
-                              }
-                              placeholder="••••••••••"
-                            />
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="connector-footer">
-                        <button
-                          type="button"
-                          className="btn-test-conn"
-                          onClick={() => handleTestarConector("totvs_moda")}
-                          disabled={testandoConector === "totvs_moda"}
-                        >
-                          {testandoConector === "totvs_moda" ? "⏳ Testando..." : "⚡ Testar Conexão com TOTVS"}
-                        </button>
-                      </div>
+                        );
+                      })}
                     </div>
 
-                    {/* CARD 2: SANKHYA ERP */}
-                    <div className="connector-card">
-                      <div className="connector-card-header">
-                        <div className="connector-title">
-                          <span className="connector-icon">🟢</span>
-                          <div>
-                            <h4>Sankhya ERP (API Gateway / MobileLogin)</h4>
-                            <p>Integração de pedidos, vendas e notas fiscais para clientes Sankhya</p>
-                          </div>
-                        </div>
-                        <label className="switch">
-                          <input
-                            type="checkbox"
-                            checked={connectorsData.sankhya?.ativo || false}
-                            onChange={(e) =>
-                              setConnectorsData({
-                                ...connectorsData,
-                                sankhya: { ...connectorsData.sankhya, ativo: e.target.checked },
-                              })
-                            }
-                          />
-                          <span className="slider round" />
-                        </label>
-                      </div>
-
-                      <div className="connector-fields">
-                        <div className="form-group-admin">
-                          <label>Endpoint Gateway Sankhya</label>
-                          <input
-                            type="text"
-                            value={connectorsData.sankhya?.base_url || ""}
-                            onChange={(e) =>
-                              setConnectorsData({
-                                ...connectorsData,
-                                sankhya: { ...connectorsData.sankhya, base_url: e.target.value },
-                              })
-                            }
-                            placeholder="https://api.sankhya.com.br/gateway/v1"
-                          />
-                        </div>
-
-                        <div className="grid-2-cols">
-                          <div className="form-group-admin">
-                            <label>App Key / Client Token</label>
-                            <input
-                              type="text"
-                              value={connectorsData.sankhya?.app_key || ""}
-                              onChange={(e) =>
-                                setConnectorsData({
-                                  ...connectorsData,
-                                  sankhya: { ...connectorsData.sankhya, app_key: e.target.value },
-                                })
-                              }
-                              placeholder="Chave pública do app Sankhya"
-                            />
-                          </div>
-                          <div className="form-group-admin">
-                            <label>Client Token / Secret</label>
-                            <input
-                              type="password"
-                              value={connectorsData.sankhya?.client_token || ""}
-                              onChange={(e) =>
-                                setConnectorsData({
-                                  ...connectorsData,
-                                  sankhya: { ...connectorsData.sankhya, client_token: e.target.value },
-                                })
-                              }
-                              placeholder="Token secreto"
-                            />
-                          </div>
-                        </div>
-
-                        <div className="grid-2-cols">
-                          <div className="form-group-admin">
-                            <label>Usuário Sankhya</label>
-                            <input
-                              type="text"
-                              value={connectorsData.sankhya?.username || ""}
-                              onChange={(e) =>
-                                setConnectorsData({
-                                  ...connectorsData,
-                                  sankhya: { ...connectorsData.sankhya, username: e.target.value },
-                                })
-                              }
-                              placeholder="USUARIO.API"
-                            />
-                          </div>
-                          <div className="form-group-admin">
-                            <label>Senha Sankhya</label>
-                            <input
-                              type="password"
-                              value={connectorsData.sankhya?.password || ""}
-                              onChange={(e) =>
-                                setConnectorsData({
-                                  ...connectorsData,
-                                  sankhya: { ...connectorsData.sankhya, password: e.target.value },
-                                })
-                              }
-                              placeholder="••••••••••"
-                            />
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="connector-footer">
-                        <button
-                          type="button"
-                          className="btn-test-conn"
-                          onClick={() => handleTestarConector("sankhya")}
-                          disabled={testandoConector === "sankhya"}
-                        >
-                          {testandoConector === "sankhya" ? "⏳ Testando..." : "⚡ Testar Conexão com Sankhya"}
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* CARD 3: BANCO DE DADOS DIRETO */}
-                    <div className="connector-card">
-                      <div className="connector-card-header">
-                        <div className="connector-title">
-                          <span className="connector-icon">🔵</span>
-                          <div>
-                            <h4>Banco de Dados Direto (PostgreSQL / MySQL)</h4>
-                            <p>Consulta direta em Data Warehouse ou réplica de leitura do ERP</p>
-                          </div>
-                        </div>
-                        <label className="switch">
-                          <input
-                            type="checkbox"
-                            checked={connectorsData.database?.ativo || false}
-                            onChange={(e) =>
-                              setConnectorsData({
-                                ...connectorsData,
-                                database: { ...connectorsData.database, ativo: e.target.checked },
-                              })
-                            }
-                          />
-                          <span className="slider round" />
-                        </label>
-                      </div>
-
-                      <div className="connector-fields">
-                        <div className="grid-2-cols">
-                          <div className="form-group-admin">
-                            <label>Host do Servidor</label>
-                            <input
-                              type="text"
-                              value={connectorsData.database?.host || ""}
-                              onChange={(e) =>
-                                setConnectorsData({
-                                  ...connectorsData,
-                                  database: { ...connectorsData.database, host: e.target.value },
-                                })
-                              }
-                              placeholder="aws-rds.cliente.com.br"
-                            />
-                          </div>
-                          <div className="form-group-admin">
-                            <label>Porta</label>
-                            <input
-                              type="number"
-                              value={connectorsData.database?.port || 5432}
-                              onChange={(e) =>
-                                setConnectorsData({
-                                  ...connectorsData,
-                                  database: { ...connectorsData.database, port: e.target.value },
-                                })
-                              }
-                              placeholder="5432"
-                            />
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="connector-footer">
-                        <button
-                          type="button"
-                          className="btn-test-conn"
-                          onClick={() => handleTestarConector("database")}
-                          disabled={testandoConector === "database"}
-                        >
-                          {testandoConector === "database" ? "⏳ Testando..." : "⚡ Testar Conexão com Banco"}
-                        </button>
-                      </div>
-                    </div>
-
-                    <div className="admin-submit-bar">
+                    <div className="admin-submit-bar" style={{ marginTop: "24px" }}>
                       <button type="submit" className="btn-primary-admin large">
                         💾 Salvar Todas as Configurações de Conectores
                       </button>
                     </div>
                   </form>
+                ) : (
+                  <div style={{ textAlign: "center", padding: "60px 20px", background: "rgba(15, 23, 42, 0.4)", borderRadius: "14px", border: "1px dashed rgba(255,255,255,0.15)", marginTop: "20px" }}>
+                    <span style={{ fontSize: "40px", display: "block", marginBottom: "12px" }}>🔌</span>
+                    <h4 style={{ margin: "0 0 8px", color: "#f8fafc" }}>Nenhum sistema integrado configurado</h4>
+                    <p style={{ color: "#94a3b8", fontSize: "14px", maxWidth: "520px", margin: "0 auto 20px" }}>
+                      Esta empresa ainda não possui APIs ou ERPs conectados. Clique no botão abaixo para adicionar TOTVS, Sankhya, Omie, Senior, SAP, Conta Azul, Bling ou bancos de dados SQL.
+                    </p>
+                    <button
+                      type="button"
+                      className="btn-primary-admin"
+                      onClick={() => setModalAddConector(true)}
+                    >
+                      ➕ Adicionar Primeiro Sistema / ERP
+                    </button>
+                  </div>
                 )}
+              </div>
+            )}
+
+            {/* ══════════════════════════════════════════════════════════
+                3.1 TAB: GESTÃO CONTRATUAL DSM x CLIENTES (CONTRATOS & ADESÃO)
+               ══════════════════════════════════════════════════════════ */}
+            {tab === "contratos" && (
+              <div className="admin-tab-content">
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
+                  <div>
+                    <h3 style={{ margin: "0 0 4px", color: "#f8fafc" }}>Gestão de Contratos de Software (SaaS)</h3>
+                    <p style={{ margin: 0, color: "#94a3b8", fontSize: "13px" }}>
+                      Contratos celebrados entre a <strong>DSM Empreendimentos Digitais Ltda</strong> (CONEXO.dev) e as Empresas Contratantes.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="admin-table-container">
+                  <table className="admin-table">
+                    <thead>
+                      <tr>
+                        <th>Nº Contrato</th>
+                        <th>Empresa Contratante</th>
+                        <th>CNPJ</th>
+                        <th>Data Início</th>
+                        <th>Vigência</th>
+                        <th>Valor Mensal</th>
+                        <th>Vencimento</th>
+                        <th>SLA Garantido</th>
+                        <th>Ações</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {tenants.map((t) => {
+                        const c = t.contrato || {};
+                        const numContrato = c.numero_contrato || `DSM-CNX-2026/${t.id?.slice(0, 4).toUpperCase()}`;
+                        const dtInicio = c.data_inicio ? new Date(c.data_inicio).toLocaleDateString("pt-BR") : "01/08/2026";
+                        const vigencia = `${c.vigencia_meses || 12} meses`;
+                        const mrr = Number(c.valor_mensal || t.valor_mensal || 3500).toLocaleString("pt-BR", { minimumFractionDigits: 2 });
+                        const venc = `Dia ${c.dia_vencimento || t.dia_vencimento || 10}`;
+                        const sla = c.sla_garantido || "99.5%";
+
+                        return (
+                          <tr key={t.id}>
+                            <td>
+                              <strong style={{ color: "#38bdf8" }}>{numContrato}</strong>
+                            </td>
+                            <td>
+                              <strong>{t.nome_fantasia || t.nome}</strong>
+                            </td>
+                            <td>{t.cnpj}</td>
+                            <td>{dtInicio}</td>
+                            <td>{vigencia}</td>
+                            <td>
+                              <span style={{ color: "#4ade80", fontWeight: 700 }}>R$ {mrr}</span>
+                            </td>
+                            <td>{venc}</td>
+                            <td>
+                              <span className="admin-badge active">{sla}</span>
+                            </td>
+                            <td>
+                              <div style={{ display: "flex", gap: "6px" }}>
+                                <button
+                                  className="btn-admin-action"
+                                  onClick={() => setModalContratoTenant(t)}
+                                  style={{ background: "#0284c7", color: "#f8fafc", padding: "5px 10px", borderRadius: "6px", fontSize: "12px", border: "none", cursor: "pointer", fontWeight: 600 }}
+                                  title="Visualizar minuta jurídica, imprimir ou salvar"
+                                >
+                                  📄 Minuta & Termos
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             )}
 
@@ -1201,6 +1134,30 @@ export default function AdminPanel({ token, onVoltarChat, onLogout }) {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Modal: Adicionar Novo Sistema / ERP Dinâmico com Busca Inteligente */}
+      {modalAddConector && (
+        <AddConnectorModal
+          token={token}
+          tenantNome={
+            tenants.find((t) => t.id === selectedTenantId)?.nome_fantasia ||
+            tenants.find((t) => t.id === selectedTenantId)?.nome ||
+            "Empresa Selecionada"
+          }
+          onSalvar={handleAdicionarConector}
+          onClose={() => setModalAddConector(false)}
+        />
+      )}
+
+      {/* Modal: Visualizar Minuta Formal e Editar Contrato DSM x Cliente */}
+      {modalContratoTenant && (
+        <ContractModal
+          tenant={modalContratoTenant}
+          token={token}
+          onSalvarContrato={handleAtualizarContratoLocal}
+          onClose={() => setModalContratoTenant(null)}
+        />
       )}
     </div>
   );

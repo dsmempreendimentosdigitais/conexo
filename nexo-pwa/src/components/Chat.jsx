@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { perguntarStream, transcrever, buscarAlertas, falar } from "../api";
 import Message from "./Message";
 import AlertPanel from "./AlertPanel";
+import ClientSettingsModal from "./ClientSettingsModal";
 
 const BOAS_VINDAS = {
   role: "conexo",
@@ -85,6 +86,7 @@ export default function Chat({ token, email, onLogout, onAbrirAdmin }) {
   const [segundosGravacao, setSegundosGravacao] = useState(0);
   const [alertas, setAlertas] = useState([]);
   const [showAlerts, setShowAlerts] = useState(false);
+  const [showConfigGestor, setShowConfigGestor] = useState(false);
   const [openGroups, setOpenGroups] = useState([0, 1, 2, 3, 4]); // Todas as 5 categorias abertas por padrão
 
   const toggleGroup = (idx) => {
@@ -714,6 +716,16 @@ export default function Chat({ token, email, onLogout, onAbrirAdmin }) {
           </button>
         )}
 
+        {email !== "conexo.dev.ai@gmail.com" && (
+          <button
+            className="sidebar-client-settings-btn"
+            onClick={() => setShowConfigGestor(true)}
+            title="Minha Assinatura, Suporte e Configurações"
+          >
+            ⚙️ Minha Assinatura & Suporte
+          </button>
+        )}
+
         <div className="sidebar-user">
           <div className="user-avatar">{initials}</div>
           <div className="user-info">
@@ -1001,6 +1013,14 @@ export default function Chat({ token, email, onLogout, onAbrirAdmin }) {
         <AlertPanel
           token={token}
           onClose={() => { setShowAlerts(false); buscarAlertas(token).then(setAlertas); }}
+        />
+      )}
+
+      {/* Modal de Configurações da Empresa e Assinatura do Gestor */}
+      {showConfigGestor && (
+        <ClientSettingsModal
+          token={token}
+          onClose={() => setShowConfigGestor(false)}
         />
       )}
     </div>
