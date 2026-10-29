@@ -704,7 +704,7 @@ export default function Chat({ token, email, onLogout, onAbrirAdmin }) {
           })}
         </div>
 
-        {onAbrirAdmin && (email === "samuel.mc85@gmail.com" || email?.includes("admin") || true) && (
+        {onAbrirAdmin && email === "conexo.dev.ai@gmail.com" && (
           <button
             className="sidebar-admin-btn"
             onClick={onAbrirAdmin}
@@ -718,7 +718,9 @@ export default function Chat({ token, email, onLogout, onAbrirAdmin }) {
           <div className="user-avatar">{initials}</div>
           <div className="user-info">
             <div className="user-name">{email}</div>
-            <div className="user-role">Gestor</div>
+            <div className="user-role">
+              {email === "conexo.dev.ai@gmail.com" ? "Administrador Master" : "Gestor"}
+            </div>
           </div>
           <button className="logout-btn" onClick={onLogout} title="Sair">⇠</button>
         </div>

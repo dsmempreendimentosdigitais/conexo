@@ -102,7 +102,9 @@ export default function App() {
   }
 
   if (session) {
-    if (viewMode === "admin") {
+    const isMasterAdmin = session.user?.email === "conexo.dev.ai@gmail.com";
+
+    if (viewMode === "admin" && isMasterAdmin) {
       return (
         <AdminPanel
           token={session.access_token}
@@ -120,10 +122,10 @@ export default function App() {
         token={session.access_token}
         email={session.user?.email}
         onLogout={handleLogout}
-        onAbrirAdmin={() => {
+        onAbrirAdmin={isMasterAdmin ? () => {
           setViewMode("admin");
           window.location.hash = "admin";
-        }}
+        } : null}
       />
     );
   }

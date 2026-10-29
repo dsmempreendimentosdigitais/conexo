@@ -51,8 +51,8 @@ def require_admin(
 
         if not u or not u.get("ativo"):
             raise HTTPException(403, "Usuário desativado ou sem acesso ao CONEXO.")
-        if u.get("perfil") != "admin":
-            raise HTTPException(403, "Apenas administradores têm permissão para acessar o painel master.")
+        if u.get("perfil") != "admin" or u.get("email") != "conexo.dev.ai@gmail.com":
+            raise HTTPException(403, "Apenas o Administrador Master (conexo.dev.ai@gmail.com) tem permissão para acessar o painel master.")
         return u
     except HTTPException:
         raise
