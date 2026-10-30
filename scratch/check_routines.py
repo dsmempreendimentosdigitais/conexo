@@ -1,15 +1,10 @@
 import sys, os
-sys.path.append(os.getcwd())
-from supabase import create_client
-from config import config
+sys.path.insert(0, os.path.abspath("."))
+from executor import supabase
 
-supabase = create_client(config.SUPABASE_URL, config.SUPABASE_KEY)
-
-sql = """
-SELECT routine_name 
-FROM information_schema.routines 
-WHERE routine_schema = 'public'
-"""
-
-res = supabase.rpc("conexo_executar_leitura", {"query_str": sql}).execute()
-print("Public routines:", res.data)
+res = supabase.rpc("conexo_executar_leitura", {
+    "query_str": "SELECT routine_name FROM information_schema.routines WHERE routine_schema = 'public'"
+}).execute().data
+print("ROUTINES:")
+for r in res:
+    print("-", r.get("routine_name"))
