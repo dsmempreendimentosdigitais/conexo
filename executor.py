@@ -209,30 +209,18 @@ def executar(intent: str, params: dict, ctx: dict | None = None):
                 
         where_sql = " AND ".join(where_clauses) if where_clauses else "1=1"
         sql = f"""
-        WITH reservas_vivas AS (
-            SELECT 
-                item->>'colorCode' as cor_codigo,
-                COALESCE(SUM((item->>'quantity')::numeric), 0) as reserva_pedidos
-            FROM pedidos_totvs p,
-            LATERAL jsonb_array_elements(
-                CASE WHEN jsonb_typeof(p.items_json) = 'array' THEN p.items_json ELSE '[]'::jsonb END
-            ) item
-            WHERE p.status IN ('InProgress', 'Blocked', 'InComposition')
-            GROUP BY item->>'colorCode'
-        )
         SELECT 
             e.cod_produto, 
             e.descricao, 
             e.cor, 
             e.cor_codigo, 
-            GREATEST(0, ROUND((COALESCE(NULLIF(e.estoque_1, 0), e.quantidade_disponivel + e.quantidade_reservada, 0) - GREATEST(COALESCE(r.reserva_pedidos, 0), e.quantidade_reservada))::numeric, 1)) AS quantidade_disponivel, 
-            GREATEST(COALESCE(r.reserva_pedidos, 0), e.quantidade_reservada) AS quantidade_reservada, 
-            ROUND(GREATEST(COALESCE(e.estoque_1, 0), e.quantidade_disponivel + e.quantidade_reservada)::numeric, 1) AS estoque_fisico, 
+            ROUND(COALESCE(e.quantidade_disponivel, 0)::numeric, 1) AS quantidade_disponivel, 
+            ROUND(COALESCE(e.quantidade_reservada, 0)::numeric, 1) AS quantidade_reservada, 
+            ROUND(GREATEST(COALESCE(e.quantidade_disponivel, 0) + COALESCE(e.quantidade_reservada, 0), COALESCE(e.estoque_1, 0))::numeric, 1) AS estoque_fisico, 
             e.categoria, 
             e.unidade, 
             e.hex_color 
         FROM estoque_pe e
-        LEFT JOIN reservas_vivas r ON e.cor_codigo = r.cor_codigo
         WHERE {where_sql} 
         ORDER BY quantidade_disponivel DESC LIMIT 30
         """
