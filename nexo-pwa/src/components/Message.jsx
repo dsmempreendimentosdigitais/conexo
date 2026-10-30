@@ -88,16 +88,11 @@ export default function Message({ msg, onEnviar, falandoTs, onToggleFala }) {
             />
           )}
 
-          {/* Prioridade #1: Gráfico e Tabela de dados no topo da resposta */}
-          {!isUser && msg.dados && (
-            <Dashboard intent={msg.intent || "nexo_consulta_geral"} dados={msg.dados} pergunta={msg.pergunta || ""} />
-          )}
-
-          {/* Prioridade #2: Texto da mensagem (com transcrição se veio por voz) */}
+          {/* Prioridade #1: Texto da mensagem (com transcrição se veio por voz) */}
           {msg.conteudo && (
             <p
               style={{
-                marginTop: !isUser && msg.dados ? 12 : (isUser && msg.audioUrl ? 8 : 0),
+                marginTop: isUser && msg.audioUrl ? 8 : 0,
                 whiteSpace: "pre-line",
                 fontSize: isUser && msg.audioUrl ? 13 : undefined,
                 opacity: isUser && msg.audioUrl ? 0.95 : 1,
@@ -130,6 +125,13 @@ export default function Message({ msg, onEnviar, falandoTs, onToggleFala }) {
               >
                 {falandoTs === msg.ts ? "⏹️ Parar voz" : "🔊 Ouvir resposta"}
               </button>
+            </div>
+          )}
+
+          {/* Painel de Dados, Gráficos e Exportação PDF (Disponível sob demanda) */}
+          {!isUser && msg.dados && (
+            <div style={{ marginTop: 10 }}>
+              <Dashboard intent={msg.intent || "nexo_consulta_geral"} dados={msg.dados} pergunta={msg.pergunta || ""} />
             </div>
           )}
 

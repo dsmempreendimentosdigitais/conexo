@@ -457,56 +457,58 @@ function abrirImpressaoUniversal(htmlContent, titulo = "Relatório CONEXO", subt
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
     <title>${titulo} — Designtex Tecidos (${dataHoje})</title>
     <style>
-      @page { size: A4 portrait; margin: 10mm 8mm; }
+      @page { size: A4 landscape; margin: 8mm 6mm; }
       * { box-sizing: border-box; }
       body {
         font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
         color: #0f172a;
         background: #f1f5f9;
-        padding: 16px;
-        font-size: 11px;
+        padding: 14px;
+        font-size: 10px;
         margin: 0;
         -webkit-print-color-adjust: exact !important;
         print-color-adjust: exact !important;
       }
       .header-bar {
         display: flex; justify-content: space-between; align-items: center;
-        margin: 0 auto 16px auto; max-width: 1050px;
-        background: #0f172a; color: white; padding: 12px 18px;
-        border-radius: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); gap: 12px; flex-wrap: wrap;
+        margin: 0 auto 14px auto; max-width: 100%;
+        background: #0f172a; color: white; padding: 10px 16px;
+        border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); gap: 12px; flex-wrap: wrap;
       }
       .header-left { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
       .btn-voltar {
         background: #1e293b; color: #ffffff; border: 1px solid #475569;
-        padding: 10px 18px; border-radius: 8px; font-weight: 700; font-size: 13px;
+        padding: 9px 16px; border-radius: 8px; font-weight: 700; font-size: 12px;
         cursor: pointer; display: inline-flex; align-items: center; gap: 6px;
         text-decoration: none;
       }
       .btn-print {
         background: #10b981; color: #0f172a; border: none;
-        padding: 10px 18px; border-radius: 8px; font-weight: 800; font-size: 13px;
+        padding: 9px 16px; border-radius: 8px; font-weight: 800; font-size: 12px;
         cursor: pointer; display: inline-flex; align-items: center; gap: 6px;
       }
       .bottom-bar {
-        display: flex; gap: 12px; margin: 20px auto 0 auto; max-width: 1050px;
-        padding: 14px 18px; background: #0f172a; border-radius: 10px; flex-wrap: wrap;
+        display: flex; gap: 12px; margin: 16px auto 0 auto; max-width: 100%;
+        padding: 12px 16px; background: #0f172a; border-radius: 8px; flex-wrap: wrap;
       }
       .report-card {
         background: #ffffff;
-        max-width: 1050px;
+        max-width: 100% !important;
+        width: 100% !important;
         margin: 0 auto;
-        padding: 24px 28px;
-        border-radius: 12px;
+        padding: 18px 22px;
+        border-radius: 10px;
         border: 1px solid #cbd5e1;
         box-shadow: 0 4px 20px rgba(15, 23, 42, 0.06);
+        box-sizing: border-box;
       }
       .doc-header {
         display: flex;
         justify-content: space-between;
         align-items: flex-start;
         border-bottom: 3px solid #0f172a;
-        padding-bottom: 14px;
-        margin-bottom: 18px;
+        padding-bottom: 12px;
+        margin-bottom: 14px;
         gap: 16px;
       }
       .doc-brand {
@@ -518,69 +520,81 @@ function abrirImpressaoUniversal(htmlContent, titulo = "Relatório CONEXO", subt
         margin-bottom: 4px;
       }
       .doc-title {
-        font-size: 20px;
+        font-size: 18px;
         font-weight: 900;
         color: #0f172a !important;
         margin: 0;
         letter-spacing: -0.3px;
       }
       .doc-query {
-        margin-top: 6px;
-        font-size: 11px;
+        margin-top: 4px;
+        font-size: 10px;
         color: #334155 !important;
         background: #f1f5f9;
-        padding: 5px 10px;
-        border-radius: 6px;
+        padding: 4px 8px;
+        border-radius: 5px;
         border-left: 3px solid #0284c7;
         display: inline-block;
       }
       .doc-meta {
         text-align: right;
-        font-size: 11px;
+        font-size: 10px;
         color: #475569 !important;
-        line-height: 1.5;
+        line-height: 1.4;
         white-space: nowrap;
       }
       .doc-meta strong { color: #0f172a !important; }
 
       .report-card .section-title, .report-card .chart-title {
-        font-size: 12px !important;
+        font-size: 11px !important;
         font-weight: 800 !important;
         color: #ffffff !important;
         background: #0f172a !important;
-        margin: 16px 0 0 0 !important;
-        padding: 8px 12px !important;
+        margin: 12px 0 0 0 !important;
+        padding: 6px 10px !important;
         border-radius: 6px 6px 0 0 !important;
         text-transform: uppercase !important;
-        letter-spacing: 0.6px !important;
+        letter-spacing: 0.5px !important;
       }
       .report-card table {
         width: 100% !important;
+        max-width: 100% !important;
+        table-layout: auto !important;
         border-collapse: collapse !important;
-        margin-bottom: 16px !important;
-        font-size: 10.5px !important;
+        margin-bottom: 12px !important;
+        font-size: 8.5px !important;
         border: 1px solid #cbd5e1 !important;
       }
       .report-card thead { display: table-header-group; }
       .report-card tfoot { display: table-row-group; }
       .report-card tr { page-break-inside: avoid; }
       .report-card th {
-        padding: 8px 7px !important;
+        padding: 6px 4px !important;
         background: #1e293b !important;
         color: #ffffff !important;
-        font-size: 9.5px !important;
+        font-size: 8px !important;
         font-weight: 800 !important;
         text-transform: uppercase !important;
-        letter-spacing: 0.4px !important;
+        letter-spacing: 0.3px !important;
         border-bottom: 2px solid #0f172a !important;
+        white-space: normal !important;
+        word-break: break-word !important;
+        line-height: 1.15 !important;
+        vertical-align: middle !important;
       }
       .report-card td {
-        padding: 6px 7px !important;
+        padding: 4px 4px !important;
         border-bottom: 1px solid #e2e8f0 !important;
         color: #0f172a !important;
-        font-size: 10.5px !important;
+        font-size: 8.5px !important;
         font-weight: 500 !important;
         vertical-align: middle !important;
+        word-break: break-word !important;
+        line-height: 1.2 !important;
+      }
+      .report-card td.val-num, .report-card td.val-moeda {
+        white-space: nowrap !important;
+        text-align: right !important;
       }
       .report-card tbody tr:nth-child(even) td { background: #f8fafc !important; }
       .report-card tbody tr:nth-child(odd) td { background: #ffffff !important; }
@@ -588,66 +602,73 @@ function abrirImpressaoUniversal(htmlContent, titulo = "Relatório CONEXO", subt
         background: #dbeafe !important;
         color: #0f172a !important;
         font-weight: 800 !important;
-        font-size: 11px !important;
+        font-size: 9px !important;
         border-top: 2px solid #0284c7 !important;
         border-bottom: 2px solid #0284c7 !important;
-        padding: 8px 7px !important;
+        padding: 6px 4px !important;
+        white-space: nowrap !important;
       }
 
       /* Resumo Executivo no final do relatório (estilo Portal de Vendas) */
       .conexo-summary-section {
-        margin-top: 18px !important;
+        margin-top: 14px !important;
         page-break-inside: avoid !important;
       }
       .conexo-summary-title {
-        font-size: 12px !important;
+        font-size: 11px !important;
         font-weight: 900 !important;
         color: #0f172a !important;
         text-transform: uppercase !important;
         letter-spacing: 0.5px !important;
-        margin-bottom: 8px !important;
+        margin-bottom: 6px !important;
       }
       .conexo-summary-table {
         width: 100% !important;
+        max-width: 100% !important;
+        table-layout: auto !important;
         border-collapse: collapse !important;
         border: 1px solid #cbd5e1 !important;
       }
       .conexo-summary-table th {
         background: #0f172a !important;
         color: #ffffff !important;
-        padding: 8px 12px !important;
-        font-size: 10px !important;
+        padding: 6px 8px !important;
+        font-size: 8.5px !important;
         font-weight: 800 !important;
         text-transform: uppercase !important;
+        white-space: normal !important;
+        word-break: break-word !important;
+        line-height: 1.15 !important;
       }
       .conexo-summary-table td {
         background: #dbeafe !important;
         color: #0f172a !important;
-        padding: 10px 12px !important;
-        font-size: 12px !important;
+        padding: 6px 8px !important;
+        font-size: 9.5px !important;
         font-weight: 800 !important;
         border-top: 2px solid #0284c7 !important;
+        white-space: nowrap !important;
       }
 
       .report-card .footer {
-        margin-top: 24px !important;
-        font-size: 10px !important;
+        margin-top: 18px !important;
+        font-size: 9px !important;
         color: #64748b !important;
         border-top: 1px solid #cbd5e1 !important;
-        padding-top: 10px !important;
+        padding-top: 8px !important;
         display: flex !important;
         justify-content: space-between !important;
       }
       
-      .kpi-grid { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 16px; }
-      .kpi-card { border: 1px solid #cbd5e1; padding: 10px 14px; border-radius: 8px; min-width: 110px; flex: 1; background: #f8fafc; }
-      .kpi-label { font-size: 10px; color: #64748b; text-transform: uppercase; letter-spacing: .5px; margin-bottom: 2px; }
-      .kpi-value { font-size: 18px; font-weight: 700; color: #0f172a; }
+      .kpi-grid { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
+      .kpi-card { border: 1px solid #cbd5e1; padding: 8px 12px; border-radius: 6px; min-width: 100px; flex: 1; background: #f8fafc; }
+      .kpi-label { font-size: 9px; color: #64748b; text-transform: uppercase; letter-spacing: .5px; margin-bottom: 2px; }
+      .kpi-value { font-size: 16px; font-weight: 700; color: #0f172a; }
       
       @media print {
         .no-print { display: none !important; }
         body { padding: 0; background: white; }
-        .report-card { border: none; box-shadow: none; padding: 0; max-width: 100%; }
+        .report-card { border: none; box-shadow: none; padding: 0; max-width: 100% !important; width: 100% !important; }
       }
     </style>
   </head><body>
@@ -727,6 +748,8 @@ function PdfWrapper({ children, title = "Relatório CONEXO", pergunta = "" }) {
   const rawId = useId ? useId() : `pdf-${Math.random().toString(36).substring(2, 9)}`;
   const containerId = String(rawId).replace(/:/g, "");
   const [modalData, setModalData] = useState(null);
+  const [mostrarGrafico, setMostrarGrafico] = useState(false);
+  const [mostrarTabela, setMostrarTabela] = useState(false);
 
   function abrirModalPDF(apenasGraficos = false) {
     const container = document.getElementById(containerId);
@@ -737,6 +760,8 @@ function PdfWrapper({ children, title = "Relatório CONEXO", pergunta = "" }) {
       const clone = container.cloneNode(true);
       const tabelas = clone.querySelectorAll(".pdf-tabela");
       tabelas.forEach(t => t.remove());
+      const sumarios = clone.querySelectorAll(".conexo-summary-section");
+      sumarios.forEach(s => s.remove());
       htmlLimpo = clone.innerHTML;
     } else {
       htmlLimpo = container.innerHTML;
@@ -759,51 +784,134 @@ function PdfWrapper({ children, title = "Relatório CONEXO", pergunta = "" }) {
   }
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 12 }}>
-      <div className="no-print" style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 8 }}>
+      {/* Container invisível offscreen: permanece sempre montado no DOM para que Recharts e tabelas calculem dimensões perfeitas para o PDF */}
+      <div
+        id={containerId}
+        style={{
+          position: "absolute",
+          left: "-9999px",
+          top: 0,
+          width: "1120px",
+          visibility: "hidden",
+          pointerEvents: "none",
+        }}
+      >
+        {children}
+      </div>
+
+      {/* Barra de Ações: não dispara automático no chat, fica disponível em botões/chips elegantes */}
+      <div className="no-print" style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
         <button
+          type="button"
+          onClick={() => setMostrarGrafico((prev) => !prev)}
+          style={{
+            background: mostrarGrafico ? "#334155" : "rgba(56, 189, 248, 0.12)",
+            color: mostrarGrafico ? "#f1f5f9" : "#38bdf8",
+            border: `1px solid ${mostrarGrafico ? "#64748b" : "rgba(56, 189, 248, 0.4)"}`,
+            borderRadius: 8,
+            padding: "8px 14px",
+            fontWeight: 600,
+            fontSize: 12,
+            cursor: "pointer",
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 6,
+            transition: "all 0.2s",
+          }}
+          title={mostrarGrafico ? "Ocultar gráfico do chat" : "Visualizar gráfico interativo no chat"}
+        >
+          {mostrarGrafico ? "✕ Ocultar Gráficos" : "📊 Visualizar Gráficos"}
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setMostrarTabela((prev) => !prev)}
+          style={{
+            background: mostrarTabela ? "#334155" : "rgba(148, 163, 184, 0.12)",
+            color: mostrarTabela ? "#f1f5f9" : "#cbd5e1",
+            border: `1px solid ${mostrarTabela ? "#64748b" : "rgba(148, 163, 184, 0.4)"}`,
+            borderRadius: 8,
+            padding: "8px 14px",
+            fontWeight: 600,
+            fontSize: 12,
+            cursor: "pointer",
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 6,
+            transition: "all 0.2s",
+          }}
+          title={mostrarTabela ? "Ocultar tabela do chat" : "Ver tabela detalhada de dados no chat"}
+        >
+          {mostrarTabela ? "✕ Ocultar Tabela" : "📋 Ver Tabela de Dados"}
+        </button>
+
+        <button
+          type="button"
           onClick={() => abrirModalPDF(false)}
           style={{
             background: "linear-gradient(135deg, #0284c7, #0369a1)",
             color: "#ffffff",
             border: "none",
             borderRadius: 8,
-            padding: "9px 16px",
+            padding: "8px 16px",
             fontWeight: 700,
-            fontSize: 13,
+            fontSize: 12,
             cursor: "pointer",
-            display: "flex",
+            display: "inline-flex",
             alignItems: "center",
             gap: 6,
-            boxShadow: "0 2px 8px rgba(2, 132, 199, 0.3)"
+            boxShadow: "0 2px 8px rgba(2, 132, 199, 0.3)",
+            transition: "all 0.2s",
           }}
         >
           📄 Visualizar / Baixar Relatório (PDF)
         </button>
+
         <button
+          type="button"
           onClick={() => abrirModalPDF(true)}
           style={{
             background: "#10b981",
             color: "#0f172a",
             border: "none",
             borderRadius: 8,
-            padding: "9px 16px",
+            padding: "8px 16px",
             fontWeight: 700,
-            fontSize: 13,
+            fontSize: 12,
             cursor: "pointer",
-            display: "flex",
+            display: "inline-flex",
             alignItems: "center",
             gap: 6,
-            boxShadow: "0 2px 8px rgba(16, 185, 129, 0.25)"
+            boxShadow: "0 2px 8px rgba(16, 185, 129, 0.25)",
+            transition: "all 0.2s",
           }}
         >
-          📊 Baixar Apenas Gráficos (PDF)
+          📈 Baixar Apenas Gráficos (PDF)
         </button>
       </div>
 
-      <div id={containerId}>
-        {children}
-      </div>
+      {/* Visualização sob demanda inline no Chat (apenas quando o usuário aciona os botões) */}
+      {(mostrarGrafico || mostrarTabela) && (
+        <div style={{ marginTop: 10, maxWidth: "100%", overflowX: "auto" }}>
+          <style>{`
+            .conexo-inline-view.hide-charts .chart-block,
+            .conexo-inline-view.hide-charts .chart-wrapper,
+            .conexo-inline-view.hide-charts .recharts-responsive-container {
+              display: none !important;
+            }
+            .conexo-inline-view.hide-tables .pdf-tabela,
+            .conexo-inline-view.hide-tables .conexo-summary-section {
+              display: none !important;
+            }
+          `}</style>
+          <div
+            className={`conexo-inline-view ${!mostrarGrafico ? "hide-charts" : ""} ${!mostrarTabela ? "hide-tables" : ""}`}
+          >
+            {children}
+          </div>
+        </div>
+      )}
 
       {/* MODAL IN-APP DE VISUALIZAÇÃO E DOWNLOAD DE PDF COM LAYOUT EXECUTIVO MODERNO */}
       {modalData && (
@@ -926,15 +1034,17 @@ function PdfWrapper({ children, title = "Relatório CONEXO", pergunta = "" }) {
               className="report-card"
               style={{
                 width: "100%",
-                maxWidth: "1020px",
+                maxWidth: "1140px",
                 backgroundColor: "#ffffff",
-                padding: "28px 32px",
+                padding: "24px 28px",
                 borderRadius: "12px",
                 border: "1px solid #cbd5e1",
                 boxShadow: "0 10px 25px rgba(15, 23, 42, 0.08)",
                 color: "#0f172a",
                 height: "fit-content",
                 marginBottom: "40px",
+                boxSizing: "border-box",
+                overflowX: "auto",
               }}
             >
               <div
@@ -953,25 +1063,58 @@ function PdfWrapper({ children, title = "Relatório CONEXO", pergunta = "" }) {
                   <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: 1.2, color: "#0284c7", textTransform: "uppercase", marginBottom: 4 }}>
                     DESIGNTEX TECIDOS • CONEXO INTELIGÊNCIA COMERCIAL
                   </div>
-                  <h1 style={{ fontSize: 22, fontWeight: 900, color: "#0f172a", margin: 0 }}>
+                  <h1 style={{ fontSize: 20, fontWeight: 900, color: "#0f172a", margin: 0 }}>
                     📊 {modalData.titulo}
                   </h1>
                   {modalData.subtituloConsulta && (
-                    <div style={{ marginTop: 8, fontSize: 12, color: "#334155", background: "#f1f5f9", padding: "6px 10px", borderRadius: 6, borderLeft: "3px solid #0284c7" }}>
+                    <div style={{ marginTop: 8, fontSize: 11, color: "#334155", background: "#f1f5f9", padding: "6px 10px", borderRadius: 6, borderLeft: "3px solid #0284c7" }}>
                       <strong>Filtro / Consulta:</strong> {modalData.subtituloConsulta}
                     </div>
                   )}
                 </div>
-                <div style={{ textAlign: "right", fontSize: 12, color: "#475569", lineHeight: 1.5 }}>
+                <div style={{ textAlign: "right", fontSize: 11, color: "#475569", lineHeight: 1.5 }}>
                   <div><strong style={{ color: "#0f172a" }}>Gerado em:</strong> {modalData.dataHoje}</div>
                   <div><strong style={{ color: "#0f172a" }}>Fonte:</strong> Base Oficial ERP / Portal</div>
                 </div>
               </div>
 
               <div
-                style={{ color: "#0f172a" }}
+                className="report-modal-content"
+                style={{ color: "#0f172a", width: "100%", overflowX: "auto" }}
                 dangerouslySetInnerHTML={{ __html: modalData.html }}
               />
+              <style>{`
+                .report-modal-content table {
+                  width: 100% !important;
+                  max-width: 100% !important;
+                  table-layout: auto !important;
+                  border-collapse: collapse !important;
+                  font-size: 8.5px !important;
+                }
+                .report-modal-content th {
+                  padding: 6px 4px !important;
+                  white-space: normal !important;
+                  word-break: break-word !important;
+                  line-height: 1.15 !important;
+                  font-size: 8px !important;
+                }
+                .report-modal-content td {
+                  padding: 4px 4px !important;
+                  font-size: 8.5px !important;
+                  word-break: break-word !important;
+                  line-height: 1.2 !important;
+                }
+                .report-modal-content td.val-num,
+                .report-modal-content td.val-moeda {
+                  white-space: nowrap !important;
+                  text-align: right !important;
+                }
+                .report-modal-content tfoot tr td {
+                  padding: 6px 4px !important;
+                  font-size: 9px !important;
+                  white-space: nowrap !important;
+                }
+              `}</style>
 
               <div
                 style={{
@@ -1296,6 +1439,55 @@ function ColorSquare({ colorHex }) {
   );
 }
 
+// Formata nomes de colunas do banco para cabeçalhos executivos elegantes e compactos
+export function formatarCabecalhoColuna(col) {
+  if (!col) return "";
+  const cLower = String(col).toLowerCase().trim();
+
+  const mapa = {
+    representante_nome: "Representante",
+    representante_codigo: "Cód. Rep.",
+    cod_representante: "Cód. Rep.",
+    supervisor: "Supervisor",
+    supervisor_nome: "Supervisor",
+    meta: "Meta",
+    cliente_nome: "Cliente",
+    cliente: "Cliente",
+    cod_cliente: "Cód. Cli.",
+    cliente_codigo: "Cód. Cli.",
+    qtd_pedidos_cliente: "Qtd. Ped.",
+    total_comprado: "Total Comprado",
+    primeiro_pedido: "1º Pedido",
+    ultimo_pedido: "Últ. Pedido",
+    total_clientes_carteira: "Carteira Total",
+    faturamento_total_representante: "Total Faturado",
+    quantidade_disponivel: "Qtd. Disp.",
+    quantidade_solicitada: "Qtd. Solicitada",
+    quantidade_reservada: "Qtd. Reservada",
+    saldo_disponivel: "Saldo Disp.",
+    estoque_atual_m: "Estoque (m)",
+    estoque_atual: "Estoque",
+    valor_total: "Valor Total",
+    valor_nf: "Valor NF",
+    faturamento: "Faturamento",
+    nome_tecido: "Tecido / Artigo",
+    artigo: "Artigo",
+    cor: "Cor",
+    nome_cor: "Cor",
+    totvs_order_code: "Ped. TOTVS",
+    numero_pedido: "Nº Pedido",
+    data_emissao: "Emissão",
+    data_entrega: "Entrega",
+    status: "Status",
+    cidade: "Cidade",
+    uf: "UF",
+  };
+
+  if (mapa[cLower]) return mapa[cLower];
+
+  return col.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase());
+}
+
 // Tabela simples para exibir lista de linhas no relatório PDF
 function TabelaSimples({ dados, titulo }) {
   if (!Array.isArray(dados) || dados.length === 0) return null;
@@ -1385,22 +1577,21 @@ function TabelaSimples({ dados, titulo }) {
       isIndexCol(c) ||
       isSummableColumn(c) ||
       cLower.includes("data") ||
-      cLower.includes("pedido") ||
-      cLower === "rep" ||
-      cLower === "tipo" ||
-      cLower.includes("lote") ||
-      cLower.includes("status")
+      cLower.includes("valor") ||
+      cLower.includes("faturamento") ||
+      cLower === "uf"
     );
   };
 
   const summableCols = colunas.filter(isSummableColumn);
   const indexColName = colunas.find(isIndexCol);
   const qtdTotalRegistros = indexColName ? (dados[0][indexColName] || dados.length) : dados.length;
+  const muitasColunas = colunas.length > 7;
 
   return (
-    <div className="pdf-tabela" style={{ marginTop: 8 }}>
+    <div className="pdf-tabela" style={{ marginTop: 8, maxWidth: "100%", overflowX: "auto" }}>
       {titulo && <div className="chart-title" style={{ fontSize: 13, fontWeight: 700, color: "#f8fafc", marginBottom: 6 }}>{titulo}</div>}
-      <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12, color: "#cbd5e1" }}>
+      <table style={{ width: "100%", borderCollapse: "collapse", fontSize: muitasColunas ? 10 : 11.5, color: "#cbd5e1" }}>
         <thead>
           <tr>
             {colunas.map((c) => {
@@ -1410,15 +1601,18 @@ function TabelaSimples({ dados, titulo }) {
                   key={c}
                   style={{
                     textAlign: align,
-                    padding: "7px 8px",
+                    padding: muitasColunas ? "5px 4px" : "7px 8px",
                     borderBottom: "1px solid #334155",
                     color: "#94a3b8",
                     fontWeight: 700,
                     background: "#0f172a",
-                    whiteSpace: isNoWrapCol(c) ? "nowrap" : "normal",
+                    fontSize: muitasColunas ? 9 : 10.5,
+                    whiteSpace: "normal",
+                    wordBreak: "break-word",
+                    lineHeight: 1.15,
                   }}
                 >
-                  {isIndexCol(c) ? "Nº" : c.replace(/_/g, " ").toUpperCase()}
+                  {isIndexCol(c) ? "Nº" : formatarCabecalhoColuna(c)}
                 </th>
               );
             })}
@@ -1433,17 +1627,23 @@ function TabelaSimples({ dados, titulo }) {
                   const cLower = c.toLowerCase();
                   const isColorCol = cLower.includes("cor") || cLower.includes("color") || cLower === "hex_color";
                   const align = isIndexCol(c) ? "center" : isSummableColumn(c) ? "right" : "left";
+                  const isSummable = isSummableColumn(c);
+                  const isNum = isSummable || typeof row[c] === "number" || (!isNaN(Number(row[c])) && typeof row[c] !== "string" && !cLower.includes("data"));
+                  const cellClass = isSummable ? "val-moeda" : isNum ? "val-num" : "";
 
                   return (
                     <td
                       key={c}
+                      className={cellClass}
                       style={{
-                        padding: "6px 8px",
+                        padding: muitasColunas ? "4px 4px" : "6px 8px",
                         borderBottom: "1px solid #1e293b",
                         textAlign: align,
-                        fontWeight: isIndexCol(c) || isSummableColumn(c) ? 600 : 400,
+                        fontWeight: isIndexCol(c) || isSummable ? 600 : 400,
                         color: isIndexCol(c) ? "#38bdf8" : "inherit",
-                        whiteSpace: isNoWrapCol(c) ? "nowrap" : "normal",
+                        fontSize: muitasColunas ? 9.5 : 11,
+                        whiteSpace: isNum || isIndexCol(c) || cLower.includes("data") ? "nowrap" : "normal",
+                        wordBreak: "break-word",
                       }}
                     >
                       {isColorCol && <ColorSquare colorHex={rowHex} />}
@@ -1470,13 +1670,15 @@ function TabelaSimples({ dados, titulo }) {
               return (
                 <td
                   key={c}
+                  className={isSummableColumn(c) ? "val-moeda" : ""}
                   style={{
-                    padding: "8px",
+                    padding: muitasColunas ? "5px 4px" : "8px",
                     borderBottom: "1px solid #38bdf8",
                     textAlign: align,
                     color: isIndexCol(c) ? "#38bdf8" : "#f8fafc",
                     whiteSpace: "nowrap",
                     fontWeight: 800,
+                    fontSize: muitasColunas ? 9.5 : 11,
                   }}
                 >
                   {footerVal}
@@ -1493,24 +1695,24 @@ function TabelaSimples({ dados, titulo }) {
           <div className="conexo-summary-title" style={{ fontSize: 12, fontWeight: 800, color: "#f8fafc", marginBottom: 6, textTransform: "uppercase", letterSpacing: 0.5 }}>
             RESUMO E TOTAL GERAL DO RELATÓRIO
           </div>
-          <table className="conexo-summary-table" style={{ width: "100%", borderCollapse: "collapse", fontSize: 12, border: "1px solid #334155" }}>
+          <table className="conexo-summary-table" style={{ width: "100%", borderCollapse: "collapse", fontSize: 11, border: "1px solid #334155" }}>
             <thead>
               <tr style={{ background: "#0f172a" }}>
-                <th style={{ textAlign: "left", padding: "8px 12px", color: "#94a3b8", fontWeight: 700 }}>RESUMO GERAL</th>
-                <th style={{ textAlign: "center", padding: "8px 12px", color: "#94a3b8", fontWeight: 700 }}>QTD. REGISTROS / PEDIDOS</th>
+                <th style={{ textAlign: "left", padding: "7px 10px", color: "#94a3b8", fontWeight: 700 }}>RESUMO GERAL</th>
+                <th style={{ textAlign: "center", padding: "7px 10px", color: "#94a3b8", fontWeight: 700 }}>QTD. REGISTROS / PEDIDOS</th>
                 {summableCols.map((sc) => (
-                  <th key={sc} style={{ textAlign: "right", padding: "8px 12px", color: "#94a3b8", fontWeight: 700 }}>
-                    {sc.replace(/_/g, " ").toUpperCase()}
+                  <th key={sc} style={{ textAlign: "right", padding: "7px 10px", color: "#94a3b8", fontWeight: 700, fontSize: 10 }}>
+                    {formatarCabecalhoColuna(sc).toUpperCase()}
                   </th>
                 ))}
               </tr>
             </thead>
             <tbody>
               <tr style={{ background: "#1e293b", fontWeight: 800, color: "#f8fafc" }}>
-                <td style={{ padding: "10px 12px", fontWeight: 800, color: "#38bdf8" }}>TOTAL GERAL DO RELATÓRIO</td>
-                <td style={{ padding: "10px 12px", textAlign: "center", fontWeight: 800 }}>{qtdTotalRegistros}</td>
+                <td style={{ padding: "8px 10px", fontWeight: 800, color: "#38bdf8" }}>TOTAL GERAL DO RELATÓRIO</td>
+                <td style={{ padding: "8px 10px", textAlign: "center", fontWeight: 800 }}>{qtdTotalRegistros}</td>
                 {summableCols.map((sc) => (
-                  <td key={sc} style={{ padding: "10px 12px", textAlign: "right", fontWeight: 800, whiteSpace: "nowrap" }}>
+                  <td key={sc} style={{ padding: "8px 10px", textAlign: "right", fontWeight: 800, whiteSpace: "nowrap" }}>
                     {fmt(totais[sc], sc)}
                   </td>
                 ))}
