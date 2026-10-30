@@ -401,6 +401,8 @@ def executar(intent: str, params: dict, ctx: dict | None = None):
             status_where = "status_norm = 'Em andamento'"
         elif status_filtro in ("faturado", "faturados", "atendido", "atendidos"):
             status_where = "status_norm IN ('Atendido', 'Parcialmente Atendido')"
+        elif status_filtro in ("atrasado", "atrasados", "em_atraso"):
+            status_where = f"status_norm IN ('Em andamento', 'Bloqueado', 'Em composição', 'Em análise') AND previsao_faturamento IS NOT NULL AND previsao_faturamento < '{datetime.date.today().strftime('%Y-%m-%d')}'"
         elif status_filtro == "todos":
             status_where = "status_norm <> 'Cancelado'"
         else:
@@ -414,7 +416,7 @@ def executar(intent: str, params: dict, ctx: dict | None = None):
                 extra_order_filters.append("(lote_pedido IN ('PE', 'PIL') OR lote_pedido ILIKE '%PE%' OR lote_pedido ILIKE '%PIL%' OR tipo IN ('PE', 'PIL') OR tipo ILIKE '%PE%' OR tipo ILIKE '%Pronta Entrega%')")
             elif safe_lote in ("PROG", "PROGRAMACAO", "PROGRAMAÇÃO"):
                 extra_order_filters.append("(lote_pedido IN ('EXC', 'DIG') OR lote_pedido ILIKE '%EXC%' OR lote_pedido ILIKE '%DIG%' OR tipo ILIKE '%Program%' OR tipo ILIKE '%EXC%')")
-            elif safe_lote == "PIL":
+            elif safe_lote in ("PIL", "PILOTAGEM", "PILOTO"):
                 extra_order_filters.append("(lote_pedido ILIKE '%PIL%' OR tipo ILIKE '%PIL%')")
             else:
                 extra_order_filters.append(f"(lote_pedido ILIKE '%{safe_lote}%' OR tipo ILIKE '%{safe_lote}%')")
@@ -455,6 +457,7 @@ def executar(intent: str, params: dict, ctx: dict | None = None):
                     ELSE COALESCE(pt.status, p.status)
                 END AS status_norm,
                 p.created_at::date AS data_pedido,
+                COALESCE(pt.previsao_faturamento::date, p.data_previsao_faturamento::date) AS previsao_faturamento,
                 COALESCE(pt.valor_total, p.valor_total, 0)::numeric AS order_valor_total,
                 pt.items_json AS pt_items_json
             FROM pedidos p
@@ -493,6 +496,7 @@ def executar(intent: str, params: dict, ctx: dict | None = None):
                     ELSE pt.status
                 END AS status_norm,
                 pt.data_pedido::date AS data_pedido,
+                pt.previsao_faturamento::date AS previsao_faturamento,
                 COALESCE(pt.valor_total, 0)::numeric AS order_valor_total,
                 pt.items_json AS pt_items_json
             FROM pedidos_totvs pt
@@ -520,6 +524,7 @@ def executar(intent: str, params: dict, ctx: dict | None = None):
                 pf.lote_pedido,
                 pf.status_norm AS status,
                 pf.data_pedido,
+                pf.previsao_faturamento,
                 COALESCE(pi.quantidade, 0)::numeric AS metros_item,
                 CASE
                     WHEN COALESCE(pi.preco_unitario, 0) > 0 AND COALESCE(pi.quantidade, 0) > 0 THEN
@@ -541,6 +546,7 @@ def executar(intent: str, params: dict, ctx: dict | None = None):
                 pf.lote_pedido,
                 pf.status_norm AS status,
                 pf.data_pedido,
+                pf.previsao_faturamento,
                 COALESCE((item->>'quantity')::numeric, 0) AS metros_item,
                 ROUND((COALESCE((item->>'quantity')::numeric, 0) * COALESCE((item->>'price')::numeric, 0)), 2) AS valor_item
             FROM pedidos_filtrados pf
@@ -559,11 +565,12 @@ def executar(intent: str, params: dict, ctx: dict | None = None):
             lote_pedido,
             status,
             data_pedido,
+            previsao_faturamento,
             ROUND(SUM(metros_item), 2) AS metros,
             ROUND(SUM(valor_item), 2) AS valor_total,
             COUNT(*) OVER() AS total_pedidos_geral
         FROM itens_resolvidos
-        GROUP BY rep_codigo, pedido, cliente, tipo, lote_pedido, status, data_pedido
+        GROUP BY rep_codigo, pedido, cliente, tipo, lote_pedido, status, data_pedido, previsao_faturamento
         HAVING SUM(metros_item) > 0 OR SUM(valor_item) > 0
         ORDER BY
             CASE WHEN pedido LIKE 'W%' THEN 0 ELSE 1 END,

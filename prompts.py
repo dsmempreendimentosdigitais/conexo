@@ -94,11 +94,22 @@ REGRAS DE ROTEAMENTO
    - NUNCA use `LATERAL` sem `CROSS JOIN` e NUNCA use `LATERAL JOIN` (causa erro 42601). Use SEMPRE `CROSS JOIN LATERAL jsonb_array_elements(CASE WHEN jsonb_typeof(p.items_json) = 'array' THEN p.items_json ELSE '[]'::jsonb END) AS item` ou busca em texto `p.items_json::text ILIKE '%estamp%'`.
    - NUNCA use `COUNT(DISTINCT ...) OVER()`. O PostgreSQL não aceita DISTINCT em Window Functions (causa erro 0A000). Use apenas `COUNT(*) OVER() AS total_pedidos_geral`.
 
-13. PEDIDOS BLOQUEADOS, EM ANDAMENTO E LOTES DE PEDIDO (EXC, PE, OP, DIG):
-   - Sempre que o usuário perguntar por "pedidos bloqueados", "pedidos em andamento e bloqueados", "pedidos do artigo X", ou "pedidos com lote pedido EXC", "quanto programar na fábrica para os pedidos EXC", "pedidos lote PE":
-     Use SEMPRE `conexo_consulta_pedidos`!
-     Se a pergunta for sobre lote (ex: 'lote pedido EXC', 'lote PE'), passe `lote = "EXC"` (ou o lote solicitado) e `status_filtro = "carteira"`.
-     NUNCA procure 'EXC' como se fosse nome de tecido! 'EXC' é o LOTE DO PEDIDO (Programação Exclusiva)!
+13. PEDIDOS BLOQUEADOS, EM ANDAMENTO, EM ATRASO E LOTES DE PEDIDO (EXC, PE, PIL, OP, DIG):
+   - LOTES DE PEDIDO:
+     • 'PIL' ou 'PILOTAGEM': é o LOTE DO PEDIDO (`lote_pedido ILIKE '%PIL%'` ou `lote_pedido = 'PIL'`). NUNCA procure 'pilotagem' no nome do tecido ou referência de item! Os tecidos de pilotagem são tecidos normais (como Sarja Dakota, Sarja Zara) cuja finalidade no lote é corte piloto/amostra!
+     • 'PE': Pronta Entrega (`lote_pedido = 'PE'` ou `lote_pedido IN ('PE', 'PIL')`).
+     • 'EXC': Desenvolvimento Exclusivo / Programação Exclusiva.
+     • 'OP' ou 'PROG': Programação de Fábrica / Ordem de Produção.
+     • 'DIG': Estamparia Digital.
+   - PEDIDOS EM ATRASO (Aba 'ATRASADOS' do Portal de Vendas):
+     • São pedidos em carteira cuja previsão de faturamento já passou:
+       `p.previsao_faturamento::date < '{data_atual}'` E `p.status NOT IN ('Attended', 'Canceled')` E `p.valor_total > 0`.
+   - Sempre que o usuário perguntar por "pedidos bloqueados", "pedidos em andamento e bloqueados", "pedidos do artigo X", "pedidos com lote pedido EXC", "quanto programar na fábrica para os pedidos EXC", "pedidos lote PE", ou "pedidos de pilotagem em atraso":
+     Use preferencialmente `conexo_consulta_pedidos`!
+     • Se a pergunta for sobre lote e atraso (ex: "pedidos de pilotagem em atraso"): passe `lote = "PIL"` e `status_filtro = "atrasados"`.
+     • Se a pergunta for sobre lote (ex: 'lote pedido EXC', 'lote PE'): passe `lote = "EXC"` e `status_filtro = "carteira"`.
+     • Se usar `conexo_consulta_geral` para "pedidos de pilotagem em atraso", faça a query exata:
+       `SELECT p.totvs_order_code AS pedido, p.cliente_nome AS cliente, p.representante_codigo, p.representante_nome AS representante, p.previsao_faturamento, p.status, p.lote_pedido, p.valor_total, ('{data_atual}'::date - p.previsao_faturamento::date) AS dias_atraso FROM pedidos_totvs p WHERE (p.lote_pedido ILIKE '%PIL%' OR p.lote_pedido ILIKE '%PILOT%') AND p.status NOT IN ('Attended', 'Canceled') AND p.previsao_faturamento::date < '{data_atual}' AND p.valor_total > 0 ORDER BY p.previsao_faturamento ASC;`
 
 14. REGRA OBRIGATÓRIA CONTRA PEDIDOS ZERADOS:
    - NUNCA inclua pedidos com `valor_total = 0` ou `valor_total IS NULL` em listagens de pedidos, carteira ou bloqueados. Adicione SEMPRE a condição `valor_total > 0` (ou `p.valor_total > 0`).
