@@ -1,0 +1,197 @@
+====================================================================================================
+           CONEXO INTELIGÊNCIA COMERCIAL — PLANO DIRETOR DE ENVIOS AUTOMÁTICOS DE E-MAILS
+                     (AGENTE ATIVO DE IA / COPILOTO COMERCIAL PROATIVO)
+====================================================================================================
+
+DOCUMENTO OFICIAL DE ESPECIFICAÇÃO E ENGENHARIA DE PRODUTO
+PRODUTO: CONEXO (DSM Empreendimentos Digitais)
+EMPRESA PILOTO: Designtex Tecidos
+DESTINATÁRIO OFICIAL DE HOMOLOGAÇÃO / TESTES: samuel.mc85@gmail.com
+FUSO HORÁRIO PADRÃO: America/Sao_Paulo (Horário de Brasília)
+
+----------------------------------------------------------------------------------------------------
+1. VISÃO GERAL & OBJETIVO ESTRATÉGICO
+----------------------------------------------------------------------------------------------------
+O CONEXO evolui de um assistente de chat reativo (que apenas responde perguntas) para um AGENTE ATIVO 
+DE INTELIGÊNCIA COMERCIAL. O sistema acorda automaticamente em horários programados, executa análises
+cruzadas e profundas no banco de dados integrado (ERP TOTVS Moda + Portal de Vendas Supabase) e 
+dispara e-mails acionáveis para a equipe comercial e diretoria.
+
+O objetivo é eliminar a passividade comercial:
+• O vendedor recebe às 07h00 da manhã o "mapa do dinheiro" (quem contatar, o que ofertar e o que destravar).
+• No fim do dia (19h00), recebe a prestação de contas exata do faturamento e da carteira.
+• Nas segundas e sextas, recebe o planejamento e o balanço tático da semana.
+• Na virada do mês, recebe a auditoria completa de metas, margem, comissões e curva ABC.
+
+----------------------------------------------------------------------------------------------------
+2. ARQUITETURA DO DISPARO (TRIO EXECUTIVO DE ENTREGÁVEIS)
+----------------------------------------------------------------------------------------------------
+Cada e-mail automático disparado pelo CONEXO é composto rigorosamente por 3 partes complementares:
+
+[1] CORPO DO E-MAIL (Briefing Executivo de IA):
+    • Saudação personalizada ao representante / gestor.
+    • Diagnóstico narrativo gerado por IA (tom de consultoria sênior, motivador e cirúrgico).
+    • "Top 3 Ações Imediatas" (ex: "Ligar para Cliente X", "Liberar Pedido Y", "Ofertar Tecido Z").
+    • Tabela-resumo com 4 a 6 indicadores-chave (Faturamento MTD, % da Meta, Pedidos Travados, PE Livre).
+
+[2] ANEXO 1 — PDF ANALÍTICO EM FORMATO TABELA (Estilo Planilha Auditável):
+    • Layout A4 Paisagem, limpo, corporativo e com zebrado executivo.
+    • Relação detalhada de pedidos, clientes, artigos, cores, metragem, valores em R$, status fabril,
+      datas de previsão de faturamento e motivo de eventuais bloqueios.
+    • Pronto para impressão ou conferência linha a linha.
+
+[3] ANEXO 2 — PDF DASHBOARD VISUAL EXECUTIVO (Estilo Power BI / Dark Theme):
+    • Design moderno e gráfico no padrão visual de Business Intelligence.
+    • Cards de KPIs principais no topo (Faturamento, Metros, % Meta, Ticket Médio).
+    • Gráfico Velocímetro / Barra de Progresso de Meta Atingida.
+    • Gráficos de barras comparativos de Top Clientes e Top Artigos.
+    • Gráficos em Donut/Pizza com a Composição da Carteira (Faturado, Andamento, Bloqueado, Atrasado).
+
+----------------------------------------------------------------------------------------------------
+3. CRONOGRAMA & MATRIZ DE PERGUNTAS INTELIGENTES DOS ENVIOS
+----------------------------------------------------------------------------------------------------
+
+====================================================================================================
+A. CICLO DIÁRIO MATINAL — 07h00 (Segunda a Sexta)
+TÍTULO: "Plano de Ataque & Oportunidades do Dia"
+OBJETIVO: Colocar a força de vendas no ataque antes das 08h da manhã com foco no faturamento imediato.
+====================================================================================================
+Perguntas e Análises Automáticas que a IA executa:
+1. Prospecção & Prevenção de Churn:
+   "Quais clientes da carteira compraram há mais de 60 ou 90 dias, já tiveram compras relevantes
+    neste mesmo trimestre no ano passado, mas ainda não colocaram nenhum pedido este mês?"
+2. Destravamento de Pedidos Bloqueados:
+   "Quais pedidos da carteira estão atualmente com status 'Bloqueado' (crédito, limite ou pendência
+    cadastral), qual o valor total travado em R$ e qual o limite disponível de cada cliente?"
+3. Atrasos Fabris & Pilotagem (PIL):
+   "Quais pedidos normais e pedidos de pilotagem (PIL/OP) estão com data de previsão de faturamento
+    vencida ou com atraso para alinhamento preventivo com o cliente?"
+4. Oportunidades de Pronta Entrega (PE):
+   "Quais artigos e cores com alto volume em estoque disponível para venda (PE) combinam com o perfil
+    histórico de compra dos maiores clientes da carteira que estão sem pedidos em andamento?"
+5. Run-Rate & Ritmo Diário da Meta:
+   "Quanto foi faturado até ontem, qual é o valor que falta para a meta mensal e qual o faturamento
+    médio diário necessário nos dias úteis restantes para atingir 100% do objetivo?"
+
+====================================================================================================
+B. CICLO DIÁRIO NOTURNO — 19h00 (Segunda a Sexta)
+TÍTULO: "Fechamento do Dia & Termômetro de Vendas"
+OBJETIVO: Prestar contas do que virou faturamento real, notas emitidas e carteira acumulada.
+====================================================================================================
+Perguntas e Análises Automáticas que a IA executa:
+1. Faturamento Realizado no Dia:
+   "Quanto foi faturado hoje (pedidos atendidos / notas fiscais emitidas) para a carteira?
+    Quais clientes receberam nota fiscal e qual o valor total em R$ e metros entregues?"
+2. Inserção de Novos Pedidos (Entrada do Dia):
+   "Quantos novos pedidos foram inseridos hoje pela carteira no sistema? Qual o volume em metros,
+    ticket médio e quais os principais artigos comercializados?"
+3. Termômetro da Meta Mensal:
+   "Após as notas emitidas hoje, qual é a porcentagem exata de atingimento da meta mensal e qual
+    a projeção estatística de fechamento do mês (Run-Rate projetado)?"
+4. Saldo em Carteira Aberta:
+   "Qual o montante total de pedidos em andamento e em composição para faturamento nos próximos
+    7 a 15 dias?"
+5. Radar do Dia Seguinte:
+   "Quais pedidos têm data de previsão de faturamento agendada para amanhã para acompanhamento
+    junto à expedição?"
+
+====================================================================================================
+C. CICLO SEMANAL DE ABERTURA — Segundas-feiras às 07h00
+TÍTULO: "Kickoff & Planejamento Estratégico da Semana"
+OBJETIVO: Organizar os 5 dias de trabalho do representante, definindo roteiro de visitas e foco.
+====================================================================================================
+Perguntas e Análises Automáticas que a IA executa:
+1. Meta Fatiada da Semana:
+   "Considerando os dias úteis restantes do mês e a meta do representante, quanto precisa ser
+    faturado exatamente nesta semana para manter o ritmo ideal de atingimento?"
+2. Pipeline de Expedição Agendada:
+   "Quais pedidos têm previsão de faturamento confirmada pela fábrica para esta semana? Qual o
+    valor total garantido caso não haja bloqueio cadastral ou financeiro?"
+3. Radar dos 15 Clientes Prioritários da Semana:
+   "Quais são os 15 clientes de maior potencial da carteira que compram sazonalmente neste período
+    do ano e estão há mais de 45 dias sem contato ou pedido registrado?"
+4. Campanhas & Giro de Estoque da Semana:
+   "Quais tecidos/artigos entraram no estoque de Pronta Entrega (PE) nos últimos dias e têm alto giro
+    no perfil regional da carteira?"
+5. Clientes com Limite de Crédito Liberado:
+   "Quais clientes possuem limite de crédito pré-aprovado liberado acima de R$ 30.000,00 e baixo
+    saldo de pedidos em aberto para ataque imediato?"
+
+====================================================================================================
+D. CICLO SEMANAL DE ENCERRAMENTO — Sextas-feiras às 18h00
+TÍTULO: "Balanço Semanal & Diagnóstico de Pendências"
+OBJETIVO: Auditar o resultado da semana, celebrar conquistas e zerar pendências para a próxima semana.
+====================================================================================================
+Perguntas e Análises Automáticas que a IA executa:
+1. Realizado vs Previsto na Semana:
+   "Quanto foi faturado na semana versus o objetivo planejado na segunda-feira? Qual foi o crescimento
+    percentual em relação à semana anterior?"
+2. Pedidos Retidos para a Próxima Semana:
+   "Quais pedidos entraram na carteira nesta semana mas ficaram pendentes de aprovação de crédito,
+    composição ou liberação fabril, exigindo ação na próxima segunda-feira?"
+3. Reativações e Novos Clientes:
+   "Houve reativação de clientes inativos ou primeira compra de novos clientes nesta semana?
+    Quais foram as empresas e qual o volume inicial registrado?"
+
+====================================================================================================
+E. CICLO MENSAL DE FECHAMENTO — Último dia do mês (19h30) e 1º dia útil seguinte (07h00)
+TÍTULO: "Livro de Fechamento de Mês & Auditoria Comercial"
+OBJETIVO: Raio-X definitivo de vendas, comissões, margens, clientes e carry-over para o novo ciclo.
+====================================================================================================
+Perguntas e Análises Automáticas que a IA executa:
+1. Desempenho Global e Comparativo Histórico:
+   "Qual foi o faturamento total final consolidado (R$ e metros)? Qual a porcentagem exata de
+    atingimento da meta? Como esse resultado se compara ao mesmo mês do ano anterior (YoY) e ao
+    mês imediatamente anterior (MoM)?"
+2. Curva ABC de Clientes (Regra 80/20 de Pareto):
+   "Quais clientes representaram 80% do faturamento no mês (Curva A)? Quem foram os novos entrantes
+    na Curva A e quais clientes tradicionais caíram para as Curvas B e C?"
+3. Mix de Artigos & Análise de Preço Médio:
+   "Quais foram os artigos e tecidos mais vendidos no mês (em metros e em faturamento)? Qual foi
+    o preço médio praticado por metro em comparação com a tabela oficial da fábrica?"
+4. Diagnóstico de Churn e Retenção:
+   "Quantos clientes da carteira efetuaram compras no mês versus o total da base? Quantos clientes
+    completaram mais de 90 dias sem comprar e foram classificados como 'em risco de perda'?"
+5. Eficiência de Carteira & Cancelamentos:
+   "Qual foi o volume e o índice de cancelamentos de pedidos no mês? Quais foram os principais motivos
+    registrados (crédito, prazo, desistência)?"
+6. Demonstrativo de Comissões e Premiações:
+   "Qual é o valor exato da comissão calculada sobre os pedidos faturados e liquidados no período
+    para o representante?"
+7. Carry-Over (Carteira Herdada para o Próximo Mês):
+   "Qual é o saldo total de pedidos em aberto (em andamento e programados) que viram o mês já
+    assegurando faturamento inicial para os primeiros dias do próximo ciclo?"
+
+----------------------------------------------------------------------------------------------------
+4. TRAVA DE SEGURANÇA E AMBIENTE DE HOMOLOGAÇÃO
+----------------------------------------------------------------------------------------------------
+• MODO DE TESTES OBRIGATÓRIO:
+  Enquanto o projeto estiver em fase de validação, 100% dos e-mails disparados (diários, semanais
+  e mensais) serão encaminhados EXCLUSIVAMENTE para:
+  👉 samuel.mc85@gmail.com
+
+• SIMULAÇÃO MULTIPERFIL:
+  No assunto e no cabeçalho do e-mail, a IA identificará a perspectiva gerada, como por exemplo:
+  - [CONEXO TESTE] Relatório Matinal - Carteira: Michele (M.N Representação Comercial)
+  - [CONEXO TESTE] Relatório Matinal - Carteira: André (A Fernandes Rep Com)
+  - [CONEXO TESTE] Relatório Matinal - Visão Consolidada Diretoria / Gestor Geral
+
+• TRANSIÇÃO PARA PRODUÇÃO:
+  Somente após a validação do formato, dos textos e dos anexos em PDF pelo Samuel, a trava será
+  aberta no painel master para disparar diretamente aos e-mails cadastrados dos representantes.
+
+----------------------------------------------------------------------------------------------------
+5. PILHA TÉCNICA RECOMENDADA PARA EXECUÇÃO
+----------------------------------------------------------------------------------------------------
+1. Motor de Agendamento:
+   APScheduler / Celery / Cron Job integrado ao FastAPI rodando em background na VPS (conexo.dev).
+2. Motor de IA:
+   Google Gemini 3.5 Flash / Flash Lite (via Google AI Studio com a chave corporativa conexo-designtex).
+3. Gerador dos Anexos PDF:
+   Backend Python utilizando WeasyPrint / ReportLab / Matplotlib corporativo com tema executivo dark.
+4. Serviço de Disparo de E-mail (SMTP):
+   SMTP Google Workspace da Designtex (ou Resend / SendGrid API com alta entregabilidade SPF/DKIM).
+
+====================================================================================================
+                        DSM Empreendimentos Digitais — Produto CONEXO
+====================================================================================================
