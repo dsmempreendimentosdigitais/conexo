@@ -1216,7 +1216,7 @@ function SmartChartBlock({ children, pergunta = "", forceVisible = true }) {
 }
 
 // ── Roteador principal de dashboards ───────────────────────
-export default function Dashboard({ intent, dados, pergunta = "" }) {
+function DashboardComponent({ intent, dados, pergunta = "" }) {
   if (!dados) return null;
 
   // Normaliza dados para sempre ser um array legível de objetos
@@ -1744,4 +1744,7 @@ function RelatorioCompleto({ dados }) {
     </PdfWrapper>
   );
 }
+
+export default React.memo(DashboardComponent);
+
 

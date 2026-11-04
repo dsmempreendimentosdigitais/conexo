@@ -98,6 +98,8 @@ export default function Chat({ token, email, onLogout, onAbrirAdmin }) {
   const recRef = useRef(null);
   const fimRef = useRef(null);
   const inputRef = useRef(null);
+  const inputValRef = useRef("");
+  inputValRef.current = input;
   const timerRef = useRef(null);
   const canceladoRef = useRef(false);
   const streamRef = useRef(null);
@@ -342,7 +344,7 @@ export default function Chat({ token, email, onLogout, onAbrirAdmin }) {
 
   const enviar = useCallback(
     async (textoPronto, opcoes = {}) => {
-      const texto = (textoPronto ?? input).trim();
+      const texto = (textoPronto ?? inputValRef.current).trim();
       const veioPorAudio = opcoes?.veioPorAudio || false;
       const audioUrl = opcoes?.audioUrl || null;
       const audioDuration = opcoes?.audioDuration || null;
@@ -420,7 +422,7 @@ export default function Chat({ token, email, onLogout, onAbrirAdmin }) {
         setLoading(false);
       }
     },
-    [input, loading, historico, token, pararFala, falarTexto]
+    [loading, historico, token, pararFala, falarTexto]
   );
 
   // Iniciar gravação de áudio no estilo WhatsApp

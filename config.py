@@ -12,7 +12,7 @@ class Config:
     IS_GEMINI        = OPENAI_API_KEY.startswith("AIzaSy") or OPENAI_API_KEY.startswith("AQ.")
     OPENAI_BASE_URL  = "https://generativelanguage.googleapis.com/v1beta/openai/" if IS_GEMINI else None
     
-    MODEL_ROUTER     = "gemini-2.5-flash" if IS_GEMINI else "gpt-4o-mini"
+    MODEL_ROUTER     = "gemini-3.5-flash-lite" if IS_GEMINI else "gpt-4o-mini"
     MODEL_FORMATTER  = "gemini-2.5-flash" if IS_GEMINI else "gpt-4o"
 
     EMPRESA          = "Designtex Tecidos"

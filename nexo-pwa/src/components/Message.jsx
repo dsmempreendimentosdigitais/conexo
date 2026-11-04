@@ -1,3 +1,4 @@
+import React, { memo } from "react";
 import Dashboard from "./Dashboard";
 import WhatsAppAudioBubble from "./WhatsAppAudioBubble";
 
@@ -5,7 +6,7 @@ function hora(ts) {
   return new Date(ts).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
 }
 
-export default function Message({ msg, onEnviar, falandoTs, onToggleFala }) {
+function Message({ msg, onEnviar, falandoTs, onToggleFala }) {
   const isUser = msg.role === "user";
   const avatarClass = isUser ? "user-av" : "conexo-av";
   const avatarText  = isUser ? "U" : "C";
@@ -183,3 +184,5 @@ export default function Message({ msg, onEnviar, falandoTs, onToggleFala }) {
     </div>
   );
 }
+
+export default memo(Message);

@@ -44,8 +44,9 @@ def rotear(pergunta: str, usuario: str, historico: list | None = None) -> tuple[
             break
         except Exception as e:
             ultimo_erro = e
-            if tentativa < 2 and any(code in str(e) for code in ["503", "429", "UNAVAILABLE", "quota", "ResourceExhausted"]):
-                time.sleep(2.5 * (tentativa + 1))
+            err_str = str(e).lower()
+            if tentativa < 2 and any(code in err_str for code in ["503", "429", "unavailable", "quota", "resourceexhausted", "resource_exhausted", "rate", "overloaded"]):
+                time.sleep(2.0 * (tentativa + 1))
                 continue
             raise
 
