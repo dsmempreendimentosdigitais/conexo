@@ -3,6 +3,7 @@ import { perguntarStream, transcrever, buscarAlertas, falar } from "../api";
 import Message from "./Message";
 import AlertPanel from "./AlertPanel";
 import ClientSettingsModal from "./ClientSettingsModal";
+import ChatInputArea from "./ChatInputArea";
 
 const BOAS_VINDAS = {
   role: "conexo",
@@ -79,7 +80,6 @@ export default function Chat({ token, email, onLogout, onAbrirAdmin }) {
   const [chats, setChats] = useState([]);
   const [activeChatId, setActiveChatId] = useState(null);
   const [msgs, setMsgs] = useState([BOAS_VINDAS]);
-  const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [gravando, setGravando] = useState(false);
   const [gravandoPausado, setGravandoPausado] = useState(false);
@@ -97,9 +97,6 @@ export default function Chat({ token, email, onLogout, onAbrirAdmin }) {
 
   const recRef = useRef(null);
   const fimRef = useRef(null);
-  const inputRef = useRef(null);
-  const inputValRef = useRef("");
-  inputValRef.current = input;
   const timerRef = useRef(null);
   const canceladoRef = useRef(false);
   const streamRef = useRef(null);
@@ -344,15 +341,11 @@ export default function Chat({ token, email, onLogout, onAbrirAdmin }) {
 
   const enviar = useCallback(
     async (textoPronto, opcoes = {}) => {
-      const texto = (textoPronto ?? inputValRef.current).trim();
+      const texto = (textoPronto || "").trim();
       const veioPorAudio = opcoes?.veioPorAudio || false;
       const audioUrl = opcoes?.audioUrl || null;
       const audioDuration = opcoes?.audioDuration || null;
       if (!texto || loading) return;
-      setInput("");
-      if (inputRef.current) {
-        inputRef.current.style.height = "auto";
-      }
 
       // Se CONEXO estava falando, para a fala ao enviar nova pergunta
       pararFala();
@@ -959,46 +952,11 @@ export default function Chat({ token, email, onLogout, onAbrirAdmin }) {
               </div>
             ) : (
               <>
-                <textarea
-                  ref={inputRef}
-                  className="chat-input"
-                  rows={2}
-                  placeholder="Pergunte ao CONEXO… (Enter para enviar)"
-                  value={input}
-                  onChange={(e) => {
-                    setInput(e.target.value);
-                    e.target.style.height = "auto";
-                    e.target.style.height = `${Math.min(e.target.scrollHeight, 140)}px`;
-                  }}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" && !e.shiftKey) {
-                      e.preventDefault();
-                      enviar();
-                    }
-                  }}
+                <ChatInputArea
+                  onEnviar={enviar}
+                  loading={loading}
+                  onIniciarGravacao={iniciarGravacao}
                 />
-                <button
-                  type="button"
-                  className="btn-icon btn-record"
-                  onClick={iniciarGravacao}
-                  title="Gravar áudio (estilo WhatsApp)"
-                  aria-label="Gravar áudio"
-                >
-                  <span className="chatgpt-voice-icon" aria-hidden="true">
-                    <span className="wave-bar bar-1" />
-                    <span className="wave-bar bar-2" />
-                    <span className="wave-bar bar-3" />
-                    <span className="wave-bar bar-4" />
-                  </span>
-                </button>
-                <button
-                  className="btn-icon btn-send"
-                  onClick={() => enviar()}
-                  disabled={loading || !input.trim()}
-                  title="Enviar"
-                >
-                  ➤
-                </button>
               </>
             )}
           </div>
