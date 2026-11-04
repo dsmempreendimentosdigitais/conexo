@@ -13,7 +13,7 @@ class Config:
     OPENAI_BASE_URL  = "https://generativelanguage.googleapis.com/v1beta/openai/" if IS_GEMINI else None
     
     MODEL_ROUTER     = "gemini-3.5-flash-lite" if IS_GEMINI else "gpt-4o-mini"
-    MODEL_FORMATTER  = "gemini-2.5-flash" if IS_GEMINI else "gpt-4o"
+    MODEL_FORMATTER  = "gemini-3.5-flash" if IS_GEMINI else "gpt-4o"
 
     EMPRESA          = "Designtex Tecidos"
     TIMEZONE         = "America/Sao_Paulo"
