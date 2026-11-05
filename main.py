@@ -14,6 +14,7 @@ from auth import get_contexto
 from prompts import FORMATTER_SYSTEM
 from onboarding.rotas import router as onboarding_router
 from admin_router import router as admin_router
+from deise_service import DeiseService
 
 app = FastAPI(
     title="CONEXO API",
@@ -529,6 +530,87 @@ def alterar_minha_senha(body: AlterarSenhaIn, ctx: dict = Depends(get_contexto))
         return {"sucesso": True, "mensagem": "Senha alterada com sucesso!"}
     except Exception as e:
         raise HTTPException(500, f"Erro ao atualizar senha: {str(e)}")
+
+
+# ─────────────────────────────────────────────────
+# Webhook da Agente DEISE (WhatsApp / Atendimento a Clientes)
+# ─────────────────────────────────────────────────
+
+@app.post("/conexo/whatsapp/deise")
+async def webhook_whatsapp_deise(payload: dict):
+    """
+    Webhook receptor de mensagens do WhatsApp (Evolution API / Z-API / Meta).
+    Garante isolamento de dados e responde via DeiseService.
+    """
+    import re
+    remetente = ""
+    texto = ""
+
+    data = payload.get("data") or payload
+    if isinstance(data, dict):
+        key = data.get("key") or {}
+        remetente = key.get("remoteJid") or data.get("sender") or data.get("phone") or payload.get("phone") or ""
+        msg_obj = data.get("message") or {}
+        texto = msg_obj.get("conversation") or msg_obj.get("extendedTextMessage", {}).get("text") or data.get("text") or ""
+    
+    if not texto and isinstance(payload.get("text"), str):
+        texto = payload["text"]
+
+    texto_limpo = texto.strip()
+
+    match_cod = re.search(r"Código:?\s*(\d+)", texto_limpo, re.IGNORECASE) or re.search(r"Cod\s*(\d+)", texto_limpo, re.IGNORECASE)
+    cliente_cod = match_cod.group(1) if match_cod else ""
+
+    if match_cod or "olá deise" in texto_limpo.lower() or "ola deise" in texto_limpo.lower():
+        resposta_texto = DeiseService.gerar_boas_vindas(cliente_cod or "14")
+    elif texto_limpo == "1" or "pronta entrega" in texto_limpo.lower():
+        resposta_texto = (
+            "👗 *Consulta de Tecidos na Pronta Entrega*\n\n"
+            "Qual acabamento você deseja consultar?\n"
+            "*1* - Liso\n"
+            "*2* - Estampado"
+        )
+    elif texto_limpo == "2" or "programação" in texto_limpo.lower() or "programacao" in texto_limpo.lower():
+        resposta_texto = (
+            "🧵 *Consulta de Tecidos em Programação (OP)*\n\n"
+            "Qual acabamento você deseja consultar?\n"
+            "*1* - Liso\n"
+            "*2* - Estampado"
+        )
+    elif texto_limpo in ("liso", "1 - liso", "1"):
+        resposta_texto = (
+            "Ótimo! Qual base você deseja ver agora?\n"
+            "*A* - Tricolines\n"
+            "*B* - Linho\n"
+            "*C* - Sarja\n"
+            "*D* - Ver todas as opções disponíveis"
+        )
+    elif texto_limpo.upper() in ("B", "LINHO", "B - LINHO"):
+        itens = DeiseService.consultar_estoque_pronta_entrega("liso", "linho")
+        linhas = ["🌿 *Opções de Linho Liso em Pronta Entrega:*\n"]
+        for it in itens[:5]:
+            linhas.append(f"• *{it['artigo']}*\n  Cor: {it['cor']} | *Saldo: {it['metros_disponiveis']:,.1f} m*")
+        linhas.append("\n📲 Deseja solicitar pré-reserva de algum desses lotes com o seu representante?")
+        resposta_texto = "\n".join(linhas)
+    elif texto_limpo == "5" or "representante" in texto_limpo.lower():
+        res_rep = DeiseService.gerar_transferencia_representante(cliente_cod or "14")
+        resposta_texto = res_rep["mensagem"]
+    else:
+        resposta_texto = (
+            "Olá! Sou a *Deise*, assistente comercial da *Designtex Tecidos*. 👗🧵\n"
+            "Como posso te ajudar hoje?\n\n"
+            "*1️⃣ Consultar tecidos na Pronta Entrega*\n"
+            "*2️⃣ Consultar tecidos em Programação*\n"
+            "*3️⃣ Acompanhar meus pedidos*\n"
+            "*4️⃣ Ver catálogo de lançamentos*\n"
+            "*5️⃣ Falar com meu representante*"
+        )
+
+    return {
+        "sucesso": True,
+        "remetente": remetente,
+        "resposta": resposta_texto
+    }
 
 
 # ─────────────────────────────────────────────────
