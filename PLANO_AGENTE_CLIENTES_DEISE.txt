@@ -4,7 +4,7 @@
 ====================================================================================================
 
 DOCUMENTO OFICIAL DE ESPECIFICAÇÃO TÉCNICA E SEGURANÇA DE DADOS
-PRODUTO: CONEXO / DEISE (DSM Empreendimentos Digitais)
+PRODUTO: CONEXO / DEISE — Designtex Tecidos
 EMPRESA: Designtex Tecidos
 CANAL DE ATUAÇÃO: Portal de Vendas (Botão Flutuante) e WhatsApp Oficial (24/7)
 
@@ -105,5 +105,5 @@ um dos 50 maiores clientes e dispara oportunidades quentes no WhatsApp do compra
 • Gatilho 3: Envio de PDF / Catálogo de novos lançamentos direcionados para a confecção.
 
 ====================================================================================================
-                        DSM Empreendimentos Digitais — Produto CONEXO
+                        Designtex Tecidos — Assistente DEISE
 ====================================================================================================

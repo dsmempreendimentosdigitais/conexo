@@ -4,7 +4,7 @@
 ====================================================================================================
 
 DOCUMENTO OFICIAL DE ESPECIFICAÇÃO E ENGENHARIA DE PRODUTO
-PRODUTO: CONEXO (DSM Empreendimentos Digitais)
+PRODUTO: CONEXO — Designtex Tecidos
 EMPRESA PILOTO: Designtex Tecidos
 DESTINATÁRIO OFICIAL DE HOMOLOGAÇÃO / TESTES: samuel.mc85@gmail.com
 FUSO HORÁRIO PADRÃO: America/Sao_Paulo (Horário de Brasília)
@@ -193,5 +193,5 @@ Perguntas e Análises Automáticas que a IA executa:
    SMTP Google Workspace da Designtex (ou Resend / SendGrid API com alta entregabilidade SPF/DKIM).
 
 ====================================================================================================
-                        DSM Empreendimentos Digitais — Produto CONEXO
+                        Designtex Tecidos — Inteligência Comercial CONEXO
 ====================================================================================================
