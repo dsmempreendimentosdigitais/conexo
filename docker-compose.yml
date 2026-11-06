@@ -15,3 +15,26 @@ services:
       timeout: 10s
       retries: 3
       start_period: 10s
+
+  evolution:
+    image: atendai/evolution-api:v2.1.2
+    container_name: evolution_api
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8080:8080"   # porta da API do WhatsApp
+    environment:
+      - SERVER_PORT=8080
+      - SERVER_URL=https://conexo.dev/evolution
+      - AUTHENTICATION_API_KEY=conexo_deise_secret_2026
+      - DATABASE_ENABLED=false
+      - CONFIG_SESSION_PHONE_CLIENT=Deise Designtex
+      - CONFIG_SESSION_PHONE_NAME=Chrome
+      - WEBHOOK_GLOBAL_ENABLED=true
+      - WEBHOOK_GLOBAL_URL=http://nexo:8000/conexo/whatsapp/deise
+      - WEBHOOK_GLOBAL_WEBHOOK_BY_EVENTS=false
+      - WEBHOOK_EVENTS_MESSAGES_UPSERT=true
+    volumes:
+      - evolution_instances:/evolution/instances
+
+volumes:
+  evolution_instances:
