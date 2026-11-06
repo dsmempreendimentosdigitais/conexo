@@ -1,0 +1,1479 @@
+[
+  {
+    "posicao": 1,
+    "codigo": "14",
+    "nome": "FOXSTEXTIL COMERCIO DE TECIDOS LTDA",
+    "representante": "DESIGNTEX INDUSTRIA E COMERCIO DE TECIDOS LTDA",
+    "faturamento_total": 17646029.89,
+    "metros_total": 1337051.3,
+    "total_pedidos": 374,
+    "ticket_medio": 47181.89810160428,
+    "preco_medio_m": 13.197720902705827,
+    "primeiro_pedido": "2019-09-04T12:00:00+00:00",
+    "ultimo_pedido": "2026-11-03T00:00:00+00:00",
+    "bases_compradas": [
+      "Tricoline",
+      "Viscose / Outros",
+      "Linho",
+      "Sarja",
+      "Fio Tinto / Listrado"
+    ],
+    "top_artigos": [
+      "TRICOLINE DELUXE 100% ALGODAO 2129C4-1 U (11,000 m)",
+      "TRICOLINE DELUXE 100% ALGODAO 2129C4-2 U (10,959 m)",
+      "TRICOLINE DELUXE 100% ALGODAO 1843-1 U (10,605 m)"
+    ],
+    "top_cores": [
+      "2129C4-1 (11,000 m)",
+      "2129C4-2 (10,959 m)",
+      "1843-1 (10,605 m)"
+    ],
+    "recomendacao_deise": "Expansão de mix de cores e novos lançamentos de alta gramatura"
+  },
+  {
+    "posicao": 2,
+    "codigo": "933",
+    "nome": "NATALIA TECIDOS LTDA",
+    "representante": "DESIGNTEX INDUSTRIA E COMERCIO DE TECIDOS LTDA",
+    "faturamento_total": 15516319.65,
+    "metros_total": 2387126.1,
+    "total_pedidos": 3,
+    "ticket_medio": 5172106.55,
+    "preco_medio_m": 6.5,
+    "primeiro_pedido": "2025-03-19T12:00:00+00:00",
+    "ultimo_pedido": "2025-03-25T12:00:00+00:00",
+    "bases_compradas": [
+      "Tricoline",
+      "Viscose / Outros",
+      "Linho",
+      "Sarja",
+      "Fio Tinto / Listrado"
+    ],
+    "top_artigos": [
+      "TRICOLINE PARIS LD LISO LEVES DEFEITOS DIVERSOS DV (1,739 m)",
+      "SARJA ZARA (LD) 100% 1008 MARROM MAGNO REF# 470 PAN 191230 U (1,056 m)",
+      "SARJA FLEX 160 (LD) 97% ALG 3 999 MARROM COURO REF# 400/55 U (1,031 m)"
+    ],
+    "top_cores": [
+      "DIVERSAS (12,400 m)",
+      "900 PRETO REF# 836 (7,051 m)",
+      "760 AZUL MAYA REF# 681 PANTONE 134302 (6,865 m)"
+    ],
+    "recomendacao_deise": "Expansão de mix de cores e novos lançamentos de alta gramatura"
+  },
+  {
+    "posicao": 3,
+    "codigo": "164",
+    "nome": "MERCANTIL LIMA LTDA",
+    "representante": "V G A REPRESENTACOES DE PRODUTOS TEXTEIS LTDA",
+    "faturamento_total": 6665128.07,
+    "metros_total": 526953.2,
+    "total_pedidos": 151,
+    "ticket_medio": 44139.920993377484,
+    "preco_medio_m": 12.648425078356107,
+    "primeiro_pedido": "2019-09-06T12:00:00+00:00",
+    "ultimo_pedido": "2026-10-27T00:00:00+00:00",
+    "bases_compradas": [
+      "Tricoline",
+      "Linho",
+      "Fio Tinto / Listrado",
+      "Viscose / Outros"
+    ],
+    "top_artigos": [
+      "LINHO DELUXE 55% ALG 30% VISC 15% LINH 100 BRANCO REF# 001 U (6,300 m)",
+      "LINHO DELUXE 55% ALG 30% VISC 15% LINHO 002 NATURAL REF# 0 U (6,000 m)",
+      "LINHO DELUXE 55% ALG 760 AZUL MAYA REF# 681 PANTONE 134302 U (5,100 m)"
+    ],
+    "top_cores": [
+      "100 BRANCO REF# 001 (8,250 m)",
+      "760 AZUL MAYA REF# 681 PANTONE 134302 (6,900 m)",
+      "002 NATURAL REF# 0 (6,500 m)"
+    ],
+    "recomendacao_deise": "Apresentar lançamentos de: Sarja"
+  },
+  {
+    "posicao": 4,
+    "codigo": "3978",
+    "nome": "EMPATIA TEXTIL LTDA",
+    "representante": "DIMA REPRESENTACOES LTDA",
+    "faturamento_total": 4168004.06,
+    "metros_total": 334919.96,
+    "total_pedidos": 66,
+    "ticket_medio": 63151.57666666667,
+    "preco_medio_m": 12.444776537056793,
+    "primeiro_pedido": "2025-01-20T12:00:00+00:00",
+    "ultimo_pedido": "2026-11-03T00:00:00+00:00",
+    "bases_compradas": [
+      "Tricoline",
+      "Linho",
+      "Viscose / Outros"
+    ],
+    "top_artigos": [
+      "TRICOLINE HAVANA 97% ALGODAO 3% ELASTA 100 BRANCO REF# 001 U (5,938 m)",
+      "LINHO PANAMA 55% ALG 15% LINHO 30% VISCO 1956C1-8 U (5,500 m)",
+      "TRICOLINE PARIS PLUS 100% ALGOD 960 MARINHO NOITE REF# 613 U (5,000 m)"
+    ],
+    "top_cores": [
+      "100 BRANCO REF# 001 (17,714 m)",
+      "900 PRETO REF# 836 (16,514 m)",
+      "1008 MARROM MAGNO REF# 470 PAN 191230 (11,286 m)"
+    ],
+    "recomendacao_deise": "Apresentar lançamentos de: Sarja, Fio Tinto / Listrado"
+  },
+  {
+    "posicao": 5,
+    "codigo": "3242",
+    "nome": "BLUE TEX IND E COM DE CONF LTDA",
+    "representante": "M.N REPRESENTACAO COMERCIAL LTDA",
+    "faturamento_total": 3947756.99,
+    "metros_total": 266643.5,
+    "total_pedidos": 57,
+    "ticket_medio": 69258.89456140352,
+    "preco_medio_m": 14.805374929446996,
+    "primeiro_pedido": "2026-05-15T12:00:00+00:00",
+    "ultimo_pedido": "2026-10-30T12:00:00+00:00",
+    "bases_compradas": [
+      "Sarja"
+    ],
+    "top_artigos": [
+      "SARJA FLEX 160 97% 240 BEGE AREIA REF# 492 PANTONE 12-0703 U (87,856 m)",
+      "SARJA FLEX 160 97% ALG 3% ELAS 900 PRETO REF# 836 U (35,277 m)",
+      "SARJA PROWORK 100%ALGODAO 100 BRANCO REF# 001 U (25,938 m)"
+    ],
+    "top_cores": [
+      "240 BEGE AREIA REF# 492 PANTONE 12-0703 (87,856 m)",
+      "900 PRETO REF# 836 (35,983 m)",
+      "100 BRANCO REF# 001 (25,938 m)"
+    ],
+    "recomendacao_deise": "Apresentar lançamentos de: Tricoline, Linho"
+  },
+  {
+    "posicao": 6,
+    "codigo": "163",
+    "nome": "MARIA ANDREA ARAGAO TORRES LTDA",
+    "representante": "V G A REPRESENTACOES DE PRODUTOS TEXTEIS LTDA",
+    "faturamento_total": 3459438.71,
+    "metros_total": 312208.4,
+    "total_pedidos": 79,
+    "ticket_medio": 43790.36341772152,
+    "preco_medio_m": 11.080543348609453,
+    "primeiro_pedido": "2019-09-06T12:00:00+00:00",
+    "ultimo_pedido": "2026-10-15T00:00:00+00:00",
+    "bases_compradas": [
+      "Tricoline",
+      "Linho",
+      "Fio Tinto / Listrado",
+      "Viscose / Outros"
+    ],
+    "top_artigos": [
+      "TRICOLINE PREMIUM 100% ALGODAO 2837-6 U (12,084 m)",
+      "TRICOLINE PREMIUM 100% ALGODAO 2837-5 U (10,946 m)",
+      "TRICOLINE DELUXE 100% ALGODAO 2837-9 U (9,100 m)"
+    ],
+    "top_cores": [
+      "2837-9 (18,840 m)",
+      "2837-6 (18,595 m)",
+      "2837-5 (16,981 m)"
+    ],
+    "recomendacao_deise": "Apresentar lançamentos de: Sarja"
+  },
+  {
+    "posicao": 7,
+    "codigo": "42",
+    "nome": "MARANTEX COMERCIO DE TECIDOS E RETALHOS LTDA",
+    "representante": "DESIGNTEX INDUSTRIA E COMERCIO DE TECIDOS LTDA",
+    "faturamento_total": 2679873.14,
+    "metros_total": 244096.12,
+    "total_pedidos": 93,
+    "ticket_medio": 28815.840215053766,
+    "preco_medio_m": 10.97876172714257,
+    "primeiro_pedido": "2025-01-20T12:00:00+00:00",
+    "ultimo_pedido": "2026-10-26T00:00:00+00:00",
+    "bases_compradas": [
+      "Tricoline",
+      "Linho"
+    ],
+    "top_artigos": [
+      "LINHO PANAMA 55%ALG 15%LIN 30%VIS 002 NATURAL REF# 0 U (5,000 m)",
+      "TRICOLINE DELUXE 100% ALGODAO 1862-7 U (4,134 m)",
+      "TRICOLINE PARIS PLUS 760 AZUL MAYA REF# 681 PANTONE 134302 U (4,040 m)"
+    ],
+    "top_cores": [
+      "450 VERMELHO REF# 279 (5,500 m)",
+      "100 BRANCO REF# 001 (5,300 m)",
+      "760 AZUL MAYA REF# 681 PANTONE 134302 (5,038 m)"
+    ],
+    "recomendacao_deise": "Apresentar lançamentos de: Sarja, Fio Tinto / Listrado"
+  },
+  {
+    "posicao": 8,
+    "codigo": "2919",
+    "nome": "BRANDILI TEXTIL LTDA",
+    "representante": "N.JACOMEL LTDA",
+    "faturamento_total": 2542511.68,
+    "metros_total": 150582.7,
+    "total_pedidos": 57,
+    "ticket_medio": 44605.46807017544,
+    "preco_medio_m": 16.88448726181693,
+    "primeiro_pedido": "2025-01-16T12:00:00+00:00",
+    "ultimo_pedido": "2026-10-30T00:00:00+00:00",
+    "bases_compradas": [
+      "Tricoline",
+      "Sarja",
+      "Linho",
+      "Viscose / Outros"
+    ],
+    "top_artigos": [
+      "PANAMA C/ ELAS 70%ALG 15%LIN 12%VIS 3%E 002 NATURAL REF# 0 U (36,764 m)",
+      "SARJA NATURE 78%ALG 15%MOD 5%LIN 391 NUDE ROSE REF# 200/12 U (9,200 m)",
+      "PANAMA C/ ELAS 70%AL 432 VERMELHOR FERRARI REF# PAN 191763 U (6,439 m)"
+    ],
+    "top_cores": [
+      "002 NATURAL REF# 0 (42,606 m)",
+      "391 NUDE ROSE REF# 200/12 (9,203 m)",
+      "432 VERMELHO FERRARI REF# PAN 191763 (6,439 m)"
+    ],
+    "recomendacao_deise": "Apresentar lançamentos de: Fio Tinto / Listrado"
+  },
+  {
+    "posicao": 9,
+    "codigo": "671",
+    "nome": "TRAPIA CONFECCOES LTDA",
+    "representante": "C-TEXTIL REPRESENTACOES LTDA",
+    "faturamento_total": 2115158.09,
+    "metros_total": 158661.0,
+    "total_pedidos": 76,
+    "ticket_medio": 27831.027499999997,
+    "preco_medio_m": 13.331304416334197,
+    "primeiro_pedido": "2025-04-22T12:00:00+00:00",
+    "ultimo_pedido": "2026-10-28T00:00:00+00:00",
+    "bases_compradas": [
+      "Sarja",
+      "Linho",
+      "Fio Tinto / Listrado",
+      "Viscose / Outros"
+    ],
+    "top_artigos": [
+      "LINHO CARAIVA 55%ALG 30%MOD 15%LIN 002 NATURAL REF# 0 U (10,412 m)",
+      "LINHO DELUXE 55% ALG 30% VISC 15% LINHO 002 NATURAL REF# 0 U (7,900 m)",
+      "VERANO FLAME 160 100% ALGODAO 100 BRANCO REF# 001 U (7,000 m)"
+    ],
+    "top_cores": [
+      "002 NATURAL REF# 0 (18,314 m)",
+      "100 BRANCO REF# 001 (10,600 m)",
+      "1008 MARROM MAGNO REF# 470 PAN 191230 (6,668 m)"
+    ],
+    "recomendacao_deise": "Apresentar lançamentos de: Tricoline"
+  },
+  {
+    "posicao": 10,
+    "codigo": "1448",
+    "nome": "MAR - QUENTE CONFECCOES LTDA",
+    "representante": "ESTILO DE PANO COMERCIO E REPRESENTACAO LTDA",
+    "faturamento_total": 1862509.07,
+    "metros_total": 143695.1,
+    "total_pedidos": 26,
+    "ticket_medio": 71634.96423076923,
+    "preco_medio_m": 12.961535014067982,
+    "primeiro_pedido": "2025-01-22T12:00:00+00:00",
+    "ultimo_pedido": "2026-06-10T12:00:00+00:00",
+    "bases_compradas": [
+      "Sarja",
+      "Linho",
+      "Viscose / Outros"
+    ],
+    "top_artigos": [
+      "LINHO MAQUINETADO 60%ALGODAO 40% LINHO 10719-1 U (9,034 m)",
+      "MAQTTON RUSTIC 100%ALGODAO 10733-1 U (8,671 m)",
+      "MAQTTON RUSTIC 100%ALGODAO 10715-1 U (7,495 m)"
+    ],
+    "top_cores": [
+      "900 PRETO REF# 836 (9,470 m)",
+      "10719-1 (9,034 m)",
+      "10733-1 (8,671 m)"
+    ],
+    "recomendacao_deise": "Apresentar lançamentos de: Tricoline, Fio Tinto / Listrado"
+  },
+  {
+    "posicao": 11,
+    "codigo": "4015",
+    "nome": "GENERALLE IND E COM DE CONFECCOES LTDA",
+    "representante": "W.S. CONSULTORIA E REPRESENTACOES COMERCIAIS LTDA",
+    "faturamento_total": 1738046.85,
+    "metros_total": 137690.0,
+    "total_pedidos": 52,
+    "ticket_medio": 33423.977884615386,
+    "preco_medio_m": 12.622898177064421,
+    "primeiro_pedido": "2025-01-21T12:00:00+00:00",
+    "ultimo_pedido": "2026-01-21T12:00:00+00:00",
+    "bases_compradas": [
+      "Tricoline"
+    ],
+    "top_artigos": [
+      "TRICOLINE TOP LINE 40/1 100% ALGODAO 1843-1 U (20,108 m)",
+      "TRICOLINE TOP LINE 40/1 100% ALGODAO 1840-1 U (12,445 m)",
+      "TRICOLINE TOP LINE 4 760 AZUL MAYA REF# 681 PANTONE 134302 U (11,377 m)"
+    ],
+    "top_cores": [
+      "1843-1 (20,108 m)",
+      "1840-1 (12,445 m)",
+      "760 AZUL MAYA REF# 681 PANTONE 134302 (11,377 m)"
+    ],
+    "recomendacao_deise": "Apresentar lançamentos de: Linho, Sarja"
+  },
+  {
+    "posicao": 12,
+    "codigo": "4904",
+    "nome": "STILLGER TEXTIL E CONFECCOES LTDA",
+    "representante": "M.N REPRESENTACAO COMERCIAL LTDA",
+    "faturamento_total": 1691022.69,
+    "metros_total": 108020.1,
+    "total_pedidos": 31,
+    "ticket_medio": 54549.119032258066,
+    "preco_medio_m": 15.654703985647114,
+    "primeiro_pedido": "2025-04-25T12:00:00+00:00",
+    "ultimo_pedido": "2026-11-03T00:00:00+00:00",
+    "bases_compradas": [
+      "Sarja"
+    ],
+    "top_artigos": [
+      "SARJA PROWORK 100%ALGODAO 100 BRANCO REF# 001 U (17,997 m)",
+      "SARJA URBAN FLEX 97% ALG 3% ELASTANO 100 BRANCO REF# 001 U (16,332 m)",
+      "SARJA DAKOTA 170 10 287 BEGE RAIZ REF# 400/112 PANT 131105 U (15,000 m)"
+    ],
+    "top_cores": [
+      "100 BRANCO REF# 001 (40,329 m)",
+      "6033 VERDE EXCLUSIVE REF# (15,013 m)",
+      "287 BEGE RAIZ REF# 400/112 PANT 131105 (15,000 m)"
+    ],
+    "recomendacao_deise": "Apresentar lançamentos de: Tricoline, Linho"
+  },
+  {
+    "posicao": 13,
+    "codigo": "5",
+    "nome": "MX72 MANUFATURA DA MODA LTDA",
+    "representante": "MJS CONSULTORIA E GESTAO COMERCIAL EIRELI",
+    "faturamento_total": 1664213.43,
+    "metros_total": 124837.0,
+    "total_pedidos": 45,
+    "ticket_medio": 36982.52066666666,
+    "preco_medio_m": 13.331091182902504,
+    "primeiro_pedido": "2025-01-09T12:00:00+00:00",
+    "ultimo_pedido": "2026-09-24T00:00:00+00:00",
+    "bases_compradas": [
+      "Tricoline",
+      "Sarja",
+      "Linho",
+      "Fio Tinto / Listrado"
+    ],
+    "top_artigos": [
+      "LINHO PANAMA 55%ALG 15%LIN 30%VIS 900 PRETO REF# 836 U (19,346 m)",
+      "LINHO PANAMA 55%ALG 15%LIN 30%VIS 002 NATURAL REF# 0 U (17,850 m)",
+      "LINHO PANAMA 55%ALG 15%LIN 30%V 960 MARINHO NOITE REF# 613 U (16,499 m)"
+    ],
+    "top_cores": [
+      "900 PRETO REF# 836 (21,246 m)",
+      "002 NATURAL REF# 0 (17,856 m)",
+      "960 MARINHO NOITE REF# 613 (16,499 m)"
+    ],
+    "recomendacao_deise": "Expansão de mix de cores e novos lançamentos de alta gramatura"
+  },
+  {
+    "posicao": 14,
+    "codigo": "51",
+    "nome": "LC COMERCIO DE TECIDOS LTDA",
+    "representante": "V G A REPRESENTACOES DE PRODUTOS TEXTEIS LTDA",
+    "faturamento_total": 1600891.89,
+    "metros_total": 131891.6,
+    "total_pedidos": 48,
+    "ticket_medio": 33351.914375,
+    "preco_medio_m": 12.137936684368071,
+    "primeiro_pedido": "2019-09-06T12:00:00+00:00",
+    "ultimo_pedido": "2026-10-25T00:00:00+00:00",
+    "bases_compradas": [
+      "Tricoline",
+      "Linho",
+      "Fio Tinto / Listrado",
+      "Viscose / Outros"
+    ],
+    "top_artigos": [
+      "LINHO DELUXE 55% ALG 30% VISC 15% LINHO 002 NATURAL REF# 0 U (7,500 m)",
+      "LINHO DELUXE 55% ALG 30% VISC 15% LINHO 1340-1 U (5,777 m)",
+      "LINHO DELUXE 55% ALG 30% VISC 15% LINHO 1340-17 U (4,070 m)"
+    ],
+    "top_cores": [
+      "002 NATURAL REF# 0 (7,500 m)",
+      "1340-1 (5,777 m)",
+      "100 BRANCO REF# 001 (4,250 m)"
+    ],
+    "recomendacao_deise": "Apresentar lançamentos de: Sarja"
+  },
+  {
+    "posicao": 15,
+    "codigo": "671",
+    "nome": "TRAPIA CONFECCOES LTDA",
+    "representante": "CINK TEXTIL REPRESENTACOES COMERCIAIS LTDA",
+    "faturamento_total": 1532799.83,
+    "metros_total": 114663.7,
+    "total_pedidos": 66,
+    "ticket_medio": 23224.23984848485,
+    "preco_medio_m": 13.367786230515849,
+    "primeiro_pedido": "2025-01-21T12:00:00+00:00",
+    "ultimo_pedido": "2025-09-12T12:00:00+00:00",
+    "bases_compradas": [
+      "Sarja",
+      "Linho",
+      "Fio Tinto / Listrado",
+      "Viscose / Outros"
+    ],
+    "top_artigos": [
+      "LINHO CARAIVA 55%ALG 30%MOD 15%LIN 002 NATURAL REF# 0 U (10,412 m)",
+      "LINHO DELUXE 55% ALG 30% VISC 15% LINHO 002 NATURAL REF# 0 U (7,900 m)",
+      "VERANO FLAME 160 100% ALGODAO 100 BRANCO REF# 001 U (7,000 m)"
+    ],
+    "top_cores": [
+      "002 NATURAL REF# 0 (18,314 m)",
+      "100 BRANCO REF# 001 (10,600 m)",
+      "1008 MARROM MAGNO REF# 470 PAN 191230 (6,668 m)"
+    ],
+    "recomendacao_deise": "Apresentar lançamentos de: Tricoline"
+  },
+  {
+    "posicao": 16,
+    "codigo": "3045",
+    "nome": "VIDA BABY COM DE ROUPAS E ACES  LTDA",
+    "representante": "A FERNANDES REP COM DE TECIDOS E CONFECCOES",
+    "faturamento_total": 1496974.61,
+    "metros_total": 105183.0,
+    "total_pedidos": 112,
+    "ticket_medio": 13365.844732142858,
+    "preco_medio_m": 14.232096536512556,
+    "primeiro_pedido": "2025-01-16T12:00:00+00:00",
+    "ultimo_pedido": "2026-11-05T00:00:00+00:00",
+    "bases_compradas": [
+      "Tricoline",
+      "Viscose / Outros",
+      "Linho",
+      "Sarja",
+      "Fio Tinto / Listrado"
+    ],
+    "top_artigos": [
+      "VERANO FLAME 160 100% ALGODAO 100 BRANCO REF# 001 U (7,500 m)",
+      "VERANO FLAME 160 100% ALGODAO 001OFF WHITE REF# 0 U (6,000 m)",
+      "VERANO LINHO PLUS 55%AL15%LIN30%VIS 002 NATURAL REF# 0 U (3,600 m)"
+    ],
+    "top_cores": [
+      "100 BRANCO REF# 001 (8,252 m)",
+      "001OFF WHITE REF# 0 (6,052 m)",
+      "002 NATURAL REF# 0 (6,050 m)"
+    ],
+    "recomendacao_deise": "Expansão de mix de cores e novos lançamentos de alta gramatura"
+  },
+  {
+    "posicao": 17,
+    "codigo": "3712",
+    "nome": "SPADA COMERCIO DE TECIDOS LTDA",
+    "representante": "LEONARDO FERNANDES GALVAO",
+    "faturamento_total": 1481810.9,
+    "metros_total": 129026.0,
+    "total_pedidos": 20,
+    "ticket_medio": 74090.545,
+    "preco_medio_m": 11.484591477686667,
+    "primeiro_pedido": "2026-07-15T12:00:00+00:00",
+    "ultimo_pedido": "2026-09-16T12:00:00+00:00",
+    "bases_compradas": [
+      "Tricoline",
+      "Linho"
+    ],
+    "top_artigos": [
+      "TRICOLINE DELUXE 100% ALGODAO 10769-14 U (9,824 m)",
+      "TRICOLINE DELUXE 100% ALGODAO 1600-18 U (8,622 m)",
+      "TRICOLINE DELUXE 100% ALGODAO 10769-13 U (6,820 m)"
+    ],
+    "top_cores": [
+      "10769-14 (9,824 m)",
+      "1600-18 (8,622 m)",
+      "10769-13 (6,820 m)"
+    ],
+    "recomendacao_deise": "Apresentar lançamentos de: Sarja, Fio Tinto / Listrado"
+  },
+  {
+    "posicao": 18,
+    "codigo": "2961",
+    "nome": "CASTRO E CASTRO COM E IMP LTDA",
+    "representante": "ZILMA TEIXEIRA DE LIMA REPRESENTACOES",
+    "faturamento_total": 1421103.51,
+    "metros_total": 112892.5,
+    "total_pedidos": 71,
+    "ticket_medio": 20015.5423943662,
+    "preco_medio_m": 12.588112673561131,
+    "primeiro_pedido": "2025-01-14T12:00:00+00:00",
+    "ultimo_pedido": "2026-09-21T12:00:00+00:00",
+    "bases_compradas": [
+      "Tricoline",
+      "Viscose / Outros",
+      "Linho",
+      "Sarja",
+      "Fio Tinto / Listrado"
+    ],
+    "top_artigos": [
+      "TRICOLINE PARIS PLUS 100% ALGODAO 100 BRANCO REF# 001 U (2,050 m)",
+      "TRICOLINE PARIS PLUS 100% ALGODAO 450 VERMELHO REF# 279 U (1,300 m)",
+      "TRICOLINE TOP LINE 40/1 100% ALGODAO 100 BRANCO REF# 001 U (1,250 m)"
+    ],
+    "top_cores": [
+      "100 BRANCO REF# 001 (4,150 m)",
+      "900 PRETO REF# 836 (2,700 m)",
+      "240 BEGE AREIA REF# 492 PANTONE 12-0703 (2,150 m)"
+    ],
+    "recomendacao_deise": "Expansão de mix de cores e novos lançamentos de alta gramatura"
+  },
+  {
+    "posicao": 19,
+    "codigo": "2843",
+    "nome": "LAVIZE DRESS CODE LTDA",
+    "representante": "TFB REPRESENTACOES LTDA",
+    "faturamento_total": 1398637.21,
+    "metros_total": 101275.9,
+    "total_pedidos": 69,
+    "ticket_medio": 20270.104492753624,
+    "preco_medio_m": 13.810168164390541,
+    "primeiro_pedido": "2025-04-04T12:00:00+00:00",
+    "ultimo_pedido": "2026-09-17T00:00:00+00:00",
+    "bases_compradas": [
+      "Tricoline",
+      "Linho",
+      "Viscose / Outros"
+    ],
+    "top_artigos": [
+      "LINHO PANAMA 55%ALG 15%LIN 30%VIS 002 NATURAL REF# 0 U (18,229 m)",
+      "LINHO PANAMA 55%ALG 15%LIN 30%VIS 100 BRANCO REF# 001 U (5,889 m)",
+      "VERANO FLAME 160 100% ALGODAO 100 BRANCO REF# 001 U (4,800 m)"
+    ],
+    "top_cores": [
+      "002 NATURAL REF# 0 (20,016 m)",
+      "100 BRANCO REF# 001 (10,689 m)",
+      "960 MARINHO NOITE REF# 613 (6,448 m)"
+    ],
+    "recomendacao_deise": "Apresentar lançamentos de: Sarja, Fio Tinto / Listrado"
+  },
+  {
+    "posicao": 20,
+    "codigo": "48",
+    "nome": "COMERCIAL JB TEXTIL LTDA",
+    "representante": "V G A REPRESENTACOES DE PRODUTOS TEXTEIS LTDA",
+    "faturamento_total": 1337849.18,
+    "metros_total": 159548.0,
+    "total_pedidos": 23,
+    "ticket_medio": 58167.35565217391,
+    "preco_medio_m": 8.385245694085793,
+    "primeiro_pedido": "2019-09-06T12:00:00+00:00",
+    "ultimo_pedido": "2019-12-12T12:00:00+00:00",
+    "bases_compradas": [
+      "Tricoline",
+      "Viscose / Outros",
+      "Linho",
+      "Sarja",
+      "Fio Tinto / Listrado"
+    ],
+    "top_artigos": [
+      "TRICOLINE DELUXE 100% ALGODAO 1983-6 U (1,769 m)",
+      "TRICOLINE DELUXE 100% ALGODAO 1999-5 U (1,506 m)",
+      "TRICOLINE DELUXE 100% ALGODAO 1984-4 U (1,342 m)"
+    ],
+    "top_cores": [
+      "1983-6 (1,769 m)",
+      "1999-5 (1,506 m)",
+      "1984-4 (1,342 m)"
+    ],
+    "recomendacao_deise": "Expansão de mix de cores e novos lançamentos de alta gramatura"
+  },
+  {
+    "posicao": 21,
+    "codigo": "4169",
+    "nome": "COTRIN INDUSTRIA LTDA",
+    "representante": "DIMA REPRESENTACOES LTDA",
+    "faturamento_total": 1291504.03,
+    "metros_total": 99501.4,
+    "total_pedidos": 14,
+    "ticket_medio": 92250.28785714286,
+    "preco_medio_m": 12.979757370248057,
+    "primeiro_pedido": "2026-01-27T12:00:00+00:00",
+    "ultimo_pedido": "2026-11-03T00:00:00+00:00",
+    "bases_compradas": [
+      "Tricoline",
+      "Linho",
+      "Fio Tinto / Listrado",
+      "Viscose / Outros"
+    ],
+    "top_artigos": [
+      "VERANO FLAME 160 100% ALGODAO 450 VERMELHO REF# 279 U (3,200 m)",
+      "VERANO FLAME 160 100% ALGODAO 391 NUDE ROSE REF# 200/12 U (3,106 m)",
+      "VERANO STRIPED (2)2X2 100% A 000027 FIO TINTO COBALTO 4640 U (3,000 m)"
+    ],
+    "top_cores": [
+      "100 BRANCO REF# 001 (4,500 m)",
+      "450 VERMELHO REF# 279 (4,200 m)",
+      "391 NUDE ROSE REF# 200/12 (4,106 m)"
+    ],
+    "recomendacao_deise": "Apresentar lançamentos de: Sarja"
+  },
+  {
+    "posicao": 22,
+    "codigo": "4759",
+    "nome": "RITMI CONFECCOES LTDA",
+    "representante": "TUAREG REPRESENTACOES LTDA",
+    "faturamento_total": 1263822.43,
+    "metros_total": 96641.9,
+    "total_pedidos": 45,
+    "ticket_medio": 28084.942888888887,
+    "preco_medio_m": 13.077375651761814,
+    "primeiro_pedido": "2025-04-04T12:00:00+00:00",
+    "ultimo_pedido": "2026-05-14T12:00:00+00:00",
+    "bases_compradas": [
+      "Tricoline",
+      "Linho",
+      "Viscose / Outros"
+    ],
+    "top_artigos": [
+      "TRICOLINE TOP LINE 4 1008 MARROM MAGNO REF# 470 PAN 191230 U (26,600 m)",
+      "TRICOLINE TOP LINE 40/1 100% ALGO 620 VERDE MUSGO REF# 514 U (16,748 m)",
+      "TRICOLINE TOP LINE 40/1 100% ALGODAO 1797-3 U (12,619 m)"
+    ],
+    "top_cores": [
+      "1008 MARROM MAGNO REF# 470 PAN 191230 (27,986 m)",
+      "620 VERDE MUSGO REF# 514 (16,748 m)",
+      "1797-3 (12,619 m)"
+    ],
+    "recomendacao_deise": "Apresentar lançamentos de: Sarja, Fio Tinto / Listrado"
+  },
+  {
+    "posicao": 23,
+    "codigo": "793",
+    "nome": "INDUSTRIA TEXTIL BETILHA LTDA",
+    "representante": "W.S. CONSULTORIA E REPRESENTACOES COMERCIAIS LTDA",
+    "faturamento_total": 1203048.0,
+    "metros_total": 93191.0,
+    "total_pedidos": 43,
+    "ticket_medio": 27977.86046511628,
+    "preco_medio_m": 12.909486967625629,
+    "primeiro_pedido": "2025-01-22T12:00:00+00:00",
+    "ultimo_pedido": "2026-06-12T12:00:00+00:00",
+    "bases_compradas": [
+      "Sarja",
+      "Tricoline",
+      "Linho",
+      "Viscose / Outros"
+    ],
+    "top_artigos": [
+      "TRICOLINE TOP LINE 40/ 484 VERMELHO MERLOT REF# PAN 191761 U (29,997 m)",
+      "TRICOLINE TOP LINE 40/1 100% ALGODAO 1016 MARROM RUM REF# U (27,117 m)",
+      "TRICOLINE TOP LINE 40/1 100% AL 960 MARINHO NOITE REF# 613 U (21,651 m)"
+    ],
+    "top_cores": [
+      "484 VERMELHO MERLOT REF# PAN 191761 (29,997 m)",
+      "1016 MARROM RUM REF# (27,117 m)",
+      "960 MARINHO NOITE REF# 613 (21,657 m)"
+    ],
+    "recomendacao_deise": "Apresentar lançamentos de: Fio Tinto / Listrado"
+  },
+  {
+    "posicao": 24,
+    "codigo": "2754",
+    "nome": "TEXPA LTDA",
+    "representante": "C-TEXTIL REPRESENTACOES LTDA",
+    "faturamento_total": 1127474.96,
+    "metros_total": 83754.9,
+    "total_pedidos": 99,
+    "ticket_medio": 11388.635959595958,
+    "preco_medio_m": 13.461599978031137,
+    "primeiro_pedido": "2025-08-13T12:00:00+00:00",
+    "ultimo_pedido": "2026-11-04T00:00:00+00:00",
+    "bases_compradas": [
+      "Sarja",
+      "Linho",
+      "Viscose / Outros"
+    ],
+    "top_artigos": [
+      "LINHO DELUXE 55% ALG 30% VISC 15% LINHO 002 NATURAL REF# 0 U (6,550 m)",
+      "SARJA ZARA 100% A 411 CAQUI TANGELO REF# 400/05 PAN 160713 U (2,450 m)",
+      "LINHO DELUXE 55%ALG 30%VISC 15%LIN 6024 VERDE TANGELO REF# U (2,000 m)"
+    ],
+    "top_cores": [
+      "002 NATURAL REF# 0 (6,550 m)",
+      "411 CAQUI TANGELO REF# 400/05 PAN 160713 (2,850 m)",
+      "6024 VERDE TANGELO REF# (2,000 m)"
+    ],
+    "recomendacao_deise": "Apresentar lançamentos de: Tricoline, Fio Tinto / Listrado"
+  },
+  {
+    "posicao": 25,
+    "codigo": "4180",
+    "nome": "ASSOC DO DESENVOLV DA IND INFORMAL DO PR-ADIPAR",
+    "representante": "DESIGNTEX INDUSTRIA E COMERCIO DE TECIDOS LTDA",
+    "faturamento_total": 1090707.27,
+    "metros_total": 117431.15,
+    "total_pedidos": 79,
+    "ticket_medio": 13806.421139240507,
+    "preco_medio_m": 9.288057470270878,
+    "primeiro_pedido": "2025-01-13T12:00:00+00:00",
+    "ultimo_pedido": "2026-11-03T00:00:00+00:00",
+    "bases_compradas": [
+      "Tricoline",
+      "Viscose / Outros",
+      "Linho",
+      "Sarja",
+      "Fio Tinto / Listrado"
+    ],
+    "top_artigos": [
+      "VERANO FLAME 160 100% ALGODAO 100 BRANCO REF# 001 U (4,200 m)",
+      "LINHO PANAMA (LD) 55%ALG15%LINHO30%VIS 100 BRANCO REF# 001 U (2,095 m)",
+      "LINHO PANAMA (LD) 55%ALG15%LINHO30%VISC 900 PRETO REF# 836 U (2,068 m)"
+    ],
+    "top_cores": [
+      "100 BRANCO REF# 001 (11,337 m)",
+      "900 PRETO REF# 836 (6,033 m)",
+      "960 MARINHO NOITE REF# 613 (4,743 m)"
+    ],
+    "recomendacao_deise": "Expansão de mix de cores e novos lançamentos de alta gramatura"
+  },
+  {
+    "posicao": 26,
+    "codigo": "2754",
+    "nome": "TEXPA LTDA",
+    "representante": "CINK TEXTIL REPRESENTACOES COMERCIAIS LTDA",
+    "faturamento_total": 1062202.6,
+    "metros_total": 65937.6,
+    "total_pedidos": 47,
+    "ticket_medio": 22600.055319148938,
+    "preco_medio_m": 16.109209313047486,
+    "primeiro_pedido": "2025-01-31T12:00:00+00:00",
+    "ultimo_pedido": "2025-09-16T12:00:00+00:00",
+    "bases_compradas": [
+      "Sarja",
+      "Linho",
+      "Viscose / Outros"
+    ],
+    "top_artigos": [
+      "LINHO DELUXE 55% ALG 30% VISC 15% LINHO 002 NATURAL REF# 0 U (6,550 m)",
+      "SARJA ZARA 100% A 411 CAQUI TANGELO REF# 400/05 PAN 160713 U (2,450 m)",
+      "LINHO DELUXE 55%ALG 30%VISC 15%LIN 6024 VERDE TANGELO REF# U (2,000 m)"
+    ],
+    "top_cores": [
+      "002 NATURAL REF# 0 (6,550 m)",
+      "411 CAQUI TANGELO REF# 400/05 PAN 160713 (2,850 m)",
+      "6024 VERDE TANGELO REF# (2,000 m)"
+    ],
+    "recomendacao_deise": "Apresentar lançamentos de: Tricoline, Fio Tinto / Listrado"
+  },
+  {
+    "posicao": 27,
+    "codigo": "738",
+    "nome": "MPL INDUSTRIA E COMERCIO DE ROUPAS LTDA",
+    "representante": "DIMA REPRESENTACOES LTDA",
+    "faturamento_total": 1046541.04,
+    "metros_total": 75169.0,
+    "total_pedidos": 72,
+    "ticket_medio": 14535.292222222222,
+    "preco_medio_m": 13.922508480889729,
+    "primeiro_pedido": "2025-01-06T12:00:00+00:00",
+    "ultimo_pedido": "2026-09-15T12:00:00+00:00",
+    "bases_compradas": [
+      "Linho",
+      "Viscose / Outros"
+    ],
+    "top_artigos": [
+      "LINHO DELUXE 55% ALG 30% VISC 15% LINHO 002 NATURAL REF# 0 U (22,047 m)",
+      "LINHO DELUXE 55% ALG 30% VI 608 VERDE CASCADE REF# 500/109 U (6,799 m)",
+      "LINHO DELUXE 55% ALG 30% VI 220 VANILA QUINDIM REF# 300/55 U (6,674 m)"
+    ],
+    "top_cores": [
+      "002 NATURAL REF# 0 (23,205 m)",
+      "608 VERDE CASCADE REF# 500/109 (6,799 m)",
+      "220 VANILA QUINDIM REF# 300/55 (6,674 m)"
+    ],
+    "recomendacao_deise": "Apresentar lançamentos de: Tricoline, Sarja"
+  },
+  {
+    "posicao": 28,
+    "codigo": "355",
+    "nome": "SUL MINAS IND E COM DE CONFEC LTDA",
+    "representante": "MJS CONSULTORIA E GESTAO COMERCIAL EIRELI",
+    "faturamento_total": 1038942.71,
+    "metros_total": 81772.0,
+    "total_pedidos": 88,
+    "ticket_medio": 11806.167159090908,
+    "preco_medio_m": 12.705360147727829,
+    "primeiro_pedido": "2025-01-08T12:00:00+00:00",
+    "ultimo_pedido": "2026-10-28T00:00:00+00:00",
+    "bases_compradas": [
+      "Tricoline",
+      "Viscose / Outros",
+      "Linho",
+      "Sarja",
+      "Fio Tinto / Listrado"
+    ],
+    "top_artigos": [
+      "VERANO FLAME 160 100% ALGODAO 620 VERDE MUSGO REF# 514 U (3,195 m)",
+      "VERANO FLAME 160 100% ALGODAO 100 BRANCO REF# 001 U (2,100 m)",
+      "VERANO FLAME 160 100 1008 MARROM MAGNO REF# 470 PAN 191230 U (2,000 m)"
+    ],
+    "top_cores": [
+      "900 PRETO REF# 836 (4,423 m)",
+      "620 VERDE MUSGO REF# 514 (3,845 m)",
+      "002 NATURAL REF# 0 (2,702 m)"
+    ],
+    "recomendacao_deise": "Expansão de mix de cores e novos lançamentos de alta gramatura"
+  },
+  {
+    "posicao": 29,
+    "codigo": "3416",
+    "nome": "MALVON CAMISARIA E CONFECCOES LTDA",
+    "representante": "J A LUIZ DA SILVA REPRESENTACOES",
+    "faturamento_total": 1021166.75,
+    "metros_total": 105743.9,
+    "total_pedidos": 54,
+    "ticket_medio": 18910.49537037037,
+    "preco_medio_m": 9.656980213515864,
+    "primeiro_pedido": "2025-01-24T12:00:00+00:00",
+    "ultimo_pedido": "2026-10-29T00:00:00+00:00",
+    "bases_compradas": [
+      "Tricoline",
+      "Viscose / Outros",
+      "Linho",
+      "Sarja",
+      "Fio Tinto / Listrado"
+    ],
+    "top_artigos": [
+      "LINHO DELUXE (LD) 55%ALG 30%VIS 960 MARINHO NOITE REF# 613 U (8,650 m)",
+      "LINHO DELUXE (LD) 55%ALG 30%VIS 15%LIN 900 PRETO REF# 836 U (7,601 m)",
+      "LINHO DELUXE 55% ALG 30% VISC 15% LINHO 002 NATURAL REF# 0 U (5,400 m)"
+    ],
+    "top_cores": [
+      "960 MARINHO NOITE REF# 613 (11,712 m)",
+      "900 PRETO REF# 836 (10,301 m)",
+      "002 NATURAL REF# 0 (8,898 m)"
+    ],
+    "recomendacao_deise": "Expansão de mix de cores e novos lançamentos de alta gramatura"
+  },
+  {
+    "posicao": 30,
+    "codigo": "3409",
+    "nome": "INDUSTRIA E COMERCIO GOMES NOGUEIRA LTDA",
+    "representante": "GUSTAVO TEODORO MAIRINQUES",
+    "faturamento_total": 904930.6,
+    "metros_total": 69569.0,
+    "total_pedidos": 23,
+    "ticket_medio": 39344.80869565217,
+    "preco_medio_m": 13.00767008293924,
+    "primeiro_pedido": "2026-02-13T12:00:00+00:00",
+    "ultimo_pedido": "2026-11-04T00:00:00+00:00",
+    "bases_compradas": [
+      "Tricoline",
+      "Sarja",
+      "Linho"
+    ],
+    "top_artigos": [
+      "SARJA PROWORK 100%ALGODAO 100 BRANCO REF# 001 U (45,379 m)",
+      "SARJA DAKOTA 170 100%ALGODAO 100 BRANCO REF# 001 U (17,849 m)",
+      "SARJA PROWORK (LD) 100%ALGODAO 100 BRANCO REF# 001 U (3,794 m)"
+    ],
+    "top_cores": [
+      "100 BRANCO REF# 001 (68,205 m)",
+      "900 PRETO REF# 836 (500 m)",
+      "1008 MARROM MAGNO REF# 470 PAN 191230 (372 m)"
+    ],
+    "recomendacao_deise": "Apresentar lançamentos de: Fio Tinto / Listrado"
+  },
+  {
+    "posicao": 31,
+    "codigo": "2314",
+    "nome": "KRINDGES INDUSTRIAL S/A",
+    "representante": "DESIGNTEX INDUSTRIA E COMERCIO DE TECIDOS LTDA",
+    "faturamento_total": 896274.08,
+    "metros_total": 62546.0,
+    "total_pedidos": 106,
+    "ticket_medio": 8455.415849056604,
+    "preco_medio_m": 14.329838518850126,
+    "primeiro_pedido": "2025-01-23T12:00:00+00:00",
+    "ultimo_pedido": "2026-03-24T12:00:00+00:00",
+    "bases_compradas": [
+      "Tricoline",
+      "Linho",
+      "Fio Tinto / Listrado",
+      "Viscose / Outros"
+    ],
+    "top_artigos": [
+      "VERANO CHAMBREY 160 100% ALGODAO 1545 FIO TINTO RAFIA 75 U (1,657 m)",
+      "VERANO CHAMBREY 160 100% ALGOD 1525 FIO TINTO COBALTO 4640 U (1,507 m)",
+      "VERANO LINHO PLUS 55%AL15%LIN30%VIS 002 NATURAL REF# 0 U (1,470 m)"
+    ],
+    "top_cores": [
+      "002 NATURAL REF# 0 (2,776 m)",
+      "100 BRANCO REF# 001 (2,502 m)",
+      "1545 FIO TINTO RAFIA 75 (1,657 m)"
+    ],
+    "recomendacao_deise": "Apresentar lançamentos de: Sarja"
+  },
+  {
+    "posicao": 32,
+    "codigo": "4075",
+    "nome": "OKM COMERCIO E CONFECCOES LTDA",
+    "representante": "W.S. CONSULTORIA E REPRESENTACOES COMERCIAIS LTDA",
+    "faturamento_total": 892992.05,
+    "metros_total": 64761.9,
+    "total_pedidos": 21,
+    "ticket_medio": 42523.43095238096,
+    "preco_medio_m": 13.788848844768298,
+    "primeiro_pedido": "2025-03-19T12:00:00+00:00",
+    "ultimo_pedido": "2026-10-09T00:00:00+00:00",
+    "bases_compradas": [
+      "Sarja",
+      "Linho"
+    ],
+    "top_artigos": [
+      "SARJA FLEX 160 97% 240 BEGE AREIA REF# 492 PANTONE 12-0703 U (6,351 m)",
+      "SARJA FLEX 160 97% ALG 3% ELAS 900 PRETO REF# 836 U (6,224 m)",
+      "SARJA NATURE 170 78%AL 15%VIS 5%LIN 2%E 002 NATURAL REF# 0 U (3,115 m)"
+    ],
+    "top_cores": [
+      "900 PRETO REF# 836 (12,482 m)",
+      "411 CAQUI TANGELO REF# 400/05 PAN 160713 (9,567 m)",
+      "240 BEGE AREIA REF# 492 PANTONE 12-0703 (9,215 m)"
+    ],
+    "recomendacao_deise": "Apresentar lançamentos de: Tricoline, Fio Tinto / Listrado"
+  },
+  {
+    "posicao": 33,
+    "codigo": "50",
+    "nome": "AVIL TEXTIL LTDA",
+    "representante": "DESIGNTEX INDUSTRIA E COMERCIO DE TECIDOS LTDA",
+    "faturamento_total": 875024.7,
+    "metros_total": 82812.0,
+    "total_pedidos": 36,
+    "ticket_medio": 24306.241666666665,
+    "preco_medio_m": 10.56639979713085,
+    "primeiro_pedido": "2025-01-14T12:00:00+00:00",
+    "ultimo_pedido": "2026-10-22T00:00:00+00:00",
+    "bases_compradas": [
+      "Tricoline",
+      "Linho",
+      "Viscose / Outros"
+    ],
+    "top_artigos": [
+      "TRICOLINE PARIS PLUS 100% ALGODAO 100 BRANCO REF# 001 U (14,184 m)",
+      "TRICOLINE PARIS PLUS 100% ALGODAO 450 VERMELHO REF# 279 U (6,150 m)",
+      "TRICOLINE PARIS PLUS 100% ALGOD 960 MARINHO NOITE REF# 613 U (4,778 m)"
+    ],
+    "top_cores": [
+      "100 BRANCO REF# 001 (16,484 m)",
+      "450 VERMELHO REF# 279 (6,400 m)",
+      "960 MARINHO NOITE REF# 613 (5,478 m)"
+    ],
+    "recomendacao_deise": "Apresentar lançamentos de: Sarja, Fio Tinto / Listrado"
+  },
+  {
+    "posicao": 34,
+    "codigo": "4212",
+    "nome": "MIKS JEANS INDUSTRIA E COMERCIO DE ROUPAS LTDA",
+    "representante": "M.N REPRESENTACAO COMERCIAL LTDA",
+    "faturamento_total": 873324.6,
+    "metros_total": 53564.0,
+    "total_pedidos": 28,
+    "ticket_medio": 31190.164285714283,
+    "preco_medio_m": 16.30432006571578,
+    "primeiro_pedido": "2025-01-23T12:00:00+00:00",
+    "ultimo_pedido": "2026-10-26T00:00:00+00:00",
+    "bases_compradas": [
+      "Sarja",
+      "Linho"
+    ],
+    "top_artigos": [
+      "SARJA FLEX 160 97% ALG 3% ELAS 804 CINZA INTENSO REF# U (10,702 m)",
+      "SARJA FLEX 160 97% ALG 3% ELAS 960 MARINHO NOITE REF# 613 U (9,000 m)",
+      "SARJA FLEX 160 97% ALG 3% ELAS 900 PRETO REF# 836 U (8,400 m)"
+    ],
+    "top_cores": [
+      "804 CINZA INTENSO REF# (10,702 m)",
+      "960 MARINHO NOITE REF# 613 (9,000 m)",
+      "900 PRETO REF# 836 (8,403 m)"
+    ],
+    "recomendacao_deise": "Apresentar lançamentos de: Tricoline, Fio Tinto / Listrado"
+  },
+  {
+    "posicao": 35,
+    "codigo": "310",
+    "nome": "WALMISA CONFECCOES LTDA",
+    "representante": "J A LUIZ DA SILVA REPRESENTACOES",
+    "faturamento_total": 870779.47,
+    "metros_total": 65590.0,
+    "total_pedidos": 65,
+    "ticket_medio": 13396.60723076923,
+    "preco_medio_m": 13.276101082482086,
+    "primeiro_pedido": "2025-01-22T12:00:00+00:00",
+    "ultimo_pedido": "2026-10-31T00:00:00+00:00",
+    "bases_compradas": [
+      "Tricoline",
+      "Linho",
+      "Fio Tinto / Listrado",
+      "Viscose / Outros"
+    ],
+    "top_artigos": [
+      "VERANO FLAME 160 100% ALGODAO 900 PRETO REF# 836 U (1,100 m)",
+      "VERANO LINHO PLUS 55%AL15%LIN30%VIS 002 NATURAL REF# 0 U (900 m)",
+      "VERANO FLAME 160 1 240 BEGE AREIA REF# 492 PANTONE 12-0703 U (750 m)"
+    ],
+    "top_cores": [
+      "1008 MARROM MAGNO REF# 470 PAN 191230 (2,809 m)",
+      "411 CAQUI TANGELO REF# 400/05 PAN 160713 (2,564 m)",
+      "620 VERDE MUSGO REF# 514 (2,542 m)"
+    ],
+    "recomendacao_deise": "Apresentar lançamentos de: Sarja"
+  },
+  {
+    "posicao": 36,
+    "codigo": "271",
+    "nome": "J. C. TECIDOS LTDA",
+    "representante": "V G A REPRESENTACOES DE PRODUTOS TEXTEIS LTDA",
+    "faturamento_total": 822618.77,
+    "metros_total": 78867.4,
+    "total_pedidos": 31,
+    "ticket_medio": 26536.08935483871,
+    "preco_medio_m": 10.430403056269132,
+    "primeiro_pedido": "2019-09-09T12:00:00+00:00",
+    "ultimo_pedido": "2026-10-20T00:00:00+00:00",
+    "bases_compradas": [
+      "Tricoline",
+      "Linho",
+      "Fio Tinto / Listrado",
+      "Viscose / Outros"
+    ],
+    "top_artigos": [
+      "LINHO DELUXE 55% ALG 30% VISC 15% LINHO 002 NATURAL REF# 0 U (5,500 m)",
+      "VERANO FLAME 100% ALGODAO 10599-31 XADREZ U (2,902 m)",
+      "TRICOLINE PREMIUM 100% ALGODAO 2837-6 U (2,712 m)"
+    ],
+    "top_cores": [
+      "002 NATURAL REF# 0 (5,700 m)",
+      "10599-31 XADREZ (2,902 m)",
+      "2837-6 (2,712 m)"
+    ],
+    "recomendacao_deise": "Apresentar lançamentos de: Sarja"
+  },
+  {
+    "posicao": 37,
+    "codigo": "3977",
+    "nome": "HANAS TEXTIL LTDA",
+    "representante": "DIMA REPRESENTACOES LTDA",
+    "faturamento_total": 819773.6,
+    "metros_total": 176356.6,
+    "total_pedidos": 11,
+    "ticket_medio": 74524.87272727273,
+    "preco_medio_m": 4.648386280978427,
+    "primeiro_pedido": "2025-01-10T12:00:00+00:00",
+    "ultimo_pedido": "2026-01-08T12:00:00+00:00",
+    "bases_compradas": [
+      "Tricoline",
+      "Viscose / Outros",
+      "Linho",
+      "Sarja",
+      "Fio Tinto / Listrado"
+    ],
+    "top_artigos": [
+      "TRICOLINE DELUXE 100% ALGODAO DIVERSOS U (16,000 m)",
+      "LINHO DELUXE 55% ALG 30% VISC 15% LINHO DIVERSAS U (15,000 m)",
+      "TECIDO RIVIERA 100% VISCOSE 100 BRANCO REF# 001 U (7,240 m)"
+    ],
+    "top_cores": [
+      "DIVERSAS (24,063 m)",
+      "DIVERSOS (16,000 m)",
+      "100 BRANCO REF# 001 (9,510 m)"
+    ],
+    "recomendacao_deise": "Expansão de mix de cores e novos lançamentos de alta gramatura"
+  },
+  {
+    "posicao": 38,
+    "codigo": "2361",
+    "nome": "JAQUELINE SOUZA DA SILVA",
+    "representante": "RR REPRESENTACOES TEXTIL LTDA",
+    "faturamento_total": 781361.36,
+    "metros_total": 56513.3,
+    "total_pedidos": 29,
+    "ticket_medio": 26943.495172413794,
+    "preco_medio_m": 13.826149950542614,
+    "primeiro_pedido": "2025-01-07T12:00:00+00:00",
+    "ultimo_pedido": "2026-11-04T00:00:00+00:00",
+    "bases_compradas": [
+      "Linho"
+    ],
+    "top_artigos": [
+      "LINHO DELUXE 55% ALG 30% VISC 15% LINHO 002 NATURAL REF# 0 U (5,643 m)",
+      "LINHO DELUXE 55% ALG 1008 MARROM MAGNO REF# 470 PAN 191230 U (3,150 m)",
+      "LINHO DELUXE 55% ALG 30% VISC 15% LINH 100 BRANCO REF# 001 U (3,000 m)"
+    ],
+    "top_cores": [
+      "002 NATURAL REF# 0 (8,246 m)",
+      "100 BRANCO REF# 001 (7,724 m)",
+      "900 PRETO REF# 836 (6,495 m)"
+    ],
+    "recomendacao_deise": "Apresentar lançamentos de: Tricoline, Sarja"
+  },
+  {
+    "posicao": 39,
+    "codigo": "4499",
+    "nome": "M. F. J. F. CONFECCOES LTDA",
+    "representante": "RTX REPRESENTACOES LTDA ME",
+    "faturamento_total": 766251.9,
+    "metros_total": 41155.0,
+    "total_pedidos": 20,
+    "ticket_medio": 38312.595,
+    "preco_medio_m": 18.618683027578665,
+    "primeiro_pedido": "2025-02-06T12:00:00+00:00",
+    "ultimo_pedido": "2026-07-06T12:00:00+00:00",
+    "bases_compradas": [
+      "Sarja"
+    ],
+    "top_artigos": [
+      "SARJA FLEX 160 97 411 CAQUI TANGELO REF# 400/05 PAN 160713 U (21,521 m)",
+      "SARJA FLEX 160 97% ALG 3% ELAS 804 CINZA INTENSO REF# U (11,435 m)",
+      "SARJA FLEX 160 97% ALG 3% ELAS 900 PRETO REF# 836 U (7,176 m)"
+    ],
+    "top_cores": [
+      "411 CAQUI TANGELO REF# 400/05 PAN 160713 (21,521 m)",
+      "804 CINZA INTENSO REF# (11,435 m)",
+      "900 PRETO REF# 836 (7,176 m)"
+    ],
+    "recomendacao_deise": "Apresentar lançamentos de: Tricoline, Linho"
+  },
+  {
+    "posicao": 40,
+    "codigo": "2276",
+    "nome": "BARROCCO MODAS LTDA",
+    "representante": "MJS CONSULTORIA E GESTAO COMERCIAL EIRELI",
+    "faturamento_total": 764592.68,
+    "metros_total": 48937.2,
+    "total_pedidos": 49,
+    "ticket_medio": 15603.93224489796,
+    "preco_medio_m": 15.62395641761278,
+    "primeiro_pedido": "2025-01-14T12:00:00+00:00",
+    "ultimo_pedido": "2026-10-21T00:00:00+00:00",
+    "bases_compradas": [
+      "Sarja",
+      "Tricoline",
+      "Linho",
+      "Viscose / Outros"
+    ],
+    "top_artigos": [
+      "SARJA FLEX 160 97% ALG 3% ELAS 900 PRETO REF# 836 U (6,028 m)",
+      "SARJA FLEX 160 97 411 CAQUI TANGELO REF# 400/05 PAN 160713 U (4,640 m)",
+      "SARJA FLEX 160 97% ALG 3% ELAS 960 MARINHO NOITE REF# 613 U (2,997 m)"
+    ],
+    "top_cores": [
+      "900 PRETO REF# 836 (9,128 m)",
+      "411 CAQUI TANGELO REF# 400/05 PAN 160713 (5,340 m)",
+      "960 MARINHO NOITE REF# 613 (4,047 m)"
+    ],
+    "recomendacao_deise": "Apresentar lançamentos de: Fio Tinto / Listrado"
+  },
+  {
+    "posicao": 41,
+    "codigo": "3260",
+    "nome": "AZZAS 2154 S.A",
+    "representante": "ZILMA TEIXEIRA DE LIMA REPRESENTACOES",
+    "faturamento_total": 753432.59,
+    "metros_total": 46153.8,
+    "total_pedidos": 109,
+    "ticket_medio": 6912.225596330275,
+    "preco_medio_m": 16.32438910772244,
+    "primeiro_pedido": "2025-03-27T12:00:00+00:00",
+    "ultimo_pedido": "2026-10-14T00:00:00+00:00",
+    "bases_compradas": [
+      "Sarja",
+      "Linho",
+      "Fio Tinto / Listrado",
+      "Viscose / Outros"
+    ],
+    "top_artigos": [
+      "VERANO LINHO PLUS 55%AL15%LIN30 960 MARINHO NOITE REF# 613 U (3,302 m)",
+      "VERANO LINHO PLUS 55%AL15%LIN 6029 VERDE CARVALHO REF# PAN U (3,250 m)",
+      "VERANO LINHO PLUS 55%AL15%LIN30%VIS 002 NATURAL REF# 0 U (2,550 m)"
+    ],
+    "top_cores": [
+      "960 MARINHO NOITE REF# 613 (3,424 m)",
+      "6029 VERDE CARVALHO REF# PAN (3,250 m)",
+      "002 NATURAL REF# 0 (3,194 m)"
+    ],
+    "recomendacao_deise": "Apresentar lançamentos de: Tricoline"
+  },
+  {
+    "posicao": 42,
+    "codigo": "198",
+    "nome": "J.N. VINATEX COMERCIO DE TECIDOS LTDA",
+    "representante": "DESIGNTEX INDUSTRIA E COMERCIO DE TECIDOS LTDA",
+    "faturamento_total": 728456.3,
+    "metros_total": 67844.7,
+    "total_pedidos": 54,
+    "ticket_medio": 13489.931481481482,
+    "preco_medio_m": 10.737114321383986,
+    "primeiro_pedido": "2025-01-17T12:00:00+00:00",
+    "ultimo_pedido": "2026-11-05T12:00:00+00:00",
+    "bases_compradas": [
+      "Tricoline",
+      "Viscose / Outros",
+      "Linho",
+      "Sarja",
+      "Fio Tinto / Listrado"
+    ],
+    "top_artigos": [
+      "TRICOLINE PREMIUM 100% ALGODAO 1437-1 U (1,635 m)",
+      "TRICOLINE PREMIUM 100% ALGODAO 1607-79 U (1,435 m)",
+      "TRICOLINE PREMIUM 100% ALGODAO 1825-1 U (1,157 m)"
+    ],
+    "top_cores": [
+      "240 BEGE AREIA REF# 492 PANTONE 12-0703 (1,850 m)",
+      "1437-1 (1,635 m)",
+      "1607-79 (1,435 m)"
+    ],
+    "recomendacao_deise": "Expansão de mix de cores e novos lançamentos de alta gramatura"
+  },
+  {
+    "posicao": 43,
+    "codigo": "4177",
+    "nome": "DESIGN TEXTIL LTDA",
+    "representante": "DESIGNTEX INDUSTRIA E COMERCIO DE TECIDOS LTDA",
+    "faturamento_total": 716073.05,
+    "metros_total": 67816.0,
+    "total_pedidos": 7,
+    "ticket_medio": 102296.15000000001,
+    "preco_medio_m": 10.559057597027252,
+    "primeiro_pedido": "2025-01-10T12:00:00+00:00",
+    "ultimo_pedido": "2025-01-28T12:00:00+00:00",
+    "bases_compradas": [
+      "Tricoline",
+      "Viscose / Outros",
+      "Linho",
+      "Sarja",
+      "Fio Tinto / Listrado"
+    ],
+    "top_artigos": [
+      "LINHO DELUXE 55%ALG 30%VISC 15% 248 BEGE PARDO REF# 400/73 U (1,500 m)",
+      "LINHO DELUXE 55% ALG 30% VISC 15% 620 VERDE MUSGO REF# 514 U (1,400 m)",
+      "LINHO DELUXE 55%ALG 668 VERDE OLIVE REF# 500/05 PAN 160430 U (1,400 m)"
+    ],
+    "top_cores": [
+      "002 NATURAL REF# 0 (3,557 m)",
+      "100 BRANCO REF# 001 (2,865 m)",
+      "240 BEGE AREIA REF# 492 PANTONE 12-0703 (2,131 m)"
+    ],
+    "recomendacao_deise": "Expansão de mix de cores e novos lançamentos de alta gramatura"
+  },
+  {
+    "posicao": 44,
+    "codigo": "3009",
+    "nome": "KABRIOLLI INDUSTRIA E COMERCIO DE ROUPAS LTDA",
+    "representante": "W.S. CONSULTORIA E REPRESENTACOES COMERCIAIS LTDA",
+    "faturamento_total": 695963.98,
+    "metros_total": 54605.6,
+    "total_pedidos": 21,
+    "ticket_medio": 33141.141904761906,
+    "preco_medio_m": 12.745285831489811,
+    "primeiro_pedido": "2025-02-11T12:00:00+00:00",
+    "ultimo_pedido": "2026-01-26T12:00:00+00:00",
+    "bases_compradas": [
+      "Sarja",
+      "Tricoline",
+      "Linho",
+      "Fio Tinto / Listrado"
+    ],
+    "top_artigos": [
+      "TRICOLINE TOP LINE 40/1 100% AL 960 MARINHO NOITE REF# 613 U (22,395 m)",
+      "TRICOLINE TOP LINE 40 1024 MARROM JAVA REF# PANTONE 191016 U (11,700 m)",
+      "TRICOLINE TOP LINE 4 1008 MARROM MAGNO REF# 470 PAN 191230 U (8,200 m)"
+    ],
+    "top_cores": [
+      "960 MARINHO NOITE REF# 613 (22,395 m)",
+      "1024 MARROM JAVA REF# PANTONE 191016 (11,700 m)",
+      "1008 MARROM MAGNO REF# 470 PAN 191230 (8,200 m)"
+    ],
+    "recomendacao_deise": "Expansão de mix de cores e novos lançamentos de alta gramatura"
+  },
+  {
+    "posicao": 45,
+    "codigo": "3882",
+    "nome": "STUDIO 40 IND E COM DE VESTUARIO LTDA",
+    "representante": "M.N REPRESENTACAO COMERCIAL LTDA",
+    "faturamento_total": 675368.0,
+    "metros_total": 56235.0,
+    "total_pedidos": 19,
+    "ticket_medio": 35545.68421052631,
+    "preco_medio_m": 12.009744820841114,
+    "primeiro_pedido": "2025-02-17T12:00:00+00:00",
+    "ultimo_pedido": "2026-06-25T12:00:00+00:00",
+    "bases_compradas": [
+      "Tricoline",
+      "Linho"
+    ],
+    "top_artigos": [
+      "TRICOLINE TOP LINE 40/1 100% ALGODAO 1600-19 U (11,646 m)",
+      "TRICOLINE TOP LINE 40/1 100% ALGODAO 1600-103 U (9,300 m)",
+      "LINHO PANAMA 55% ALG 15% LINHO 30% VISCO 1853-1 U (7,547 m)"
+    ],
+    "top_cores": [
+      "1600-19 (11,646 m)",
+      "001OFF WHITE REF# 0 (10,900 m)",
+      "1600-103 (9,300 m)"
+    ],
+    "recomendacao_deise": "Apresentar lançamentos de: Sarja, Fio Tinto / Listrado"
+  },
+  {
+    "posicao": 46,
+    "codigo": "1059",
+    "nome": "VEST SURF IND COM IMP E EXP DE ROUPAS LTDA.",
+    "representante": "J A LUIZ DA SILVA REPRESENTACOES",
+    "faturamento_total": 638561.1,
+    "metros_total": 44055.3,
+    "total_pedidos": 69,
+    "ticket_medio": 9254.508695652174,
+    "preco_medio_m": 14.494535277253814,
+    "primeiro_pedido": "2025-01-06T12:00:00+00:00",
+    "ultimo_pedido": "2026-08-27T00:00:00+00:00",
+    "bases_compradas": [
+      "Sarja",
+      "Tricoline",
+      "Linho"
+    ],
+    "top_artigos": [
+      "LINHO IPANEMA 55% ALGO 20% VISC 25% LIN 002 NATURAL REF# 0 U (2,937 m)",
+      "LINHO PANAMA 55%ALG 15%LIN 30%V 960 MARINHO NOITE REF# 613 U (2,011 m)",
+      "LINHO PANAMA 55%ALG 15%LIN 30%VIS 002 NATURAL REF# 0 U (1,703 m)"
+    ],
+    "top_cores": [
+      "002 NATURAL REF# 0 (4,648 m)",
+      "960 MARINHO NOITE REF# 613 (2,016 m)",
+      "411 CAQUI TANGELO REF# 400/05 PAN 160713 (1,703 m)"
+    ],
+    "recomendacao_deise": "Apresentar lançamentos de: Fio Tinto / Listrado"
+  },
+  {
+    "posicao": 47,
+    "codigo": "1487",
+    "nome": "MARIA ANGELA DE ASSIS COM DE ROUPAS LTDA",
+    "representante": "ZILMA TEIXEIRA DE LIMA REPRESENTACOES",
+    "faturamento_total": 630943.15,
+    "metros_total": 39033.5,
+    "total_pedidos": 71,
+    "ticket_medio": 8886.52323943662,
+    "preco_medio_m": 16.164144901174634,
+    "primeiro_pedido": "2025-01-23T12:00:00+00:00",
+    "ultimo_pedido": "2026-10-23T00:00:00+00:00",
+    "bases_compradas": [
+      "Tricoline",
+      "Viscose / Outros",
+      "Linho",
+      "Sarja",
+      "Fio Tinto / Listrado"
+    ],
+    "top_artigos": [
+      "SARJA ZARA 100% ALGODAO 001OFF WHITE REF# 0 U (2,890 m)",
+      "SARJA ZARA 100% ALGODAO 1946C5-1 U (2,050 m)",
+      "TRICOLINE TOP LINE 40/1 100% ALGODAO 001OFF WHITE REF# 0 U (1,450 m)"
+    ],
+    "top_cores": [
+      "001OFF WHITE REF# 0 (4,800 m)",
+      "1946C5-1 (2,050 m)",
+      "1832-1 (1,254 m)"
+    ],
+    "recomendacao_deise": "Expansão de mix de cores e novos lançamentos de alta gramatura"
+  },
+  {
+    "posicao": 48,
+    "codigo": "144",
+    "nome": "SANTOS CONDORI QUISPE 23411451831",
+    "representante": "W.S. CONSULTORIA E REPRESENTACOES COMERCIAIS LTDA",
+    "faturamento_total": 620873.53,
+    "metros_total": 45023.0,
+    "total_pedidos": 42,
+    "ticket_medio": 14782.703095238096,
+    "preco_medio_m": 13.790141261133199,
+    "primeiro_pedido": "2025-02-06T12:00:00+00:00",
+    "ultimo_pedido": "2026-08-06T12:00:00+00:00",
+    "bases_compradas": [
+      "Tricoline",
+      "Linho",
+      "Fio Tinto / Listrado",
+      "Viscose / Outros"
+    ],
+    "top_artigos": [
+      "LINHO DELUXE 55% ALG 30% VISC 15% LINHO 002 NATURAL REF# 0 U (4,140 m)",
+      "TRICOLINE DELUXE 100% ALGODAO 2638-2 U (3,108 m)",
+      "TRICOLINE DELUXE 100% ALGODAO 2638-6 U (2,991 m)"
+    ],
+    "top_cores": [
+      "760 AZUL MAYA REF# 681 PANTONE 134302 (4,858 m)",
+      "002 NATURAL REF# 0 (4,140 m)",
+      "450 VERMELHO REF# 279 (3,212 m)"
+    ],
+    "recomendacao_deise": "Apresentar lançamentos de: Sarja"
+  },
+  {
+    "posicao": 49,
+    "codigo": "3160",
+    "nome": "BRELLAN CAMISARIA LTDA",
+    "representante": "C-TEXTIL REPRESENTACOES LTDA",
+    "faturamento_total": 610518.42,
+    "metros_total": 44808.0,
+    "total_pedidos": 43,
+    "ticket_medio": 14198.102790697676,
+    "preco_medio_m": 13.625210230316016,
+    "primeiro_pedido": "2025-08-26T12:00:00+00:00",
+    "ultimo_pedido": "2026-10-29T00:00:00+00:00",
+    "bases_compradas": [
+      "Sarja",
+      "Linho",
+      "Fio Tinto / Listrado",
+      "Viscose / Outros"
+    ],
+    "top_artigos": [
+      "LINHO PANAMA 55%ALG 15%LIN 30%VIS 002 NATURAL REF# 0 U (13,550 m)",
+      "LINHO PANAMA 55%ALG 15%LIN 30%VIS 900 PRETO REF# 836 U (7,700 m)",
+      "LINHO PANAMA 55%ALG 15%LIN 30%VIS 100 BRANCO REF# 001 U (6,098 m)"
+    ],
+    "top_cores": [
+      "002 NATURAL REF# 0 (16,602 m)",
+      "900 PRETO REF# 836 (9,850 m)",
+      "100 BRANCO REF# 001 (8,895 m)"
+    ],
+    "recomendacao_deise": "Apresentar lançamentos de: Tricoline"
+  },
+  {
+    "posicao": 50,
+    "codigo": "110000001",
+    "nome": "DESIGNTEX INDUSTRIA E COMERCIO DE TECIDOS LTDA",
+    "representante": "DESIGNTEX INDUSTRIA E COMERCIO DE TECIDOS LTDA",
+    "faturamento_total": 604920.82,
+    "metros_total": 48134.38,
+    "total_pedidos": 34,
+    "ticket_medio": 17791.78882352941,
+    "preco_medio_m": 12.567333785124063,
+    "primeiro_pedido": "2025-02-26T12:00:00+00:00",
+    "ultimo_pedido": "2026-11-04T00:00:00+00:00",
+    "bases_compradas": [
+      "Tricoline",
+      "Viscose / Outros",
+      "Linho",
+      "Sarja",
+      "Fio Tinto / Listrado"
+    ],
+    "top_artigos": [
+      "TRICOLINE PARIS PLUS 760 AZUL MAYA REF# 681 PANTONE 134302 U (3,000 m)",
+      "TRICOLINE DELUXE 100% ALGODAO 3518-6 U (2,273 m)",
+      "SARJA FLEX 160 97% ALG 3% ELAS 804 CINZA INTENSO REF# U (2,131 m)"
+    ],
+    "top_cores": [
+      "760 AZUL MAYA REF# 681 PANTONE 134302 (4,432 m)",
+      "411 CAQUI TANGELO REF# 400/05 PAN 160713 (3,720 m)",
+      "240 BEGE AREIA REF# 492 PANTONE 12-0703 (3,189 m)"
+    ],
+    "recomendacao_deise": "Expansão de mix de cores e novos lançamentos de alta gramatura"
+  }
+]
