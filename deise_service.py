@@ -188,12 +188,12 @@ class DeiseService:
         if not cliente:
             return {
                 "mensagem": "Vou transferir para nossa equipe de atendimento geral da Designtex.",
-                "link_zap": "https://wa.me/5511999999999",
+                "link_zap": "https://wa.me/5531990151359",
                 "rep_nome": "Comercial Designtex"
             }
 
         rep_nome = cliente.get("rep_contato") or cliente.get("rep_nome") or "Representante Designtex"
-        rep_fone = cliente.get("rep_telefone") or "5511999999999"
+        rep_fone = cliente.get("rep_telefone") or "5531990151359"
         
         # Limpa telefone para formato internacional wa.me
         limpo_fone = "".join(filter(str.isdigit, rep_fone))
