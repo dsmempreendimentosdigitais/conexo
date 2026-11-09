@@ -27,6 +27,8 @@ app.add_middleware(
     allow_origins=[
         "https://conexo.dev",
         "https://www.conexo.dev",
+        "https://vendas.designtex.com.br",
+        "https://www.vendas.designtex.com.br",
         "http://localhost:5173",
         "http://localhost:3000",
     ],
