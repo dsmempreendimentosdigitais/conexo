@@ -576,94 +576,17 @@ async def webhook_whatsapp_deise(payload: dict):
     if not texto_limpo or not remetente:
         return {"ignorado": True, "motivo": "sem texto ou remetente"}
 
-    # 2. Identificação de código de cliente se informado no texto
+    # 2. Identificação de código de cliente se informado no texto ou no payload
     match_cod = re.search(r"Código:?\s*(\d+)", texto_limpo, re.IGNORECASE) or re.search(r"Cod\s*(\d+)", texto_limpo, re.IGNORECASE)
-    cliente_cod = match_cod.group(1) if match_cod else "14"  # Default FOXS TEXTIL (14)
+    cliente_cod = (
+        match_cod.group(1) if match_cod 
+        else str(payload.get("cliente_codigo") or data.get("cliente_codigo") or "14")
+    )
 
-    # 3. Roteamento de intenções da DEISE
-    if match_cod or "olá deise" in texto_limpo.lower() or "ola deise" in texto_limpo.lower() or "menu" in texto_limpo.lower():
-        resposta_texto = DeiseService.gerar_boas_vindas(cliente_cod)
-        
-    elif texto_limpo == "1" or "pronta entrega" in texto_limpo.lower():
-        resposta_texto = (
-            "👗 *Consulta de Tecidos na Pronta Entrega*\n\n"
-            "Qual acabamento você deseja consultar?\n"
-            "*1* - Liso\n"
-            "*2* - Estampado"
-        )
-    elif texto_limpo == "2" or "programação" in texto_limpo.lower() or "programacao" in texto_limpo.lower():
-        resposta_texto = (
-            "🧵 *Consulta de Tecidos em Programação (OPs de Tecelagem)*\n\n"
-            "Qual acabamento você deseja consultar?\n"
-            "*1* - Liso\n"
-            "*2* - Estampado"
-        )
-    elif texto_limpo in ("liso", "1 - liso", "1"):
-        resposta_texto = (
-            "Ótimo! Qual base você deseja ver agora?\n"
-            "*A* - Tricolines\n"
-            "*B* - Linho\n"
-            "*C* - Sarja\n"
-            "*D* - Ver todas as opções disponíveis"
-        )
-    elif texto_limpo.upper() in ("B", "LINHO", "B - LINHO"):
-        itens = DeiseService.consultar_estoque_pronta_entrega("liso", "linho")
-        linhas = ["🌿 *Opções de Linho Liso em Pronta Entrega:*\n"]
-        for it in itens[:5]:
-            linhas.append(f"• *{it['artigo']}*\n  Cor: {it['cor']} | *Saldo: {it['metros_disponiveis']:,.1f} m*")
-        linhas.append("\n📲 Deseja solicitar pré-reserva de algum desses lotes com o seu representante?")
-        resposta_texto = "\n".join(linhas)
-        
-    elif texto_limpo in ("3", "3️⃣") or "pedido" in texto_limpo.lower() or "pedidos" in texto_limpo.lower():
-        # Consulta pedidos estritamente da FOXS TEXTIL (14)
-        pedidos = DeiseService.get_pedidos_cliente(cliente_cod, limit=4)
-        if pedidos:
-            linhas = [f"📦 *Acompanhamento de Pedidos — FOXS TEXTIL (Cód: {cliente_cod}):*\n"]
-            for p in pedidos:
-                ped_num = p.get("pedido")
-                status = p.get("status") or "Em processamento"
-                metros = float(p.get("metros") or 0)
-                nf = p.get("nf") or "Aguardando faturamento"
-                prev = p.get("previsao_faturamento") or "A definir"
-                linhas.append(
-                    f"🔹 *Pedido TOTVS: {ped_num}*\n"
-                    f"   Status: *{status}*\n"
-                    f"   Volume: *{metros:,.1f} m*\n"
-                    f"   Nota Fiscal: *{nf}*\n"
-                    f"   Previsão: {prev}\n"
-                )
-            linhas.append("Digite *5* para falar com o seu representante sobre qualquer um desses pedidos.")
-            resposta_texto = "\n".join(linhas)
-        else:
-            resposta_texto = f"Não encontrei pedidos recentes em aberto para a FOXS TEXTIL (Cód: {cliente_cod})."
-            
-    elif texto_limpo in ("4", "4️⃣") or "catálogo" in texto_limpo.lower() or "catalogo" in texto_limpo.lower():
-        resposta_texto = (
-            "📖 *Catálogo Digital & Lançamentos Designtex Tecidos*\n\n"
-            "Acesse nosso catálogo completo e mostruário digital pelo link abaixo:\n"
-            "👉 https://vendas.designtex.com.br/catalogo\n\n"
-            "Para fazer download das fichas técnicas ou solicitar cartela de cores física, digite *5* para falar com seu representante!"
-        )
-        
-    elif texto_limpo in ("5", "5️⃣") or "representante" in texto_limpo.lower():
-        res_rep = DeiseService.gerar_transferencia_representante(cliente_cod)
-        resposta_texto = res_rep["mensagem"]
-        
-    else:
-        cliente_info = DeiseService.validar_cliente(cliente_cod)
-        nome_cli = cliente_info.get("nome_fantasia") or "FOXS TEXTIL" if cliente_info else "FOXS TEXTIL"
-        resposta_texto = (
-            f"Olá! Sou a *Deise*, assistente comercial da *Designtex Tecidos*. 👗🧵\n"
-            f"Atendimento exclusivo para *{nome_cli}*.\n\n"
-            "Como posso te ajudar agora? Digite o número da opção:\n\n"
-            "*1️⃣ Consultar tecidos na Pronta Entrega*\n"
-            "*2️⃣ Consultar tecidos em Programação*\n"
-            "*3️⃣ Acompanhar meus pedidos em aberto*\n"
-            "*4️⃣ Ver catálogo e lançamentos*\n"
-            "*5️⃣ Falar com meu representante oficial*"
-        )
+    # 3. Processamento inteligente da DEISE com gestão de estado de diálogo
+    resposta_texto = DeiseService.atender(remetente=remetente, texto=texto_limpo, cliente_cod=cliente_cod)
 
-    # 4. Envio automático de volta para o WhatsApp do cliente via WAHA
+    # 4. Envio automático de volta para o WhatsApp do cliente via WAHA (se não for requisição interna do portal)
     waha_url = os.getenv("WAHA_SERVER_URL", "https://deise-zap.onrender.com")
     waha_key = os.getenv("WAHA_API_KEY", "deise2026")
     
