@@ -29,6 +29,63 @@ _SESSOES: Dict[str, Dict[str, Any]] = {}
 
 SUPABASE_STORAGE_DESENHOS = "https://liolnupwhhpsryfgnnyl.supabase.co/storage/v1/object/public/desenhos"
 
+BASES_CONHECIDAS = [
+    "TRICOLINE PARIS PLUS", "TRICOLINE TOP LINE", "TRICOLINE DELUXE", 
+    "TRICOLINE HAVANA", "TRICOLINE PREMIUM", "TRICOLINE LONDRES", "TRICOLINE CLASSIC",
+    "LINHO DELUXE MAQUINETADO", "LINHO DELUXE", "LINHO PANAMA", "LINHO IPANEMA", 
+    "LINHO MARAGOGI", "LINHO CARAIVA", "LINHO ATALAIA", "LINHO BELGA", "LINHO BLEND", "LINHO XADREZ",
+    "SARJA CARIBE FLEX", "SARJA CARIBE LIGHT", "SARJA URBAN FLEX", "SARJA STREET", 
+    "SARJA VELVET PELETIZADA", "SARJA VELVET", "SARJA PROWORK PROFISSIONAL", "SARJA PROWORK", 
+    "SARJA NATURE 170", "SARJA NATURE", "SARJA DAKOTA 170", "SARJA DAKOTA", 
+    "SARJA INHOTIM", "SARJA BYSKAY", "SARJA FLEX 160", "SARJA FLEX", "SARJA ZARA",
+    "VERANO FLAME 160", "VERANO FLAME", "VERANO LINHO PLUS", "VERANO LINHO", "VERANO CHAMBREY", 
+    "VERANO CHAMBRAY 160", "VERANO STRIPED", "VERANO ARIZONA", "VERANO MILANO",
+    "PANAMA COM ELASTANO", "PANAMA C/ ELAS", "PANAMA C/ELAS", "PANAMA",
+    "CHAMBRAY TWO TONE 160", "CHAMBRAY TWO TONE", "CHAMBRAY PARATY",
+    "RUSH PELETIZADO", "RUSH PREMIUM", "TECIDO RUSH",
+    "FINE FLEX JEANS", "BOTONE COLOR PLUS", "BOTONE COLOR", "ROYALE FIO TINTO",
+    "VENETO FIO TINTO", "TESSERA RUSTIC", "POPELINE PRIMORE", "RAYON BALLI",
+    "MAQTTON RUSTIC", "MAQTTON LINHO", "VISCOSE DELUXE", "AMALFI RUSTIC", "MEDITERRANEO",
+    "RIVIERA", "BARI RUSTIC", "PORTO FINO", "SORRENTO", "CIERRO LINHO", "PROVANCE FLAME"
+]
+
+def limpar_nome_artigo(artigo: str) -> str:
+    if not artigo:
+        return "Tecido Designtex"
+    s = str(artigo).strip()
+    is_ld = bool(re.search(r'\(\s*LD\s*\)|\bLD\b', s, re.IGNORECASE))
+    s_upper = s.upper()
+
+    matched = None
+    for b in BASES_CONHECIDAS:
+        if b in s_upper:
+            matched = b
+            break
+
+    if matched:
+        res = matched
+    else:
+        sem_ld = re.sub(r'\(\s*LD\s*\)', '', s, flags=re.IGNORECASE)
+        parts = re.split(r'\b(\d+%\s*|\d{3,}\b|\(|\bREF#?|\bPAN\b|\bPANTONE\b)', sem_ld, flags=re.IGNORECASE)
+        res = (parts[0] or sem_ld).strip().rstrip("-_ /")
+
+    if is_ld and "(LD)" not in res:
+        res += " (LD)"
+    return res or s
+
+def limpar_nome_cor(cor: str) -> str:
+    if not cor:
+        return "Padrão"
+    s = str(cor).strip()
+    s = re.sub(r'REF#.*$', '', s, flags=re.IGNORECASE)
+    s = re.sub(r'\bCOD\s*\d+.*$', '', s, flags=re.IGNORECASE)
+    s = re.sub(r'\bPANTONE\s*[\d-]+.*$', '', s, flags=re.IGNORECASE)
+    s = re.sub(r'\bPAN\s*[\d-]+.*$', '', s, flags=re.IGNORECASE)
+    s = re.sub(r'\bPAN\b.*$', '', s, flags=re.IGNORECASE)
+    s = re.sub(r'\bU\b\s*$', '', s, flags=re.IGNORECASE)
+    s = re.sub(r'[\s\-_/:]+$', '', s).strip()
+    return s or cor
+
 
 class DeiseService:
     """
@@ -422,9 +479,9 @@ class DeiseService:
             sessao["step"] = None
 
             if modulo == "pronta_entrega":
-                return cls._gerar_resposta_estoque(acabamento, base_escolhida)
+                return cls._gerar_resposta_estoque(acabamento, base_escolhida, cliente_cod)
             else:
-                return cls._gerar_resposta_programacao(acabamento, base_escolhida)
+                return cls._gerar_resposta_programacao(acabamento, base_escolhida, cliente_cod)
 
         # 5. Reconhecimento Direto por Palavras-chave (Texto Livre)
         if any(palavra in texto_norm for palavra in ("pedido", "pedidos", "entrega", "faturamento", "nota fiscal", "nf")):
@@ -452,14 +509,14 @@ class DeiseService:
                     )
                 )
                 sessao["step"] = None
-                return cls._gerar_resposta_estoque(acabamento, base_key)
+                return cls._gerar_resposta_estoque(acabamento, base_key, cliente_cod)
 
         # Fallback padrão: Boas-vindas guiada
         sessao["step"] = None
         return cls.gerar_boas_vindas(cliente_cod)
 
     @classmethod
-    def _gerar_resposta_estoque(cls, acabamento: str, base: str) -> str:
+    def _gerar_resposta_estoque(cls, acabamento: str, base: str, cliente_cod: str = "14") -> str:
         itens = cls.consultar_estoque_pronta_entrega(acabamento, base)
         
         rotulos_tipo = {
@@ -482,15 +539,19 @@ class DeiseService:
         linhas = [f"{emoji_header} *Tecidos {tipo_label} em Pronta Entrega ({base_label}):*\n"]
 
         for it in itens[:6]:
-            art = it.get("artigo") or "Tecido Designtex"
-            cor = it.get("cor") or "Padrão"
+            raw_art = it.get("artigo") or "Tecido Designtex"
+            raw_cor = it.get("cor") or "Padrão"
             cor_cod = str(it.get("cor_codigo") or "").strip()
             metros = float(it.get("metros_disponiveis") or 0)
             hex_c = (it.get("hex_color") or "").strip()
             desenho_url = (it.get("desenho_url") or "").strip()
 
+            art = limpar_nome_artigo(raw_art)
+            cor = limpar_nome_cor(raw_cor)
+            metros_fmt = f"{metros:,.1f}".replace(",", "X").replace(".", ",").replace("X", ".")
+
             hex_tag = f" [hex:{hex_c}]" if (hex_c and hex_c.startswith("#")) else ""
-            linhas.append(f"• *{art}*\n  Cor: {cor}{hex_tag} | *Disponível: {metros:,.1f} m*")
+            linhas.append(f"• *{art}*\n  Cor: {cor}{hex_tag} | *Disponível: {metros_fmt} m*")
 
             # Se for estampado, adiciona a estampa para preview e download
             if is_estampado:
@@ -501,6 +562,10 @@ class DeiseService:
                 if img_url:
                     linhas.append(f"  [estampa:{img_url}]")
 
+        # Link oficial para download do relatório em PDF
+        pdf_url = f"https://vendas.designtex.com.br/api/deise/pdf?modulo=pe&acabamento={acabamento}&base={base}&cliente={cliente_cod}"
+        linhas.append(f"\n📄 [Baixar Relatório Completo em PDF]({pdf_url})")
+
         linhas.append(
             "\n📲 *Deseja solicitar pré-reserva de algum desses lotes?*\n"
             "Digite *5* para falar com seu representante comercial ou digite *menu* para voltar."
@@ -508,7 +573,7 @@ class DeiseService:
         return "\n".join(linhas)
 
     @classmethod
-    def _gerar_resposta_programacao(cls, acabamento: str, base: str) -> str:
+    def _gerar_resposta_programacao(cls, acabamento: str, base: str, cliente_cod: str = "14") -> str:
         ops = cls.consultar_programacao_ops(acabamento, base)
         rotulos_tipo = {
             "liso": "Lisos Convencionais",
@@ -529,17 +594,25 @@ class DeiseService:
         linhas = [f"🧵 *Ordens de Produção em Programação ({base_label} - {tipo_label}):*\n"]
         for op in ops[:6]:
             op_num = op.get("op") or "OP"
-            art = op.get("artigo") or "Tecido"
-            cor = op.get("cor") or "Cor Padrão"
+            raw_art = op.get("artigo") or "Tecido"
+            raw_cor = op.get("cor") or "Cor Padrão"
             metros = float(op.get("metros_planejados") or 0)
             prev = op.get("previsao_entrega") or "A definir"
             hex_c = (op.get("hex_color") or "").strip()
             desenho_url = (op.get("desenho_url") or "").strip()
 
+            art = limpar_nome_artigo(raw_art)
+            cor = limpar_nome_cor(raw_cor)
+            metros_fmt = f"{metros:,.1f}".replace(",", "X").replace(".", ",").replace("X", ".")
+
             hex_tag = f" [hex:{hex_c}]" if (hex_c and hex_c.startswith("#")) else ""
-            linhas.append(f"• *OP {op_num}: {art}*\n  Cor: {cor}{hex_tag} | Previsão: *{prev}* | Saldo: *{metros:,.1f} m*")
+            linhas.append(f"• *OP {op_num}: {art}*\n  Cor: {cor}{hex_tag} | Previsão: *{prev}* | Saldo: *{metros_fmt} m*")
             if is_estampado and desenho_url:
                 linhas.append(f"  [estampa:{desenho_url}]")
+
+        # Link oficial para download do relatório em PDF
+        pdf_url = f"https://vendas.designtex.com.br/api/deise/pdf?modulo=prog&acabamento={acabamento}&base={base}&cliente={cliente_cod}"
+        linhas.append(f"\n📄 [Baixar Relatório Completo em PDF]({pdf_url})")
 
         linhas.append(
             "\n📲 *Deseja programar corte antecipado de alguma dessas OPs?*\n"
