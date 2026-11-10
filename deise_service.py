@@ -27,6 +27,8 @@ def desacentuar(txt: str) -> str:
 # Gerenciador de Sessões em Memória
 _SESSOES: Dict[str, Dict[str, Any]] = {}
 
+SUPABASE_STORAGE_DESENHOS = "https://liolnupwhhpsryfgnnyl.supabase.co/storage/v1/object/public/desenhos"
+
 
 class DeiseService:
     """
@@ -100,16 +102,21 @@ class DeiseService:
     @staticmethod
     def consultar_estoque_pronta_entrega(acabamento: str = "liso", base: str = "todas", termo_busca: str = "") -> List[Dict[str, Any]]:
         """
-        Consulta o estoque público de Pronta Entrega disponível para venda.
-        acabamento: 'liso' ou 'estampado'
+        Consulta o estoque de Pronta Entrega disponível por categoria oficial:
+        acabamento: 'liso', 'estampado', 'ld_liso', 'ld_estampado'
         base: 'tricoline', 'linho', 'sarja', ou 'todas'
         """
         filtros = ["quantidade_disponivel > 0"]
 
-        if acabamento == "liso":
-            filtros.append("(cor NOT ILIKE '%estamp%' AND descricao NOT ILIKE '%estamp%')")
-        elif acabamento == "estampado":
-            filtros.append("(cor ILIKE '%estamp%' OR descricao ILIKE '%estamp%')")
+        acab = acabamento.lower().strip()
+        if acab in ("liso", "1"):
+            filtros.append("categoria = 'liso'")
+        elif acab in ("estampado", "2"):
+            filtros.append("categoria = 'estampado'")
+        elif acab in ("ld_liso", "liso_ld", "3"):
+            filtros.append("categoria = 'ld_liso'")
+        elif acab in ("ld_estampado", "estampado_ld", "4"):
+            filtros.append("categoria = 'ld_estampado'")
 
         if base == "tricoline":
             filtros.append("(descricao ILIKE '%tricoline%')")
@@ -129,6 +136,9 @@ class DeiseService:
             cod_produto as codigo_artigo,
             cor,
             cor_codigo,
+            hex_color,
+            desenho_url,
+            categoria,
             quantidade_disponivel as metros_disponiveis
         FROM estoque_pe
         WHERE {where_clause}
@@ -145,10 +155,15 @@ class DeiseService:
         """
         filtros = ["quantidade_disponivel > 0"]
 
-        if acabamento == "liso":
-            filtros.append("(tipo = 'liso' OR nome_cor NOT ILIKE '%estamp%')")
-        elif acabamento == "estampado":
-            filtros.append("(tipo = 'estampado' OR nome_cor ILIKE '%estamp%')")
+        acab = acabamento.lower().strip()
+        if acab in ("liso", "1"):
+            filtros.append("tipo = 'liso'")
+        elif acab in ("estampado", "2"):
+            filtros.append("tipo = 'estampado'")
+        elif acab in ("ld_liso", "liso_ld", "3"):
+            filtros.append("(tipo = 'liso' AND (nome_tecido ILIKE '%(ld)%' OR nome_tecido ILIKE '%(dig)%'))")
+        elif acab in ("ld_estampado", "estampado_ld", "4"):
+            filtros.append("(tipo = 'estampado' AND (nome_tecido ILIKE '%(ld)%' OR nome_tecido ILIKE '%(dig)%'))")
 
         if base == "tricoline":
             filtros.append("(nome_tecido ILIKE '%tricoline%')")
@@ -167,6 +182,8 @@ class DeiseService:
             op,
             nome_tecido as artigo,
             nome_cor as cor,
+            hex_color,
+            desenho_url,
             previsao_faturamento as previsao_entrega,
             quantidade_disponivel as metros_planejados
         FROM programacoes
@@ -264,7 +281,7 @@ class DeiseService:
     def atender(cls, remetente: str, texto: str, cliente_cod: str = "14") -> str:
         """
         Processador de diálogo inteligente com gestão de sessão e máquina de estados.
-        Evita loops repetitivos e entende tanto opções numéricas quanto texto livre.
+        Suporta os 4 acabamentos: 1 - Liso, 2 - Estampado, 3 - Liso LD, 4 - Estampado LD.
         """
         texto_limpo = str(texto or "").strip()
         texto_norm = desacentuar(texto_limpo)
@@ -288,7 +305,7 @@ class DeiseService:
             sessao["step"] = None
             return cls.gerar_boas_vindas(cliente_cod)
 
-        # 2. Opções do Menu Principal (quando não está em um passo interno, ou se for chamado explicitamente)
+        # 2. Opções do Menu Principal
         if current_step is None:
             if texto_norm in ("1", "1)", "1 - pronta entrega", "pronta entrega", "pronta", "estoque", "pe"):
                 sessao["step"] = "aguardando_acabamento"
@@ -297,7 +314,9 @@ class DeiseService:
                     "👗 *Consulta de Tecidos na Pronta Entrega*\n\n"
                     "Qual acabamento você deseja consultar?\n"
                     "*1* - Liso\n"
-                    "*2* - Estampado"
+                    "*2* - Estampado\n"
+                    "*3* - Liso LD\n"
+                    "*4* - Estampado LD"
                 )
 
             elif texto_norm in ("2", "2)", "2 - programacao", "programacao", "programação", "ops", "producao", "produção"):
@@ -307,7 +326,9 @@ class DeiseService:
                     "🧵 *Consulta de Tecidos em Programação (OPs de Tecelagem)*\n\n"
                     "Qual acabamento você deseja consultar?\n"
                     "*1* - Liso\n"
-                    "*2* - Estampado"
+                    "*2* - Estampado\n"
+                    "*3* - Liso LD\n"
+                    "*4* - Estampado LD"
                 )
 
             elif texto_norm in ("3", "3)", "3 - pedidos", "pedidos", "meus pedidos", "pedido", "status pedido"):
@@ -324,7 +345,7 @@ class DeiseService:
             elif texto_norm in ("5", "5)", "5 - representante", "representante", "vendedor", "contato"):
                 return cls.gerar_transferencia_representante(cliente_cod)["mensagem"]
 
-        # 3. MÁQUINA DE ESTADOS: PASSO 1 (Acabamento: Liso vs Estampado)
+        # 3. MÁQUINA DE ESTADOS: PASSO 1 (Acabamento: 1 - Liso, 2 - Estampado, 3 - Liso LD, 4 - Estampado LD)
         if current_step == "aguardando_acabamento":
             modulo = sessao.get("modulo", "pronta_entrega")
             modulo_label = "Pronta Entrega" if modulo == "pronta_entrega" else "Programação (OPs)"
@@ -333,26 +354,50 @@ class DeiseService:
                 sessao["acabamento"] = "liso"
                 sessao["step"] = "aguardando_base"
                 return (
-                    f"🌿 *Tecidos Lisos ({modulo_label})*\n\n"
+                    f"🌿 *Tecidos Lisos Convencionais ({modulo_label})*\n\n"
                     "Qual base você deseja conferir agora?\n"
-                    "*1* - Tricolines (Top Line, Deluxe, Paris Plus...)\n"
-                    "*2* - Linhos (Linho Panama, Deluxe, Maragogi...)\n"
-                    "*3* - Sarjas (Sarja Flex, Zara, Dakota...)\n"
+                    "*1* - Tricolines (Top Line, Paris Plus...)\n"
+                    "*2* - Linhos (Linho Panama, Linho Deluxe, Maragogi...)\n"
+                    "*3* - Sarjas (Sarja Flex, Sarja Zara, Dakota...)\n"
                     "*4* - Ver todas as opções disponíveis"
                 )
 
-            elif texto_norm in ("2", "2)", "2 - estampado", "estampado", "estampados", "estampa", "estampas"):
+            elif texto_norm in ("2", "2)", "2 - estampado", "estampado", "estampados", "estampa", "rotativo"):
                 sessao["acabamento"] = "estampado"
                 sessao["step"] = "aguardando_base"
                 return (
-                    f"🎨 *Tecidos Estampados ({modulo_label})*\n\n"
+                    f"🎨 *Tecidos Estampados Convencionais ({modulo_label})*\n\n"
                     "Qual base você deseja conferir agora?\n"
                     "*1* - Tricolines Estampadas\n"
                     "*2* - Linhos Estampados\n"
                     "*3* - Sarjas Estampadas\n"
                     "*4* - Ver todas as estampas disponíveis"
                 )
-            
+
+            elif texto_norm in ("3", "3)", "3 - liso ld", "liso ld", "ld liso", "liso digital", "ld"):
+                sessao["acabamento"] = "ld_liso"
+                sessao["step"] = "aguardando_base"
+                return (
+                    f"✨ *Tecidos Lisos LD - Linha Digital ({modulo_label})*\n\n"
+                    "Qual base você deseja conferir agora?\n"
+                    "*1* - Tricolines LD (Tricoline Paris LD, Deluxe LD...)\n"
+                    "*2* - Linhos LD\n"
+                    "*3* - Sarjas LD (Sarja Caribe Flex LD...)\n"
+                    "*4* - Ver todas as opções disponíveis"
+                )
+
+            elif texto_norm in ("4", "4)", "4 - estampado ld", "estampado ld", "ld estampado", "estampa digital", "digital"):
+                sessao["acabamento"] = "ld_estampado"
+                sessao["step"] = "aguardando_base"
+                return (
+                    f"🌟 *Tecidos Estampados LD - Linha Digital ({modulo_label})*\n\n"
+                    "Qual base você deseja conferir agora?\n"
+                    "*1* - Tricolines Estampadas LD (Deluxe LD, Top Line Digital...)\n"
+                    "*2* - Linhos Estampados LD\n"
+                    "*3* - Sarjas Estampadas LD\n"
+                    "*4* - Ver todas as estampas disponíveis"
+                )
+
             # Se o usuário digitou direto o nome da base (ex: "linho", "tricoline", "sarja")
             elif any(b in texto_norm for b in ("tricoline", "linho", "sarja")):
                 sessao["step"] = "aguardando_base"
@@ -401,7 +446,11 @@ class DeiseService:
         # Se citou um tecido específico em texto livre (ex: "tem linho?", "tem sarja flex?", "tem tricoline?")
         for base_key in ("tricoline", "linho", "sarja"):
             if base_key in texto_norm:
-                acabamento = "estampado" if ("estamp" in texto_norm) else "liso"
+                acabamento = "ld_estampado" if ("ld" in texto_norm and "estamp" in texto_norm) else (
+                    "ld_liso" if ("ld" in texto_norm) else (
+                        "estampado" if ("estamp" in texto_norm) else "liso"
+                    )
+                )
                 sessao["step"] = None
                 return cls._gerar_resposta_estoque(acabamento, base_key)
 
@@ -412,7 +461,14 @@ class DeiseService:
     @classmethod
     def _gerar_resposta_estoque(cls, acabamento: str, base: str) -> str:
         itens = cls.consultar_estoque_pronta_entrega(acabamento, base)
-        tipo_label = "Estampados" if acabamento == "estampado" else "Lisos"
+        
+        rotulos_tipo = {
+            "liso": "Lisos Convencionais",
+            "estampado": "Estampados Convencionais",
+            "ld_liso": "Lisos LD (Linha Digital)",
+            "ld_estampado": "Estampados LD (Linha Digital)",
+        }
+        tipo_label = rotulos_tipo.get(acabamento, "Tecidos")
         base_label = base.capitalize() if base != "todas" else "Principais Bases"
 
         if not itens:
@@ -421,12 +477,29 @@ class DeiseService:
                 "Gostaria de consultar as opções em *Programação de Produção (OPs)*? Digite *2* ou digite *5* para falar com seu representante!"
             )
 
-        linhas = [f"👗 *Tecidos {tipo_label} em Pronta Entrega ({base_label}):*\n"]
+        is_estampado = acabamento in ("estampado", "ld_estampado")
+        emoji_header = "🎨" if is_estampado else "👗"
+        linhas = [f"{emoji_header} *Tecidos {tipo_label} em Pronta Entrega ({base_label}):*\n"]
+
         for it in itens[:6]:
             art = it.get("artigo") or "Tecido Designtex"
             cor = it.get("cor") or "Padrão"
+            cor_cod = str(it.get("cor_codigo") or "").strip()
             metros = float(it.get("metros_disponiveis") or 0)
-            linhas.append(f"• *{art}*\n  Cor: {cor} | *Disponível: {metros:,.1f} m*")
+            hex_c = (it.get("hex_color") or "").strip()
+            desenho_url = (it.get("desenho_url") or "").strip()
+
+            hex_tag = f" [hex:{hex_c}]" if (hex_c and hex_c.startswith("#")) else ""
+            linhas.append(f"• *{art}*\n  Cor: {cor}{hex_tag} | *Disponível: {metros:,.1f} m*")
+
+            # Se for estampado, adiciona a estampa para preview e download
+            if is_estampado:
+                img_url = desenho_url
+                if not img_url and cor_cod:
+                    clean_des = cor_cod.replace(" ", "")
+                    img_url = f"{SUPABASE_STORAGE_DESENHOS}/{clean_des}.jpg"
+                if img_url:
+                    linhas.append(f"  [estampa:{img_url}]")
 
         linhas.append(
             "\n📲 *Deseja solicitar pré-reserva de algum desses lotes?*\n"
@@ -437,7 +510,13 @@ class DeiseService:
     @classmethod
     def _gerar_resposta_programacao(cls, acabamento: str, base: str) -> str:
         ops = cls.consultar_programacao_ops(acabamento, base)
-        tipo_label = "Estampados" if acabamento == "estampado" else "Lisos"
+        rotulos_tipo = {
+            "liso": "Lisos Convencionais",
+            "estampado": "Estampados Convencionais",
+            "ld_liso": "Lisos LD (Linha Digital)",
+            "ld_estampado": "Estampados LD (Linha Digital)",
+        }
+        tipo_label = rotulos_tipo.get(acabamento, "Tecidos")
         base_label = base.capitalize() if base != "todas" else "Principais Linhas"
 
         if not ops:
@@ -446,6 +525,7 @@ class DeiseService:
                 "Digite *1* para conferir a Pronta Entrega ou *5* para consultar previsões especiais com seu representante!"
             )
 
+        is_estampado = acabamento in ("estampado", "ld_estampado")
         linhas = [f"🧵 *Ordens de Produção em Programação ({base_label} - {tipo_label}):*\n"]
         for op in ops[:6]:
             op_num = op.get("op") or "OP"
@@ -453,7 +533,13 @@ class DeiseService:
             cor = op.get("cor") or "Cor Padrão"
             metros = float(op.get("metros_planejados") or 0)
             prev = op.get("previsao_entrega") or "A definir"
-            linhas.append(f"• *OP {op_num}: {art}*\n  Cor: {cor} | Previsão: *{prev}* | Saldo: *{metros:,.1f} m*")
+            hex_c = (op.get("hex_color") or "").strip()
+            desenho_url = (op.get("desenho_url") or "").strip()
+
+            hex_tag = f" [hex:{hex_c}]" if (hex_c and hex_c.startswith("#")) else ""
+            linhas.append(f"• *OP {op_num}: {art}*\n  Cor: {cor}{hex_tag} | Previsão: *{prev}* | Saldo: *{metros:,.1f} m*")
+            if is_estampado and desenho_url:
+                linhas.append(f"  [estampa:{desenho_url}]")
 
         linhas.append(
             "\n📲 *Deseja programar corte antecipado de alguma dessas OPs?*\n"
