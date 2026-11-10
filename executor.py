@@ -437,7 +437,12 @@ def executar(intent: str, params: dict, ctx: dict | None = None):
         WITH pedidos_unificados AS (
             SELECT
                 p.id AS local_id,
-                COALESCE(pt.totvs_order_code, p.numero) AS pedido,
+                CASE 
+                    WHEN p.numero ILIKE 'W%' AND pt.totvs_order_code IS NOT NULL THEN p.numero || ' (TOTVS ' || pt.totvs_order_code || ')'
+                    WHEN p.numero ILIKE 'W%' THEN p.numero
+                    WHEN p.payload_totvs->>'orderId' ILIKE 'W%' THEN split_part(p.payload_totvs->>'orderId', '-', 1) || ' (TOTVS ' || COALESCE(pt.totvs_order_code, p.numero) || ')'
+                    ELSE COALESCE(pt.totvs_order_code, p.numero)
+                END AS pedido,
                 COALESCE(pt.representante_codigo, p.representante_codigo) AS rep_codigo,
                 COALESCE(pt.representante_nome, r.nome, '') AS rep_nome,
                 COALESCE(c.razao_social, c.nome_fantasia, pt.cliente_nome, p.payload_totvs->>'customerName', '-') AS cliente,
@@ -447,13 +452,23 @@ def executar(intent: str, params: dict, ctx: dict | None = None):
                     ELSE COALESCE(NULLIF(pt.lote_pedido, ''), p.payload_totvs->>'batchOrder', p.tipo_pedido, '-')
                 END AS lote_pedido,
                 CASE
-                    WHEN COALESCE(pt.status, p.status) IN ('InProgress', 'Em andamento', 'open', 'aberto', '1') THEN 'Em andamento'
-                    WHEN COALESCE(pt.status, p.status) IN ('Blocked', 'Bloqueado', '5') THEN 'Bloqueado'
+                    WHEN (p.status ILIKE '%cancel%' OR pt.status IN ('Canceled', 'Cancelled', 'Cancelado', '6', '9')) THEN 'Cancelado'
+                    WHEN (
+                        pt.status IN ('Blocked', 'Bloqueado', '5')
+                        OR p.status ILIKE '%bloquead%'
+                        OR p.status ILIKE '%análise%'
+                        OR p.status ILIKE '%analise%'
+                        OR p.status ILIKE '%aguardando%'
+                        OR (
+                            (p.numero ILIKE 'W%' OR p.payload_totvs->>'orderId' ILIKE 'W%')
+                            AND (pt.status IS NULL OR pt.status IN ('Blocked', 'Bloqueado', 'Pending', 'InAnalysis', '5', '8'))
+                            AND (p.status IS NULL OR (p.status NOT ILIKE '%liberad%' AND p.status NOT ILIKE '%atendid%' AND p.status NOT ILIKE '%aprovad%'))
+                        )
+                    ) THEN 'Bloqueado'
                     WHEN COALESCE(pt.status, p.status) IN ('InComposition', 'Em composição', 'Em composicao', '7') THEN 'Em composição'
-                    WHEN COALESCE(pt.status, p.status) IN ('Pending', 'InAnalysis', 'Em análise', 'Em analise', '8') THEN 'Em análise'
                     WHEN COALESCE(pt.status, p.status) IN ('PartiallyAnswered', 'Parcialmente Atendido', '3') THEN 'Parcialmente Atendido'
                     WHEN COALESCE(pt.status, p.status) IN ('Attended', 'Atendido', 'Faturado', '4') THEN 'Atendido'
-                    WHEN COALESCE(pt.status, p.status) IN ('Canceled', 'Cancelled', 'Cancelado', '6', '9') THEN 'Cancelado'
+                    WHEN COALESCE(pt.status, p.status) IN ('InProgress', 'Em andamento', 'open', 'aberto', '1') THEN 'Em andamento'
                     ELSE COALESCE(pt.status, p.status)
                 END AS status_norm,
                 p.created_at::date AS data_pedido,
@@ -486,13 +501,13 @@ def executar(intent: str, params: dict, ctx: dict | None = None):
                 '-' AS tipo,
                 COALESCE(NULLIF(pt.lote_pedido, ''), '-') AS lote_pedido,
                 CASE
-                    WHEN pt.status IN ('InProgress', 'Em andamento', 'open', 'aberto', '1') THEN 'Em andamento'
+                    WHEN pt.status IN ('Canceled', 'Cancelled', 'Cancelado', '6', '9') THEN 'Cancelado'
                     WHEN pt.status IN ('Blocked', 'Bloqueado', '5') THEN 'Bloqueado'
                     WHEN pt.status IN ('InComposition', 'Em composição', 'Em composicao', '7') THEN 'Em composição'
                     WHEN pt.status IN ('Pending', 'InAnalysis', 'Em análise', 'Em analise', '8') THEN 'Em análise'
                     WHEN pt.status IN ('PartiallyAnswered', 'Parcialmente Atendido', '3') THEN 'Parcialmente Atendido'
                     WHEN pt.status IN ('Attended', 'Atendido', 'Faturado', '4') THEN 'Atendido'
-                    WHEN pt.status IN ('Canceled', 'Cancelled', 'Cancelado', '6', '9') THEN 'Cancelado'
+                    WHEN pt.status IN ('InProgress', 'Em andamento', 'open', 'aberto', '1') THEN 'Em andamento'
                     ELSE pt.status
                 END AS status_norm,
                 pt.data_pedido::date AS data_pedido,

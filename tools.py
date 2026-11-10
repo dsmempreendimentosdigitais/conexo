@@ -143,9 +143,10 @@ TOOLS = [
     {"type": "function", "function": {
         "name": "conexo_consulta_pedidos",
         "description": (
-            "Consulta e gera relatório/PDF de pedidos unificando o Portal de Vendas (pedidos + pedido_itens, incluindo pedidos locais W... bloqueados) "
+            "Consulta e gera relatório/PDF de pedidos unificando o Portal de Vendas (pedidos + pedido_itens, incluindo pedidos locais W... retidos/bloqueados) "
             "com o ERP TOTVS (pedidos_totvs), com 100% de precisão na metragem e valor total por pedido. "
-            "Use SEMPRE para: 'pedidos com lote pedido EXC', 'quanto preciso programar na fábrica para o lote EXC', "
+            "Use OBRIGATORIAMENTE para: 'qual o maior pedido atualmente bloqueado?', 'pedidos bloqueados', 'carteira retida', "
+            "'pedidos com inicial W', 'pedidos travados no crédito ou diretoria', 'pedidos com lote pedido EXC', 'quanto preciso programar na fábrica para o lote EXC', "
             "'liste todos os pedidos em andamento e bloqueados do artigo X', 'gere um pdf com os pedidos do artigo 1117 - sarja dakota', "
             "'quais os pedidos bloqueados?', 'pedidos em andamento de tal tecido/cor/cliente/representante', 'relatório resumido de pedidos'."
         ),
@@ -153,7 +154,7 @@ TOOLS = [
             "artigo":        {"type": "string", "description": "Código ou nome do artigo/tecido (ex: '1117 - sarja dakota', '1117', 'sarja dakota', 'linho deluxe'). Vazio para todos."},
             "cor":           {"type": "string", "description": "Código ou nome da cor/desenho (ex: '900', 'preto', 'off white'). Vazio para todas."},
             "lote":          {"type": "string", "description": "Filtro pelo lote do pedido ou tipo de entrega: 'PIL' (Pilotagem / Pedidos de Pilotagem - use SEMPRE que o usuário falar 'pilotagem' ou 'pedidos de pilotagem'!), 'EXC' (Desenvolvimento Exclusivo / Programação Exclusiva), 'PE' (Pronta Entrega), 'DIG' (Estamparia Digital), 'OP' (Ordem de Produção), ou número de OP. NUNCA procure 'pilotagem' no nome do tecido; pilotagem é o lote_pedido 'PIL'!"},
-            "status_filtro": {"type": "string", "description": "Filtro de status: 'atrasados' (use SEMPRE para 'pedidos em atraso', 'pedidos atrasados' - filtra pedidos cuja previsão de faturamento já venceu), 'carteira' (Em andamento + Bloqueado + Em composição + Em análise, padrão para carteira em aberto), 'todos' (use SEMPRE para pedidos que deram entrada/foram cadastrados em determinada data como 'pedidos de ontem' ou 'pedidos que entraram hoje', incluindo os atendidos no mesmo dia), 'bloqueados' (apenas Bloqueado), 'em_andamento' (apenas Em andamento), 'faturados' (Atendido + Parcialmente Atendido)."},
+            "status_filtro": {"type": "string", "description": "Filtro de status: 'bloqueados' (use SEMPRE para 'pedidos bloqueados', 'maior pedido bloqueado', 'carteira retida' - inclui pedidos com inicial W e em análise pela diretoria), 'atrasados' (use SEMPRE para 'pedidos em atraso', 'pedidos atrasados' - filtra pedidos cuja previsão de faturamento já venceu), 'carteira' (Em andamento + Bloqueado + Em composição + Em análise, padrão para carteira em aberto), 'todos' (use SEMPRE para pedidos que deram entrada/foram cadastrados em determinada data como 'pedidos de ontem' ou 'pedidos que entraram hoje', incluindo os atendidos no mesmo dia), 'em_andamento' (apenas Em andamento), 'faturados' (Atendido + Parcialmente Atendido)."},
             "cliente":       {"type": "string", "description": "Nome ou razão social do cliente (opcional)."},
             "representante": {"type": "string", "description": "Código ou nome do representante (opcional)."},
             "inicio":        {"type": "string", "description": "Data inicial ISO AAAA-MM-DD (padrão '2026-01-01')."},
@@ -169,7 +170,7 @@ TOOLS = [
             "Escreva uma consulta SQL PostgreSQL de leitura (SELECT) válida sobre as tabelas: "
             "- pedidos_totvs (id, totvs_order_code, totvs_order_id, data_pedido, data_faturamento, valor_total, valor_nf, quantidade_total, representante_codigo, representante_nome, cliente_nome, status, items_json) "
             "- clientes (id, codigo, razao_social, nome_fantasia, representante_codigo, cidade, uf, limite_credito, saldo_disponivel, telefone, email, status_cliente) "
-            "- pedidos (tabela do PORTAL DE VENDAS vendas.designtex.com.br — contém id, numero, status, valor_total, created_at, cliente_id, representante_codigo. Para pedidos BLOQUEADOS ou no FORÇA DE VENDAS, use esta tabela fazendo JOIN clientes c ON c.id = p.cliente_id e JOIN representantes r ON r.codigo = p.representante_codigo!) "
+            "- pedidos (tabela do PORTAL DE VENDAS vendas.designtex.com.br — contém id, numero, status, valor_total, created_at, cliente_id, representante_codigo. Para pedidos BLOQUEADOS ou no FORÇA DE VENDAS com inicial W, use esta tabela fazendo JOIN clientes c ON c.id = p.cliente_id e JOIN representantes r ON r.codigo = p.representante_codigo!) "
             "- representantes (codigo, nome, meta, supervisor, ativo, cidade) "
             "- estoque_pe (cod_produto, descricao, cor, cor_codigo, quantidade_disponivel, categoria, unidade) "
             "- programacoes (op, cod_tecido, nome_tecido, cod_cor, nome_cor, quantidade_solicitada, quantidade_disponivel, previsao_faturamento, tipo) "
@@ -178,7 +179,7 @@ TOOLS = [
             "2. As colunas de data ('data_faturamento', 'data_pedido') são do tipo timestamp. Sempre use o cast '::date' ao comparar com strings de data (ex: 'data_pedido::date = ''2026-08-19''').\n"
             "3. REGRA CRÍTICA DE DATAS E PEDIDOS BLOQUEADOS:\n"
             "   a) Faturamento/Vendas concluídas: Use `pedidos_totvs`, `nota_fiscal_data::date`, `valor_nf` e `status IN ('Attended', 'PartiallyAnswered')`.\n"
-            "   b) Pedidos BLOQUEADOS / Aprovação no Força de Vendas (vendas.designtex.com.br): DEVE consultar a tabela `pedidos` (Portal de Vendas) com JOIN clientes c ON c.id = p.cliente_id e JOIN representantes r ON r.codigo = p.representante_codigo, filtrando `WHERE p.status = 'Bloqueado' AND p.valor_total > 0`.\n"
+            "   b) Pedidos BLOQUEADOS / Carteira Retida no Força de Vendas (vendas.designtex.com.br): Pedidos iniciados em 'W' (ex: W014930FOXS, W014923CRED) estão na esteira de aprovação da tabela `pedidos`. Para pedidos bloqueados, SEMPRE prefira a ferramenta `conexo_consulta_pedidos` com `status_filtro = 'bloqueados'`, ou se usar SQL livre, consulte a tabela `pedidos` (Portal) com JOIN clientes c ON c.id = p.cliente_id e JOIN representantes r ON r.codigo = p.representante_codigo, filtrando `WHERE (p.status ILIKE '%bloquead%' OR p.status ILIKE '%análise%' OR p.numero ILIKE 'W%') AND p.status NOT ILIKE '%cancel%' AND p.valor_total > 0`.\n"
             "4. REGRA OBRIGATÓRIA CONTRA PEDIDOS ZERADOS: NUNCA inclua pedidos com `valor_total = 0` ou `valor_total IS NULL`. Sempre adicione a condição `valor_total > 0` (ou `p.valor_total > 0`).\n"
             "5. CONSULTAS EM ITEMS_JSON: Para buscar por produto, estampa ou cor dentro dos pedidos_totvs:\n"
             "   a) Busca simples por produto/estampa no JSON: Use `p.items_json::text ILIKE '%estamp%'` (ex: para desenhos, estampados, produtos).\n"

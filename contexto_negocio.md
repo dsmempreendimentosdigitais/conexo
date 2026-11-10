@@ -38,7 +38,12 @@ Campos principais:
 
 FATURAMENTO: usar nota_fiscal_data::date como filtro de data, valor_nf como valor, status IN ('Attended','PartiallyAnswered')
 CARTEIRA EM ANDAMENTO: usar data_pedido::date, valor_total, status IN ('InProgress','Blocked','InComposition')
-PEDIDOS BLOQUEADOS / PORTAL DE VENDAS (vendas.designtex.com.br): Usar a tabela `pedidos` (Portal de Vendas), JOIN clientes c ON c.id = p.cliente_id, JOIN representantes r ON r.codigo = p.representante_codigo, onde `p.status = 'Bloqueado'` e `p.valor_total > 0`.
+PEDIDOS BLOQUEADOS / ESTEIRA DO PORTAL DE VENDAS (vendas.designtex.com.br):
+- No Portal de Vendas, pedidos novos criados pelos representantes iniciam com o prefixo 'W' (ex: `W014930FOXS`, `W014923CRED`, `W014931CAMA`).
+- Enquanto aguardam aprovação comercial ou análise financeira de crédito/diretoria, esses pedidos ficam na esteira de PEDIDOS BLOQUEADOS (status 'Bloqueado', 'Em análise pela diretoria', etc.).
+- Essa esteira do Portal de Vendas soma mais de R$ 1,3 milhão (23 pedidos retidos), com pedidos de grande volume como o `W014930FOXS` da FOXSTEXTIL (R$ 351.050,00 - 30.000m de Tricoline Deluxe) e `W001296EMPA` da Empatia Têxtil (R$ 413.400,00).
+- Quando integrados ao ERP TOTVS, podem receber código numérico (ex: `37410`, `37232`), mas continuam fazendo parte da carteira bloqueada/retida até a efetiva liberação.
+- Por isso, qualquer consulta de pedidos bloqueados DEVE usar a ferramenta `conexo_consulta_pedidos` com `status_filtro = 'bloqueados'`, unificando os pedidos com inicial W da tabela `pedidos` do portal com os bloqueados do TOTVS!
 FILTRO DE VALOR ZERADO (OBRIGATÓRIO): NUNCA inclua pedidos com `valor_total = 0` ou `valor_total IS NULL` em listagens de pedidos, carteira ou bloqueados. Adicione SEMPRE `valor_total > 0`.
 CÓDIGO DO PEDIDO: sempre usar totvs_order_code ou numero (ex: 35828 ou W001347GIGI), nunca id interno
 META PADRÃO: R$ 10.000/mês por representante

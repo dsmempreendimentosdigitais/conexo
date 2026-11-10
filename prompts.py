@@ -38,14 +38,15 @@ REGRAS DE ROTEAMENTO
 3. FATURAMENTO vs CARTEIRA / PEDIDOS EM ANDAMENTO E BLOQUEADOS:
    - Perguntas sobre "faturamento", "vendas", "pedidos faturados", "receita" →
      use nota_fiscal_data::date + valor_nf + status IN ('Attended','PartiallyAnswered')
-   - Perguntas pedindo lista ou PDF de "pedidos em andamento e bloqueados", "pedidos de um artigo/tecido (ex: 1117 - sarja dakota)", "pedidos bloqueados", "pedidos em andamento", "carteira de pedidos", ou "pedidos com lote pedido EXC / PE / OP":
-     ESCOLHA SEMPRE A FERRAMENTA `conexo_consulta_pedidos`! Ela unifica automaticamente os pedidos locais do Portal (`pedidos` + `pedido_itens`, incluindo pedidos `W...` bloqueados) com os pedidos do ERP (`pedidos_totvs`), aplicando a mesma regra exata do Portal de Vendas!
+   - Perguntas pedindo lista ou PDF de "pedidos em andamento e bloqueados", "pedidos de um artigo/tecido (ex: 1117 - sarja dakota)", "qual o maior pedido bloqueado?", "pedidos bloqueados", "pedidos em andamento", "carteira de pedidos", "pedidos retidos na análise", ou "pedidos com lote pedido EXC / PE / OP":
+     ESCOLHA SEMPRE A FERRAMENTA `conexo_consulta_pedidos`! Ela unifica automaticamente os pedidos locais do Portal (`pedidos` + `pedido_itens`, incluindo pedidos com prefixo `W...` bloqueados na esteira do comercial/diretoria) com os pedidos do ERP (`pedidos_totvs`), aplicando a mesma regra exata do Portal de Vendas!
+     ATENÇÃO CRÍTICA A PEDIDOS BLOQUEADOS: Os pedidos iniciados com 'W' (ex: W014930FOXS de R$ 351.050,00 da FOXSTEXTIL, W014923CRED, etc.) são pedidos do Portal de Vendas que aguardam aprovação comercial/crédito. Eles superam com folga os pedidos isolados do TOTVS e somam mais de R$ 1,3 milhão na carteira retida. SEMPRE use `conexo_consulta_pedidos` com `status_filtro = "bloqueados"` para responder sobre pedidos bloqueados ou o maior pedido bloqueado!
    - ATENÇÃO CRÍTICA A LOTES DE PEDIDO (EXC, PE, OP, DIG, PIL): 'EXC' significa Lote de Desenvolvimento Exclusivo / Programação Exclusiva (e NUNCA nome de tecido!). Para perguntas como 'verifique os pedidos com lote pedido EXC e sugira quanto preciso programar na fábrica', passe SEMPRE `conexo_consulta_pedidos` com `lote = "EXC"` e `status_filtro = "carteira"`!
 
 4. MAPEAMENTO DE `status_filtro` E LOTES NA FERRAMENTA `conexo_consulta_pedidos`:
+   - "qual o maior pedido bloqueado?" / "pedidos bloqueados" / "carteira bloqueada" / "pedidos retidos" → `status_filtro = "bloqueados"` (traz TODOS os pedidos retidos, incluindo prefixo W do portal de vendas e Blocked do TOTVS)
    - "pedidos em andamento e bloqueados" / "em aberto" / "carteira" → `status_filtro = "carteira"` (traz Em andamento, Bloqueado, Em composição e Em análise — NUNCA inclui Parcialmente Atendido!)
    - "quantos pedidos entraram ontem / hoje / em determinado dia" / "pedidos cadastrados / emitidos / inseridos / do relatório resumido" → `status_filtro = "todos"` (traz TODOS os pedidos que deram entrada na data informada, incluindo os atendidos/faturados no mesmo dia como o pedido 37218! Apenas cancelados são excluídos)
-   - "apenas bloqueados" / "pedidos bloqueados"                    → `status_filtro = "bloqueados"`
    - "apenas em andamento"                                         → `status_filtro = "em_andamento"`
    - "faturados" / "atendidos"                                     → `status_filtro = "faturados"`
    - "todos"                                                       → `status_filtro = "todos"`
