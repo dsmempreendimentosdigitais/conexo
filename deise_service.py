@@ -244,13 +244,12 @@ class DeiseService:
         if len(limpo_fone) in (10, 11) and not limpo_fone.startswith("55"):
             limpo_fone = "55" + limpo_fone
 
-        link_zap = f"https://wa.me/{limpo_fone}?text=" + \
-            f"Ol%C3%A1%20{rep_nome}!%20Sou%20da%20empresa%20{cliente.get('nome_fantasia') or cliente.get('razao_social')}%20e%20solicitei%20atendimento%20pelo%20Portal%20da%20Designtex."
+        link_zap = f"https://wa.me/{limpo_fone}"
 
         mensagem = (
             f"Com certeza! O seu representante oficial na Designtex é *{rep_nome}*.\n\n"
-            f"Clique no link abaixo para conversar diretamente com ele(a) no WhatsApp:\n"
-            f"👉 {link_zap}\n\n"
+            f"Fale diretamente com ele(a) no WhatsApp:\n"
+            f"👉 [Conversar com Representante no WhatsApp]({link_zap})\n\n"
             f"Já registrei sua solicitação e o(a) {rep_nome} dará total prioridade ao seu atendimento! 🤝"
         )
 
