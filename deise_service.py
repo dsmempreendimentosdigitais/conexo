@@ -161,9 +161,9 @@ class DeiseService:
         elif acab in ("estampado", "2"):
             filtros.append("tipo = 'estampado'")
         elif acab in ("ld_liso", "liso_ld", "3"):
-            filtros.append("(tipo = 'liso' AND (nome_tecido ILIKE '%(ld)%' OR nome_tecido ILIKE '%(dig)%'))")
+            filtros.append("(tipo = 'liso' AND (nome_tecido ILIKE '%(ld)%' OR nome_tecido ILIKE '% ld%' OR nome_tecido ILIKE '%defeito%'))")
         elif acab in ("ld_estampado", "estampado_ld", "4"):
-            filtros.append("(tipo = 'estampado' AND (nome_tecido ILIKE '%(ld)%' OR nome_tecido ILIKE '%(dig)%'))")
+            filtros.append("(tipo = 'estampado' AND (nome_tecido ILIKE '%(ld)%' OR nome_tecido ILIKE '% ld%' OR nome_tecido ILIKE '%defeito%'))")
 
         if base == "tricoline":
             filtros.append("(nome_tecido ILIKE '%tricoline%')")
@@ -315,8 +315,8 @@ class DeiseService:
                     "Qual acabamento você deseja consultar?\n"
                     "*1* - Liso\n"
                     "*2* - Estampado\n"
-                    "*3* - Liso LD\n"
-                    "*4* - Estampado LD"
+                    "*3* - Liso LD (Leves Defeitos)\n"
+                    "*4* - Estampado LD (Leves Defeitos)"
                 )
 
             elif texto_norm in ("2", "2)", "2 - programacao", "programacao", "programação", "ops", "producao", "produção"):
@@ -327,8 +327,8 @@ class DeiseService:
                     "Qual acabamento você deseja consultar?\n"
                     "*1* - Liso\n"
                     "*2* - Estampado\n"
-                    "*3* - Liso LD\n"
-                    "*4* - Estampado LD"
+                    "*3* - Liso LD (Leves Defeitos)\n"
+                    "*4* - Estampado LD (Leves Defeitos)"
                 )
 
             elif texto_norm in ("3", "3)", "3 - pedidos", "pedidos", "meus pedidos", "pedido", "status pedido"):
@@ -374,11 +374,11 @@ class DeiseService:
                     "*4* - Ver todas as estampas disponíveis"
                 )
 
-            elif texto_norm in ("3", "3)", "3 - liso ld", "liso ld", "ld liso", "liso digital", "ld"):
+            elif texto_norm in ("3", "3)", "3 - liso ld", "liso ld", "ld liso", "liso leves defeitos", "leves defeitos", "ld"):
                 sessao["acabamento"] = "ld_liso"
                 sessao["step"] = "aguardando_base"
                 return (
-                    f"✨ *Tecidos Lisos LD - Linha Digital ({modulo_label})*\n\n"
+                    f"✨ *Tecidos Lisos LD - Leves Defeitos ({modulo_label})*\n\n"
                     "Qual base você deseja conferir agora?\n"
                     "*1* - Tricolines LD (Tricoline Paris LD, Deluxe LD...)\n"
                     "*2* - Linhos LD\n"
@@ -386,13 +386,13 @@ class DeiseService:
                     "*4* - Ver todas as opções disponíveis"
                 )
 
-            elif texto_norm in ("4", "4)", "4 - estampado ld", "estampado ld", "ld estampado", "estampa digital", "digital"):
+            elif texto_norm in ("4", "4)", "4 - estampado ld", "estampado ld", "ld estampado", "estampado leves defeitos", "estampa ld"):
                 sessao["acabamento"] = "ld_estampado"
                 sessao["step"] = "aguardando_base"
                 return (
-                    f"🌟 *Tecidos Estampados LD - Linha Digital ({modulo_label})*\n\n"
+                    f"🌟 *Tecidos Estampados LD - Leves Defeitos ({modulo_label})*\n\n"
                     "Qual base você deseja conferir agora?\n"
-                    "*1* - Tricolines Estampadas LD (Deluxe LD, Top Line Digital...)\n"
+                    "*1* - Tricolines Estampadas LD (Deluxe LD...)\n"
                     "*2* - Linhos Estampados LD\n"
                     "*3* - Sarjas Estampadas LD\n"
                     "*4* - Ver todas as estampas disponíveis"
@@ -465,8 +465,8 @@ class DeiseService:
         rotulos_tipo = {
             "liso": "Lisos Convencionais",
             "estampado": "Estampados Convencionais",
-            "ld_liso": "Lisos LD (Linha Digital)",
-            "ld_estampado": "Estampados LD (Linha Digital)",
+            "ld_liso": "Lisos LD (Leves Defeitos)",
+            "ld_estampado": "Estampados LD (Leves Defeitos)",
         }
         tipo_label = rotulos_tipo.get(acabamento, "Tecidos")
         base_label = base.capitalize() if base != "todas" else "Principais Bases"
@@ -513,8 +513,8 @@ class DeiseService:
         rotulos_tipo = {
             "liso": "Lisos Convencionais",
             "estampado": "Estampados Convencionais",
-            "ld_liso": "Lisos LD (Linha Digital)",
-            "ld_estampado": "Estampados LD (Linha Digital)",
+            "ld_liso": "Lisos LD (Leves Defeitos)",
+            "ld_estampado": "Estampados LD (Leves Defeitos)",
         }
         tipo_label = rotulos_tipo.get(acabamento, "Tecidos")
         base_label = base.capitalize() if base != "todas" else "Principais Linhas"
