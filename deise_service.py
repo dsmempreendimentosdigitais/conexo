@@ -8,6 +8,7 @@ import json
 import re
 import unicodedata
 from datetime import datetime
+import httpx
 from config import config
 from executor import supabase
 
@@ -334,6 +335,92 @@ class DeiseService:
             "mensagem": mensagem
         }
 
+    @staticmethod
+    def disparar_pre_pedido_email(reserva: Dict[str, Any], cliente_cod: str) -> Dict[str, Any]:
+        """
+        Dispara a emissão do PDF de Pré-Pedido e envio de e-mail ao representante via API do Portal.
+        """
+        url = "https://vendas.designtex.com.br/api/deise/pre-pedido"
+        payload = {
+            "clienteCodigo": str(cliente_cod),
+            "artigoCodigo": str(reserva.get("artigo_cod") or "1000"),
+            "artigoNome": str(reserva.get("artigo_nome") or "Tecido"),
+            "corCodigo": str(reserva.get("cor_cod") or ""),
+            "corNome": str(reserva.get("cor_nome") or "Padrão"),
+            "hexColor": str(reserva.get("hex_color") or "#CCCCCC"),
+            "metros": float(reserva.get("metros") or 100),
+            "saldoDisponivel": float(reserva.get("disponivel") or 0),
+            "emailDestino": "samuel.mc85@gmail.com"
+        }
+        try:
+            resp = httpx.post(url, json=payload, timeout=20.0)
+            if resp.status_code == 200:
+                return resp.json()
+            print(f"[Deise] Erro ao chamar API pre-pedido: {resp.status_code} {resp.text}")
+        except Exception as e:
+            print(f"[Deise] Exceção ao enviar pre-pedido: {e}")
+        return {"sucesso": False}
+
+    @staticmethod
+    def detectar_solicitacao_reserva(texto: str) -> Optional[Dict[str, Any]]:
+        """
+        Identifica intenção de reserva com metragem explícita.
+        Exemplos:
+          'quero 1000 metros de off white na tricoline paris plus'
+          'quero 100 metros de tricoline paris off white'
+          'preciso de 500m de sarja flex preto'
+          'separe 300 metros de linho deluxe natural'
+        """
+        t_raw = str(texto or "").strip()
+        t_norm = desacentuar(t_raw)
+
+        # 1. Detectar metragem
+        match_m = re.search(r'(\d+[\d.,]*)\s*(?:metros?|m\b|mts?)\b', t_norm)
+        if not match_m:
+            match_m = re.search(r'(?:quero|preciso|reservar|separe|separar|comprar|pedir)\s+(\d+[\d.,]*)', t_norm)
+
+        if not match_m:
+            return None
+
+        num_str = match_m.group(1).replace(".", "").replace(",", ".")
+        try:
+            metros = float(num_str)
+            if metros <= 0:
+                return None
+        except Exception:
+            return None
+
+        # 2. Extrair termos de busca limpando stop words
+        sobra = t_norm
+        sobra = re.sub(r'(\d+[\d.,]*)\s*(?:metros?|m\b|mts?)\b', ' ', sobra)
+        sobra = re.sub(r'\b(quero|preciso|reserva|reservar|separe|separar|comprar|pedir|gostaria|favor|de|da|do|na|no|em|um|uma|uns|umas|o|a|os|as|por|para)\b', ' ', sobra)
+        termos = [w.strip() for w in sobra.split() if len(w.strip()) >= 2]
+
+        if not termos:
+            return None
+
+        # 3. Consultar correspondência no estoque_pe
+        conds = [f"(descricao ILIKE '%{w}%' OR cor ILIKE '%{w}%' OR cod_produto ILIKE '%{w}%' OR cor_codigo ILIKE '%{w}%')" for w in termos]
+        where_termos = " AND ".join(conds)
+
+        sql = f"""
+        SELECT cod_produto, descricao, cor, cor_codigo, hex_color, quantidade_disponivel, categoria
+        FROM estoque_pe
+        WHERE quantidade_disponivel > 0 AND ({where_termos})
+        ORDER BY quantidade_disponivel DESC
+        LIMIT 1
+        """
+
+        try:
+            res = supabase.rpc("conexo_executar_leitura", {"query_str": sql}).execute()
+            rows = res.data or []
+            if rows:
+                return {"metros": metros, "item": rows[0]}
+        except Exception as e:
+            print("[Deise] Erro ao buscar produto para reserva:", e)
+
+        return None
+
     @classmethod
     def atender(cls, remetente: str, texto: str, cliente_cod: str = "14") -> str:
         """
@@ -356,6 +443,54 @@ class DeiseService:
         sessao["timestamp"] = datetime.now()
 
         current_step = sessao.get("step")
+
+        # 0. Tratamento do Passo de Confirmação de Pré-Reserva
+        if current_step == "aguardando_confirmacao_reserva":
+            if texto_norm in ("1", "1)", "1 - sim", "sim", "s", "confirmo", "confirmar", "pode enviar", "quero", "ok", "positivo"):
+                reserva = sessao.get("reserva_pendente")
+                if not reserva:
+                    sessao["step"] = None
+                    return "Não encontrei os dados da reserva pendente. Como posso te ajudar agora? Digite *menu* para ver as opções."
+
+                # Dispara envio do PDF por e-mail para o representante
+                envio = cls.disparar_pre_pedido_email(reserva, cliente_cod)
+
+                sessao["step"] = None
+                sessao["reserva_pendente"] = None
+
+                metros_fmt = formatar_metros(reserva["metros"])
+                art_cod = reserva["artigo_cod"]
+                art_nome = reserva["artigo_nome"]
+                cor_fmt = reserva["cor_nome"]
+                hex_c = reserva.get("hex_color") or ""
+                hex_tag = f" [hex:{hex_c}]" if (hex_c and hex_c.startswith("#")) else ""
+
+                pdf_url = envio.get("pdfUrl") or f"https://vendas.designtex.com.br/api/deise/pdf-pre-pedido?cliente={cliente_cod}&artigo={art_cod}&artigoNome={art_nome}&cor={reserva.get('cor_cod','')}&corNome={cor_fmt}&hex={hex_c}&metros={reserva['metros']}"
+
+                cliente = cls.validar_cliente(cliente_cod)
+                nome_cliente = cliente.get("nome_fantasia") or cliente.get("razao_social") or f"Cliente #{cliente_cod}"
+
+                return (
+                    "✅ *Pré-reserva confirmada com sucesso!*\n\n"
+                    "Enviei o relatório em PDF com o seu pré-pedido diretamente para o e-mail do seu representante comercial (*samuel.mc85@gmail.com*).\n\n"
+                    "📋 *Resumo da Reserva:*\n"
+                    f"• *Cliente:* {nome_cliente} (Cód. {cliente_cod})\n"
+                    f"• *Tecido:* {art_cod} - {art_nome}\n"
+                    f"• *Cor:* {cor_fmt}{hex_tag}\n"
+                    f"• *Metragem Reservada:* {metros_fmt}\n"
+                    f"• *Status:* Pré-reserva enviada para separação\n\n"
+                    "Seu representante já foi notificado para priorizar o seu pedido e entrará em contato em breve para confirmar o faturamento e entrega!\n\n"
+                    f"📄 [Visualizar / Baixar Pré-Pedido em PDF]({pdf_url})\n\n"
+                    "Posso te ajudar com mais alguma consulta? Digite *menu* a qualquer momento."
+                )
+
+            elif texto_norm in ("2", "2)", "2 - nao", "2 - não", "nao", "não", "n", "cancelar", "cancela", "deixa"):
+                sessao["step"] = None
+                sessao["reserva_pendente"] = None
+                return (
+                    "Entendido! A solicitação de reserva foi cancelada e nenhum pré-pedido foi enviado.\n\n"
+                    "Como posso te ajudar agora? Digite *menu* para ver as opções ou digite o tecido que procura!"
+                )
 
         # 1. Comandos Globais de Interrupção / Menu
         if texto_norm in ("menu", "inicio", "voltar", "oi", "ola", "ola deise", "olá deise", "bom dia", "boa tarde", "boa noite", "ajuda"):
@@ -483,7 +618,69 @@ class DeiseService:
             else:
                 return cls._gerar_resposta_programacao(acabamento, base_escolhida, cliente_cod)
 
-        # 5. Reconhecimento Direto por Palavras-chave (Texto Livre)
+        # 5. Verificação inteligente de pedido com metragem (ex: "quero 100 metros de tricoline paris off white")
+        intencao_reserva = cls.detectar_solicitacao_reserva(texto_limpo)
+        if intencao_reserva:
+            metros_pedidos = intencao_reserva["metros"]
+            it = intencao_reserva["item"]
+            disponivel = float(it.get("quantidade_disponivel") or 0)
+
+            art_cod = it.get("cod_produto") or "1000"
+            raw_art = it.get("descricao") or "Tecido Designtex"
+            raw_cor = it.get("cor") or "Padrão"
+            cor_cod = str(it.get("cor_codigo") or "").strip()
+            hex_c = (it.get("hex_color") or "").strip()
+
+            art_nome = limpar_nome_artigo(raw_art)
+            cor_nome = limpar_nome_cor(raw_cor)
+            cor_fmt = f"{cor_cod} - {cor_nome}" if (cor_cod and not cor_nome.startswith(cor_cod)) else cor_nome
+
+            hex_tag = f" [hex:{hex_c}]" if (hex_c and hex_c.startswith("#")) else ""
+            metros_fmt = formatar_metros(metros_pedidos)
+            disp_fmt = formatar_metros(disponivel)
+
+            if disponivel >= metros_pedidos:
+                sessao["step"] = "aguardando_confirmacao_reserva"
+                sessao["reserva_pendente"] = {
+                    "artigo_cod": art_cod,
+                    "artigo_nome": art_nome,
+                    "cor_cod": cor_cod,
+                    "cor_nome": cor_nome,
+                    "hex_color": hex_c,
+                    "metros": metros_pedidos,
+                    "disponivel": disponivel,
+                    "cliente_cod": cliente_cod
+                }
+                return (
+                    "Certo, identifiquei essa metragem disponível em nosso estoque de pronta entrega! 👗✨\n\n"
+                    f"• *{art_cod} - {art_nome}*\n"
+                    f"  Cor: {cor_fmt}{hex_tag}\n"
+                    f"  *Saldo em Estoque:* {disp_fmt}\n"
+                    f"  *Metragem Solicitada:* {metros_fmt}\n\n"
+                    "Deseja confirmar a reserva dessa quantidade e enviar o pré-pedido para o seu representante comercial?\n"
+                    "*1* - Sim\n"
+                    "*2* - Não"
+                )
+            else:
+                sessao["step"] = "aguardando_confirmacao_reserva"
+                sessao["reserva_pendente"] = {
+                    "artigo_cod": art_cod,
+                    "artigo_nome": art_nome,
+                    "cor_cod": cor_cod,
+                    "cor_nome": cor_nome,
+                    "hex_color": hex_c,
+                    "metros": disponivel,
+                    "disponivel": disponivel,
+                    "cliente_cod": cliente_cod
+                }
+                return (
+                    f"Identifiquei o tecido *{art_cod} - {art_nome}* ({cor_fmt}{hex_tag}), porém no momento temos *{disp_fmt}* disponível em pronta entrega (solicitado: {metros_fmt}).\n\n"
+                    f"Deseja reservar o saldo total de *{disp_fmt}* disponível e enviar o pré-pedido ao representante?\n"
+                    "*1* - Sim\n"
+                    "*2* - Não"
+                )
+
+        # 6. Reconhecimento Direto por Palavras-chave (Texto Livre)
         if any(palavra in texto_norm for palavra in ("pedido", "pedidos", "entrega", "faturamento", "nota fiscal", "nf")):
             sessao["step"] = None
             return cls._gerar_resposta_pedidos(cliente_cod)
