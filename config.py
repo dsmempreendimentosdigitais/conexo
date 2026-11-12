@@ -24,4 +24,7 @@ class Config:
     # Tavily — web search para inteligência de mercado (fase 2)
     TAVILY_API_KEY   = os.environ.get("TAVILY_API_KEY", "")
 
+    # Resend — disparos de e-mail transacionais e comunicados
+    RESEND_API_KEY   = os.environ.get("RESEND_API_KEY", "")
+
 config = Config()

@@ -156,7 +156,7 @@ export default function ClientSettingsModal({ token, onClose }) {
                       </div>
                       <div className="plan-price-block">
                         <span className="plan-price-val">
-                          R$ {(empresa?.valor_mensal || 3500).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                          R$ {(empresa?.valor_mensal !== undefined && empresa?.valor_mensal !== null ? empresa.valor_mensal : 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
                         </span>
                         <span className="plan-price-sub">/ mês</span>
                         <div className="plan-status-pill online">

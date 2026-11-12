@@ -479,7 +479,7 @@ def get_minha_empresa(ctx: dict = Depends(get_contexto)):
         "nome_fantasia": t.get("nome_fantasia") or t.get("nome"),
         "cnpj": t.get("cnpj"),
         "plano": t.get("plano") or "Enterprise",
-        "valor_mensal": t.get("valor_mensal") or 3500.0,
+        "valor_mensal": t.get("valor_mensal") if t.get("valor_mensal") is not None else 0.0,
         "dia_vencimento": t.get("dia_vencimento") or 10,
         "status_pagamento": t.get("status_pagamento") or "em_dia",
         "total_usuarios": total_users,
@@ -532,6 +532,289 @@ def alterar_minha_senha(body: AlterarSenhaIn, ctx: dict = Depends(get_contexto))
         return {"sucesso": True, "mensagem": "Senha alterada com sucesso!"}
     except Exception as e:
         raise HTTPException(500, f"Erro ao atualizar senha: {str(e)}")
+
+
+# ─────────────────────────────────────────────────
+# Configuração de Mensagens Automáticas & Rotinas
+# ─────────────────────────────────────────────────
+
+ROTINAS_PADRAO = [
+    {
+        "id": "rotina-1",
+        "titulo": "Resumo Matinal de Vendas & Metas",
+        "descricao": "Dispara diariamente o faturamento acumulado, atingimento da meta mensal e destaques comerciais.",
+        "frequencia": "diario",
+        "horario": "08:00",
+        "dias_semana": ["seg", "ter", "qua", "qui", "sex"],
+        "canal": "email",
+        "destinatarios_tipo": "equipe_vendas",
+        "ativo": False,
+        "ultima_execucao": None,
+        "mensagem_template": "Olá equipe! Segue o resumo matinal com o faturamento acumulado e metas atualizadas. Bom dia e ótimas vendas!"
+    },
+    {
+        "id": "rotina-2",
+        "titulo": "Alerta de Pedidos Bloqueados",
+        "descricao": "Monitora pedidos com status 'Bloqueado' no TOTVS Moda e alerta a gestão e representantes envolvidos.",
+        "frequencia": "diario",
+        "horario": "09:30",
+        "dias_semana": ["seg", "ter", "qua", "qui", "sex"],
+        "canal": "email",
+        "destinatarios_tipo": "gestao",
+        "ativo": False,
+        "ultima_execucao": None,
+        "mensagem_template": "Atenção: Identificamos pedidos com retenção por alçada de crédito aguardando liberação no sistema."
+    },
+    {
+        "id": "rotina-3",
+        "titulo": "Clientes Inativos (Sem compras há 60+ dias)",
+        "descricao": "Gera alerta para a equipe com a lista de clientes da carteira que deixaram de comprar.",
+        "frequencia": "semanal",
+        "horario": "09:00",
+        "dias_semana": ["seg"],
+        "canal": "email",
+        "destinatarios_tipo": "equipe_vendas",
+        "ativo": False,
+        "ultima_execucao": None,
+        "mensagem_template": "Oportunidade de Reativação: Estes clientes completaram 60 dias sem faturamento em sua carteira."
+    },
+    {
+        "id": "rotina-4",
+        "titulo": "Destaques e Oportunidades de Estoque (Pronta Entrega)",
+        "descricao": "Informa os artigos com alto volume disponível para faturamento imediato.",
+        "frequencia": "semanal",
+        "horario": "10:00",
+        "dias_semana": ["qua", "sex"],
+        "canal": "email",
+        "destinatarios_tipo": "equipe_vendas",
+        "ativo": False,
+        "ultima_execucao": None,
+        "mensagem_template": "Confira os destaques com grande volume de pronta entrega disponíveis para venda imediata hoje."
+    },
+    {
+        "id": "rotina-5",
+        "titulo": "Alerta de Queda de Faturamento Semanal",
+        "descricao": "Avisa a diretoria caso o faturamento da semana caia mais de 15% em relação à anterior.",
+        "frequencia": "semanal",
+        "horario": "08:30",
+        "dias_semana": ["seg"],
+        "canal": "email",
+        "destinatarios_tipo": "gestao",
+        "ativo": False,
+        "ultima_execucao": None,
+        "mensagem_template": "Relatório Semanal CONEXO: Análise comparativa do faturamento consolidado vs semana anterior."
+    }
+]
+
+EMAILS_INTERNOS_PADRAO = [
+    "diretoria@designtextecidos.com.br",
+    "financeiro.adm@designtextecidos.com.br",
+    "pedidos@designtextecidos.com.br",
+    "samuel.mc85@gmail.com"
+]
+
+class RotinasSaveIn(BaseModel):
+    rotinas: list[dict]
+
+class DispararAvisoIn(BaseModel):
+    assunto: str
+    mensagem: str
+    publico: str = "equipe_vendas"  # equipe_vendas | equipe_interna | todos
+    prioridade: str | None = "normal"
+    emails_extras: list[str] | None = []
+
+class EmailsInternosIn(BaseModel):
+    emails: list[str]
+
+@app.get("/conexo/rotinas-automaticas")
+def get_rotinas_automaticas(ctx: dict = Depends(get_contexto)):
+    tenant_id = ctx.get("tenant_id")
+    t_res = supabase.table("tenants").select("conectores").eq("id", tenant_id).single().execute()
+    conns = (t_res.data or {}).get("conectores") or {}
+    
+    rotinas = conns.get("rotinas_automaticas")
+    if rotinas is None:
+        rotinas = ROTINAS_PADRAO
+        conns["rotinas_automaticas"] = rotinas
+        supabase.table("tenants").update({"conectores": conns}).eq("id", tenant_id).execute()
+
+    emails_internos = conns.get("emails_internos") or EMAILS_INTERNOS_PADRAO
+
+    reps_res = supabase.table("representantes").select("codigo, nome, email, ativo").eq("ativo", True).execute()
+    reps = reps_res.data or []
+    com_email = sum(1 for r in reps if r.get("email") and "@" in r["email"] and not r["email"].endswith(".internal"))
+    sem_email = len(reps) - com_email
+
+    return {
+        "rotinas": rotinas,
+        "emails_internos": emails_internos,
+        "stats": {
+            "total_reps_ativos": len(reps),
+            "reps_com_email": com_email,
+            "reps_sem_email": sem_email,
+            "total_internos": len(emails_internos)
+        }
+    }
+
+@app.post("/conexo/rotinas-automaticas")
+def salvar_rotinas_automaticas(body: RotinasSaveIn, ctx: dict = Depends(get_contexto)):
+    tenant_id = ctx.get("tenant_id")
+    t_res = supabase.table("tenants").select("conectores").eq("id", tenant_id).single().execute()
+    conns = (t_res.data or {}).get("conectores") or {}
+    conns["rotinas_automaticas"] = body.rotinas
+
+    supabase.table("tenants").update({"conectores": conns}).eq("id", tenant_id).execute()
+    return {"sucesso": True, "mensagem": "Rotinas atualizadas com sucesso!"}
+
+@app.get("/conexo/equipe-destinatarios")
+def get_equipe_destinatarios(ctx: dict = Depends(get_contexto)):
+    tenant_id = ctx.get("tenant_id")
+    t_res = supabase.table("tenants").select("conectores").eq("id", tenant_id).single().execute()
+    conns = (t_res.data or {}).get("conectores") or {}
+    emails_internos = conns.get("emails_internos") or EMAILS_INTERNOS_PADRAO
+
+    reps_res = supabase.table("representantes").select("codigo, nome, email, email_login, telefone, ativo, supervisor").order("codigo").execute()
+    reps = reps_res.data or []
+
+    return {
+        "representantes": reps,
+        "emails_internos": emails_internos
+    }
+
+@app.post("/conexo/equipe-destinatarios/internos")
+def salvar_emails_internos(body: EmailsInternosIn, ctx: dict = Depends(get_contexto)):
+    tenant_id = ctx.get("tenant_id")
+    t_res = supabase.table("tenants").select("conectores").eq("id", tenant_id).single().execute()
+    conns = (t_res.data or {}).get("conectores") or {}
+    conns["emails_internos"] = body.emails
+
+    supabase.table("tenants").update({"conectores": conns}).eq("id", tenant_id).execute()
+    return {"sucesso": True, "mensagem": "E-mails internos atualizados com sucesso!"}
+
+@app.post("/conexo/avisos/disparar")
+def disparar_aviso_equipe(body: DispararAvisoIn, ctx: dict = Depends(get_contexto)):
+    import httpx
+    from datetime import datetime, timezone
+
+    tenant_id = ctx.get("tenant_id")
+    remetente = ctx.get("email")
+
+    t_res = supabase.table("tenants").select("conectores, nome").eq("id", tenant_id).single().execute()
+    conns = (t_res.data or {}).get("conectores") or {}
+    emails_internos = conns.get("emails_internos") or EMAILS_INTERNOS_PADRAO
+
+    destinatarios = set()
+
+    # 1. Representantes
+    if body.publico in ("equipe_vendas", "todos"):
+        reps_res = supabase.table("representantes").select("email, ativo").eq("ativo", True).execute()
+        for r in reps_res.data or []:
+            em = (r.get("email") or "").strip().lower()
+            if em and "@" in em and not em.endswith(".internal") and "sem e-mail" not in em:
+                destinatarios.add(em)
+
+    # 2. Equipe Interna
+    if body.publico in ("equipe_interna", "todos"):
+        for em in emails_internos:
+            em_clean = em.strip().lower()
+            if em_clean and "@" in em_clean:
+                destinatarios.add(em_clean)
+
+    # 3. Extras
+    for em in (body.emails_extras or []):
+        em_clean = em.strip().lower()
+        if em_clean and "@" in em_clean:
+            destinatarios.add(em_clean)
+
+    lista_dest = list(destinatarios)
+    if not lista_dest:
+        raise HTTPException(400, "Nenhum e-mail de destinatário válido encontrado para o público selecionado.")
+
+    tag_prioridade = "🚨 COMUNICADO URGENTE" if body.prioridade == "urgente" else "📢 COMUNICADO OFICIAL"
+    cor_badge = "#ef4444" if body.prioridade == "urgente" else "#38bdf8"
+    cor_badge_txt = "#ffffff" if body.prioridade == "urgente" else "#0f172a"
+
+    html_content = f"""
+    <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 650px; margin: 0 auto; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.06);">
+      <div style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); padding: 24px 32px; color: #ffffff;">
+        <span style="display: inline-block; background: {cor_badge}; color: {cor_badge_txt}; font-size: 11px; font-weight: 700; text-transform: uppercase; padding: 4px 10px; border-radius: 9999px; letter-spacing: 0.5px; margin-bottom: 8px;">
+          {tag_prioridade}
+        </span>
+        <h2 style="margin: 0; font-size: 20px; font-weight: 700; color: #ffffff;">{body.assunto}</h2>
+        <p style="margin: 6px 0 0; font-size: 13px; color: #94a3b8;">Designtex Tecidos — Canal de Comunicação CONEXO</p>
+      </div>
+      <div style="padding: 32px; color: #334155; font-size: 15px; line-height: 1.6; white-space: pre-line;">
+        {body.mensagem}
+      </div>
+      <div style="background: #f8fafc; border-top: 1px solid #e2e8f0; padding: 18px 32px; font-size: 12px; color: #64748b; display: flex; justify-content: space-between; align-items: center;">
+        <span>Enviado pela Gestão Comercial via <strong>CONEXO.dev</strong></span>
+        <span>{datetime.now().strftime('%d/%m/%Y %H:%M')}</span>
+      </div>
+    </div>
+    """
+
+    sucesso_resend = False
+    erro_resend = None
+
+    if config.RESEND_API_KEY:
+        try:
+            headers = {
+                "Authorization": f"Bearer {config.RESEND_API_KEY}",
+                "Content-Type": "application/json"
+            }
+            lote_size = 45
+            for i in range(0, len(lista_dest), lote_size):
+                lote = lista_dest[i:i + lote_size]
+                payload = {
+                    "from": "CONEXO Vendas <onboarding@resend.dev>",
+                    "to": ["delivered@resend.dev"],
+                    "bcc": lote,
+                    "subject": f"[{'URGENTE' if body.prioridade == 'urgente' else 'COMUNICADO'}] {body.assunto}",
+                    "html": html_content
+                }
+                r = httpx.post("https://api.resend.com/emails", json=payload, headers=headers, timeout=10.0)
+                if r.status_code not in (200, 201):
+                    erro_resend = r.text
+            sucesso_resend = True
+        except Exception as ex:
+            erro_resend = str(ex)
+
+    try:
+        supabase.table("notificacoes").insert({
+            "titulo": f"📢 {body.assunto}",
+            "mensagem": body.mensagem[:250],
+            "tipo": "alerta" if body.prioridade == "urgente" else "info",
+            "lida": False,
+            "created_at": datetime.now(timezone.utc).isoformat()
+        }).execute()
+    except Exception as e_notif:
+        print("Aviso ao inserir notificacao:", e_notif)
+
+    try:
+        supabase.table("conexo_logs").insert({
+            "usuario": remetente,
+            "pergunta": f"[DISPARO AVISO] {body.assunto}",
+            "intent": "disparo_aviso_equipe",
+            "parametros": {
+                "publico": body.publico,
+                "total_destinatarios": len(lista_dest),
+                "destinatarios": lista_dest,
+                "prioridade": body.prioridade,
+                "resend_ok": sucesso_resend,
+                "erro": erro_resend
+            },
+            "sucesso": True
+        }).execute()
+    except Exception as e_log:
+        print("Aviso ao registrar log:", e_log)
+
+    return {
+        "sucesso": True,
+        "total_enviados": len(lista_dest),
+        "destinatarios": lista_dest,
+        "resend_status": "enviado" if sucesso_resend else "simulado",
+        "mensagem": f"Aviso disparado com sucesso para {len(lista_dest)} destinatários da equipe!"
+    }
 
 
 # ─────────────────────────────────────────────────

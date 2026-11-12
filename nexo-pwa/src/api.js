@@ -320,3 +320,59 @@ export async function alterarMinhaSenha(novaSenha, token) {
   if (!r.ok) throw new Error((await r.json()).detail || "Erro ao alterar senha");
   return r.json();
 }
+
+// ── Mensagens Automáticas, Rotinas e Avisos para Equipe ──
+export async function getRotinasAutomaticas(token) {
+  const r = await fetch(`${BASE}/conexo/rotinas-automaticas`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!r.ok) throw new Error((await r.json()).detail || "Erro ao carregar rotinas automáticas");
+  return r.json();
+}
+
+export async function salvarRotinasAutomaticas(rotinas, token) {
+  const r = await fetch(`${BASE}/conexo/rotinas-automaticas`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ rotinas }),
+  });
+  if (!r.ok) throw new Error((await r.json()).detail || "Erro ao salvar rotinas automáticas");
+  return r.json();
+}
+
+export async function getEquipeDestinatarios(token) {
+  const r = await fetch(`${BASE}/conexo/equipe-destinatarios`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!r.ok) throw new Error((await r.json()).detail || "Erro ao carregar lista de destinatários");
+  return r.json();
+}
+
+export async function salvarEmailsInternos(emails, token) {
+  const r = await fetch(`${BASE}/conexo/equipe-destinatarios/internos`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ emails }),
+  });
+  if (!r.ok) throw new Error((await r.json()).detail || "Erro ao salvar e-mails internos");
+  return r.json();
+}
+
+export async function dispararAvisoEquipe(dados, token) {
+  const r = await fetch(`${BASE}/conexo/avisos/disparar`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(dados),
+  });
+  if (!r.ok) throw new Error((await r.json()).detail || "Erro ao disparar aviso para a equipe");
+  return r.json();
+}

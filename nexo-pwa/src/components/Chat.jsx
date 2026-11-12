@@ -3,6 +3,7 @@ import { perguntarStream, transcrever, buscarAlertas, falar } from "../api";
 import Message from "./Message";
 import AlertPanel from "./AlertPanel";
 import ClientSettingsModal from "./ClientSettingsModal";
+import RotinasModal from "./RotinasModal";
 import ChatInputArea from "./ChatInputArea";
 
 const BOAS_VINDAS = {
@@ -87,6 +88,7 @@ export default function Chat({ token, email, onLogout, onAbrirAdmin }) {
   const [alertas, setAlertas] = useState([]);
   const [showAlerts, setShowAlerts] = useState(false);
   const [showConfigGestor, setShowConfigGestor] = useState(false);
+  const [showRotinasModal, setShowRotinasModal] = useState(false);
   const [openGroups, setOpenGroups] = useState([0, 1, 2, 3, 4]); // Todas as 5 categorias abertas por padrão
 
   const toggleGroup = (idx) => {
@@ -711,6 +713,14 @@ export default function Chat({ token, email, onLogout, onAbrirAdmin }) {
           </button>
         )}
 
+        <button
+          className="sidebar-rotinas-btn"
+          onClick={() => setShowRotinasModal(true)}
+          title="Configurar Mensagens Automáticas, Rotinas e Avisos para a Equipe"
+        >
+          ⏰ Configurar Mensagens Automáticas
+        </button>
+
         {email !== "conexo.dev.ai@gmail.com" && (
           <button
             className="sidebar-client-settings-btn"
@@ -981,6 +991,14 @@ export default function Chat({ token, email, onLogout, onAbrirAdmin }) {
         <ClientSettingsModal
           token={token}
           onClose={() => setShowConfigGestor(false)}
+        />
+      )}
+
+      {/* Modal de Configurar Mensagens Automáticas & Rotinas */}
+      {showRotinasModal && (
+        <RotinasModal
+          token={token}
+          onClose={() => setShowRotinasModal(false)}
         />
       )}
     </div>

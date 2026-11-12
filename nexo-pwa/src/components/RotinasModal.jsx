@@ -1,0 +1,712 @@
+import { useState, useEffect } from "react";
+import {
+  getRotinasAutomaticas,
+  salvarRotinasAutomaticas,
+  getEquipeDestinatarios,
+  salvarEmailsInternos,
+  dispararAvisoEquipe
+} from "../api";
+
+export default function RotinasModal({ token, onClose }) {
+  const [tab, setTab] = useState("rotinas"); // rotinas | aviso | equipe
+  const [loading, setLoading] = useState(true);
+  const [rotinas, setRotinas] = useState([]);
+  const [emailsInternos, setEmailsInternos] = useState([]);
+  const [representantes, setRepresentantes] = useState([]);
+  const [stats, setStats] = useState({ total_reps_ativos: 0, reps_com_email: 0, reps_sem_email: 0, total_internos: 0 });
+  const [erro, setErro] = useState("");
+  const [sucesso, setSucesso] = useState("");
+
+  // Estado para Criar/Editar Rotina
+  const [modalEdicaoRotina, setModalEdicaoRotina] = useState(false);
+  const [rotinaEmEdicao, setRotinaEmEdicao] = useState(null);
+  const [formRotina, setFormRotina] = useState({
+    id: "",
+    titulo: "",
+    descricao: "",
+    frequencia: "diario",
+    horario: "08:00",
+    dias_semana: ["seg", "ter", "qua", "qui", "sex"],
+    canal: "email",
+    destinatarios_tipo: "equipe_vendas",
+    ativo: true,
+    mensagem_template: "",
+  });
+
+  // Estado para Disparo de Aviso Imediato
+  const [avisoAssunto, setAvisoAssunto] = useState("");
+  const [avisoMensagem, setAvisoMensagem] = useState("");
+  const [avisoPublico, setAvisoPublico] = useState("equipe_vendas");
+  const [avisoPrioridade, setAvisoPrioridade] = useState("normal");
+  const [avisoExtras, setAvisoExtras] = useState("");
+  const [disparandoAviso, setDisparandoAviso] = useState(false);
+
+  // Estado para Gerenciamento de E-mails Internos
+  const [novoEmailInterno, setNovoEmailInterno] = useState("");
+  const [salvandoInternos, setSalvandoInternos] = useState(false);
+
+  // Busca na lista de representantes
+  const [buscaRep, setBuscaRep] = useState("");
+
+  useEffect(() => {
+    carregarDados();
+  }, [token]);
+
+  async function carregarDados() {
+    setLoading(true);
+    setErro("");
+    try {
+      const [resRotinas, resEquipe] = await Promise.all([
+        getRotinasAutomaticas(token),
+        getEquipeDestinatarios(token)
+      ]);
+      setRotinas(resRotinas.rotinas || []);
+      setEmailsInternos(resRotinas.emails_internos || []);
+      setStats(resRotinas.stats || {});
+      setRepresentantes(resEquipe.representantes || []);
+    } catch (e) {
+      setErro(e.message || "Erro ao carregar dados das rotinas.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  // Alternar Status Ativo/Inativo de uma rotina
+  async function handleToggleAtivo(rotinaId) {
+    const novas = rotinas.map(r => r.id === rotinaId ? { ...r, ativo: !r.ativo } : r);
+    setRotinas(novas);
+    try {
+      await salvarRotinasAutomaticas(novas, token);
+      const alterada = novas.find(r => r.id === rotinaId);
+      setSucesso(`Rotina "${alterada.titulo}" ${alterada.ativo ? "ativada" : "desativada"} com sucesso!`);
+      setTimeout(() => setSucesso(""), 3500);
+    } catch (e) {
+      setErro("Erro ao salvar alteração: " + e.message);
+    }
+  }
+
+  // Deletar rotina
+  async function handleDeletarRotina(rotinaId) {
+    if (!confirm("Tem certeza que deseja remover esta rotina automática?")) return;
+    const novas = rotinas.filter(r => r.id !== rotinaId);
+    setRotinas(novas);
+    try {
+      await salvarRotinasAutomaticas(novas, token);
+      setSucesso("Rotina removida com sucesso!");
+      setTimeout(() => setSucesso(""), 3500);
+    } catch (e) {
+      setErro("Erro ao excluir rotina: " + e.message);
+    }
+  }
+
+  // Abrir Modal de Criação ou Edição
+  function handleAbrirCriar() {
+    setRotinaEmEdicao(null);
+    setFormRotina({
+      id: "rotina-" + Date.now(),
+      titulo: "",
+      descricao: "",
+      frequencia: "diario",
+      horario: "08:00",
+      dias_semana: ["seg", "ter", "qua", "qui", "sex"],
+      canal: "email",
+      destinatarios_tipo: "equipe_vendas",
+      ativo: true,
+      mensagem_template: "",
+    });
+    setModalEdicaoRotina(true);
+  }
+
+  function handleAbrirEditar(rotina) {
+    setRotinaEmEdicao(rotina.id);
+    setFormRotina({ ...rotina });
+    setModalEdicaoRotina(true);
+  }
+
+  async function handleSalvarRotina(e) {
+    e.preventDefault();
+    if (!formRotina.titulo.trim()) {
+      alert("Por favor, preencha o título da rotina.");
+      return;
+    }
+
+    let novas;
+    if (rotinaEmEdicao) {
+      novas = rotinas.map(r => r.id === rotinaEmEdicao ? { ...formRotina } : r);
+    } else {
+      novas = [...rotinas, { ...formRotina, id: formRotina.id || "rotina-" + Date.now() }];
+    }
+
+    setRotinas(novas);
+    setModalEdicaoRotina(false);
+    try {
+      await salvarRotinasAutomaticas(novas, token);
+      setSucesso(`Rotina "${formRotina.titulo}" salva com sucesso!`);
+      setTimeout(() => setSucesso(""), 3500);
+    } catch (e) {
+      setErro("Erro ao salvar rotina: " + e.message);
+    }
+  }
+
+  // Disparo Imediato de Aviso
+  async function handleDispararAviso(e) {
+    e.preventDefault();
+    if (!avisoAssunto.trim() || !avisoMensagem.trim()) {
+      setErro("Preencha o assunto e a mensagem do aviso.");
+      return;
+    }
+
+    const confirmMsg = avisoPublico === "equipe_vendas"
+      ? `Disparar este aviso para todos os ${stats.reps_com_email || 65} representantes com e-mail cadastrado?`
+      : avisoPublico === "equipe_interna"
+      ? `Disparar este aviso para a equipe interna (${emailsInternos.length} e-mails)?`
+      : `Disparar este aviso para toda a equipe de vendas E equipe interna?`;
+
+    if (!confirm(confirmMsg)) return;
+
+    setDisparandoAviso(true);
+    setErro("");
+    setSucesso("");
+
+    try {
+      const extras = avisoExtras.split(/[\n,;]+/).map(s => s.trim()).filter(Boolean);
+      const res = await dispararAvisoEquipe(
+        {
+          assunto: avisoAssunto.trim(),
+          mensagem: avisoMensagem.trim(),
+          publico: avisoPublico,
+          prioridade: avisoPrioridade,
+          emails_extras: extras
+        },
+        token
+      );
+      setSucesso(`✅ ${res.mensagem || "Aviso enviado com sucesso!"}`);
+      setAvisoAssunto("");
+      setAvisoMensagem("");
+      setAvisoExtras("");
+    } catch (e) {
+      setErro("Erro ao disparar aviso: " + e.message);
+    } finally {
+      setDisparandoAviso(false);
+    }
+  }
+
+  // Gerenciamento de e-mails internos
+  async function handleAdicionarEmailInterno(e) {
+    e.preventDefault();
+    const em = novoEmailInterno.trim().toLowerCase();
+    if (!em || !em.includes("@")) {
+      alert("Digite um e-mail válido.");
+      return;
+    }
+    if (emailsInternos.includes(em)) {
+      alert("Este e-mail já está na lista.");
+      return;
+    }
+
+    const novos = [...emailsInternos, em];
+    setEmailsInternos(novos);
+    setNovoEmailInterno("");
+    setSalvandoInternos(true);
+    try {
+      await salvarEmailsInternos(novos, token);
+      setSucesso(`E-mail ${em} adicionado à equipe interna!`);
+      setTimeout(() => setSucesso(""), 3500);
+    } catch (e) {
+      setErro("Erro ao salvar e-mails internos: " + e.message);
+    } finally {
+      setSalvandoInternos(false);
+    }
+  }
+
+  async function handleRemoverEmailInterno(emailParaRemover) {
+    if (!confirm(`Remover ${emailParaRemover} da lista de e-mails internos?`)) return;
+    const novos = emailsInternos.filter(e => e !== emailParaRemover);
+    setEmailsInternos(novos);
+    setSalvandoInternos(true);
+    try {
+      await salvarEmailsInternos(novos, token);
+      setSucesso(`E-mail ${emailParaRemover} removido!`);
+      setTimeout(() => setSucesso(""), 3500);
+    } catch (e) {
+      setErro("Erro ao salvar: " + e.message);
+    } finally {
+      setSalvandoInternos(false);
+    }
+  }
+
+  const repsFiltrados = representantes.filter(r => {
+    if (!buscaRep.trim()) return true;
+    const term = buscaRep.toLowerCase();
+    return (
+      (r.codigo || "").toLowerCase().includes(term) ||
+      (r.nome || "").toLowerCase().includes(term) ||
+      (r.email || "").toLowerCase().includes(term) ||
+      (r.supervisor || "").toLowerCase().includes(term)
+    );
+  });
+
+  return (
+    <div className="admin-modal-backdrop" onClick={onClose}>
+      <div className="admin-modal-card rotinas-modal-card" onClick={(e) => e.stopPropagation()}>
+        <div className="admin-modal-header">
+          <div>
+            <h3>⏰ Configurar Mensagens Automáticas & Rotinas</h3>
+            <p className="modal-subtitle">
+              Gestão de Automações, Alertas Proativos e Avisos para a Equipe de Vendas
+            </p>
+          </div>
+          <button className="admin-modal-close" onClick={onClose}>✕</button>
+        </div>
+
+        {/* Abas */}
+        <div className="client-settings-tabs">
+          <button
+            className={`client-tab-btn ${tab === "rotinas" ? "active" : ""}`}
+            onClick={() => { setTab("rotinas"); setErro(""); setSucesso(""); }}
+          >
+            ⏰ Rotinas Automáticas ({rotinas.length})
+          </button>
+          <button
+            className={`client-tab-btn ${tab === "aviso" ? "active" : ""}`}
+            onClick={() => { setTab("aviso"); setErro(""); setSucesso(""); }}
+          >
+            📢 Enviar Aviso Imediato
+          </button>
+          <button
+            className={`client-tab-btn ${tab === "equipe" ? "active" : ""}`}
+            onClick={() => { setTab("equipe"); setErro(""); setSucesso(""); }}
+          >
+            👥 Equipe & E-mails ({stats.total_reps_ativos || 66} reps)
+          </button>
+        </div>
+
+        {erro && <div className="admin-banner-erro" style={{ margin: "14px 24px 0" }}>⚠️ {erro}</div>}
+        {sucesso && <div className="admin-banner-sucesso" style={{ margin: "14px 24px 0" }}>{sucesso}</div>}
+
+        <div className="admin-modal-body" style={{ maxHeight: "72vh", overflowY: "auto", padding: "20px 24px" }}>
+          {loading ? (
+            <div style={{ padding: "40px", textAlign: "center", color: "#94a3b8" }}>
+              Carregando rotinas e mensagens automáticas...
+            </div>
+          ) : (
+            <>
+              {/* ── ABA 1: ROTINAS AUTOMÁTICAS ── */}
+              {tab === "rotinas" && (
+                <div className="rotinas-view-container">
+                  {/* Resumo no topo */}
+                  <div className="rotinas-stats-banner">
+                    <div className="rotinas-stat-box">
+                      <span className="stat-label">Rotinas Configuradas</span>
+                      <span className="stat-val">{rotinas.length}</span>
+                    </div>
+                    <div className="rotinas-stat-box">
+                      <span className="stat-label">Rotinas Ativas</span>
+                      <span className="stat-val highlight" style={{ color: "#34d399" }}>
+                        {rotinas.filter(r => r.ativo).length} ativas
+                      </span>
+                    </div>
+                    <div className="rotinas-stat-box">
+                      <span className="stat-label">Alcance da Equipe</span>
+                      <span className="stat-val">
+                        {stats.reps_com_email || 65} representantes + {emailsInternos.length} internos
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleAbrirCriar}
+                      className="btn-nova-rotina"
+                    >
+                      ➕ Nova Rotina
+                    </button>
+                  </div>
+
+                  {/* Lista de Rotinas */}
+                  <div className="rotinas-cards-list">
+                    {rotinas.map((r) => (
+                      <div key={r.id} className={`rotina-card ${r.ativo ? "ativa" : "inativa"}`}>
+                        <div className="rotina-card-header">
+                          <div className="rotina-title-group">
+                            <div className="rotina-header-badges">
+                              <span className={`badge-frequencia ${r.frequencia}`}>
+                                {r.frequencia === "diario" ? "📅 Diário" : r.frequencia === "semanal" ? "🗓️ Semanal" : "🔄 Periódico"}
+                              </span>
+                              <span className="badge-canal">
+                                {r.canal === "email" ? "✉️ E-mail" : r.canal === "whatsapp" ? "💬 WhatsApp" : "🔔 Portal"}
+                              </span>
+                              <span className="badge-destinatario">
+                                {r.destinatarios_tipo === "equipe_vendas" ? "👥 Equipe de Vendas" : r.destinatarios_tipo === "gestao" ? "👔 Gestão / Diretoria" : "🏢 Todos"}
+                              </span>
+                            </div>
+                            <h4 className="rotina-titulo">{r.titulo}</h4>
+                          </div>
+
+                          <div className="rotina-toggle-container">
+                            <label className="switch-toggle" title={r.ativo ? "Clique para pausar" : "Clique para ativar"}>
+                              <input
+                                type="checkbox"
+                                checked={r.ativo}
+                                onChange={() => handleToggleAtivo(r.id)}
+                              />
+                              <span className="slider round"></span>
+                            </label>
+                            <span className={`rotina-status-text ${r.ativo ? "ativo" : "inativo"}`}>
+                              {r.ativo ? "Ativa" : "Pausada"}
+                            </span>
+                          </div>
+                        </div>
+
+                        <p className="rotina-descricao">{r.descricao}</p>
+
+                        <div className="rotina-detalhes-footer">
+                          <div className="rotina-meta-info">
+                            <span>⏰ Horário: <strong>{r.horario}</strong></span>
+                            {r.dias_semana && r.dias_semana.length > 0 && (
+                              <span> • Dias: <strong>{r.dias_semana.join(", ").toUpperCase()}</strong></span>
+                            )}
+                          </div>
+
+                          <div className="rotina-acoes-buttons">
+                            <button
+                              type="button"
+                              className="btn-acao-rotina edit"
+                              onClick={() => handleAbrirEditar(r)}
+                              title="Editar configurações da rotina"
+                            >
+                              ✏️ Editar
+                            </button>
+                            <button
+                              type="button"
+                              className="btn-acao-rotina delete"
+                              onClick={() => handleDeletarRotina(r.id)}
+                              title="Remover rotina"
+                            >
+                              🗑️
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* ── ABA 2: ENVIAR AVISO IMEDIATO ── */}
+              {tab === "aviso" && (
+                <div className="aviso-view-container">
+                  <div className="aviso-info-banner">
+                    <div>
+                      <strong>📢 Comunicado Oficial / Alerta Rápido</strong>
+                      <p>
+                        Envie avisos operacionais, mudanças de tabela, incentivos ou alertas de urgência diretamente
+                        para a caixa de entrada da equipe de vendas e da equipe interna.
+                      </p>
+                    </div>
+                  </div>
+
+                  <form onSubmit={handleDispararAviso} className="aviso-form">
+                    <div className="form-row-grid">
+                      <div className="form-group-custom">
+                        <label>Público Destinatário</label>
+                        <select
+                          value={avisoPublico}
+                          onChange={(e) => setAvisoPublico(e.target.value)}
+                          className="input-custom-select"
+                        >
+                          <option value="equipe_vendas">
+                            👥 Toda a Equipe de Vendas ({stats.reps_com_email || 65} representantes)
+                          </option>
+                          <option value="equipe_interna">
+                            🏢 Apenas Equipe Interna ({emailsInternos.length} e-mails @designtextecidos.com.br)
+                          </option>
+                          <option value="todos">
+                            🌐 Todos (Representantes + Equipe Interna)
+                          </option>
+                        </select>
+                      </div>
+
+                      <div className="form-group-custom">
+                        <label>Nível de Prioridade</label>
+                        <select
+                          value={avisoPrioridade}
+                          onChange={(e) => setAvisoPrioridade(e.target.value)}
+                          className="input-custom-select"
+                        >
+                          <option value="normal">📢 Normal (Comunicado Oficial)</option>
+                          <option value="urgente">🚨 Urgente (Aviso Importante / Bloqueios)</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <div className="form-group-custom">
+                      <label>Assunto do E-mail</label>
+                      <input
+                        type="text"
+                        placeholder="Ex: Campanha de Estoque Pronta Entrega / Atualização Comercial"
+                        value={avisoAssunto}
+                        onChange={(e) => setAvisoAssunto(e.target.value)}
+                        required
+                        className="input-custom-text"
+                      />
+                    </div>
+
+                    <div className="form-group-custom">
+                      <label>Mensagem do Comunicado</label>
+                      <textarea
+                        rows={6}
+                        placeholder="Escreva a mensagem que será enviada para toda a equipe..."
+                        value={avisoMensagem}
+                        onChange={(e) => setAvisoMensagem(e.target.value)}
+                        required
+                        className="input-custom-textarea"
+                      />
+                    </div>
+
+                    <div className="form-group-custom">
+                      <label>E-mails Extras (Opcional - separados por vírgula ou linha)</label>
+                      <input
+                        type="text"
+                        placeholder="outro@email.com, diretoria@designtextecidos.com.br"
+                        value={avisoExtras}
+                        onChange={(e) => setAvisoExtras(e.target.value)}
+                        className="input-custom-text"
+                      />
+                    </div>
+
+                    <button
+                      type="submit"
+                      disabled={disparandoAviso}
+                      className="btn-disparar-aviso"
+                    >
+                      {disparandoAviso ? "🚀 Disparando E-mails..." : "🚀 Disparar Aviso para a Equipe Agora"}
+                    </button>
+                  </form>
+                </div>
+              )}
+
+              {/* ── ABA 3: EQUIPE & E-MAILS CADASTRADOS ── */}
+              {tab === "equipe" && (
+                <div className="equipe-view-container">
+                  {/* Seção 1: E-mails da Equipe Interna */}
+                  <div className="equipe-interna-card">
+                    <div className="card-header-flex">
+                      <div>
+                        <h4>🏢 Equipe Interna (@designtextecidos.com.br)</h4>
+                        <p className="card-subtitle-small">
+                          Estes e-mails recebem cópia dos alertas de faturamento, pedidos bloqueados e comunicados internos.
+                        </p>
+                      </div>
+                    </div>
+
+                    <form onSubmit={handleAdicionarEmailInterno} className="form-add-interno">
+                      <input
+                        type="email"
+                        placeholder="novo.usuario@designtextecidos.com.br"
+                        value={novoEmailInterno}
+                        onChange={(e) => setNovoEmailInterno(e.target.value)}
+                        className="input-custom-text"
+                        style={{ flex: 1 }}
+                      />
+                      <button type="submit" disabled={salvandoInternos} className="btn-add-interno">
+                        ➕ Adicionar
+                      </button>
+                    </form>
+
+                    <div className="chips-internos-grid">
+                      {emailsInternos.map((em) => (
+                        <div key={em} className="email-interno-chip">
+                          <span>{em}</span>
+                          <button
+                            type="button"
+                            onClick={() => handleRemoverEmailInterno(em)}
+                            className="btn-chip-remove"
+                            title="Remover e-mail"
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Seção 2: Representantes Comerciais */}
+                  <div className="reps-list-card">
+                    <div className="reps-header-flex">
+                      <div>
+                        <h4>👥 Representantes Comerciais ({representantes.filter(r => r.ativo).length} ativos)</h4>
+                        <span className="reps-stats-tag">
+                          🟢 {stats.reps_com_email || 65} com e-mail cadastrado • 🟡 {stats.reps_sem_email || 1} pendente
+                        </span>
+                      </div>
+                      <input
+                        type="text"
+                        placeholder="Buscar por código, nome ou e-mail..."
+                        value={buscaRep}
+                        onChange={(e) => setBuscaRep(e.target.value)}
+                        className="input-busca-rep"
+                      />
+                    </div>
+
+                    <div className="tabela-reps-wrapper">
+                      <table className="tabela-reps">
+                        <thead>
+                          <tr>
+                            <th>Cód</th>
+                            <th>Representante</th>
+                            <th>E-mail Oficial</th>
+                            <th>Telefone</th>
+                            <th>Supervisor</th>
+                            <th>Status E-mail</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {repsFiltrados.slice(0, 50).map((r) => {
+                            const temEmail = r.email && r.email.includes("@") && !r.email.includes("SEM E-MAIL");
+                            return (
+                              <tr key={r.codigo}>
+                                <td className="col-cod font-mono">{r.codigo}</td>
+                                <td className="col-nome font-semibold">{r.nome}</td>
+                                <td className="col-email">
+                                  {temEmail ? (
+                                    <span className="email-link">{r.email}</span>
+                                  ) : (
+                                    <span className="email-pendente">⚠️ Sem E-mail</span>
+                                  )}
+                                </td>
+                                <td className="col-tel text-muted">{r.telefone || "-"}</td>
+                                <td className="col-sup">{r.supervisor || "-"}</td>
+                                <td>
+                                  {temEmail ? (
+                                    <span className="badge-status-ok">Pronto para Envio</span>
+                                  ) : (
+                                    <span className="badge-status-warn">Pendente</span>
+                                  )}
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+
+        {/* ── MODAL DE CRIAÇÃO / EDIÇÃO DE ROTINA ── */}
+        {modalEdicaoRotina && (
+          <div className="admin-modal-backdrop sub-modal" onClick={() => setModalEdicaoRotina(false)}>
+            <div className="admin-modal-card rotina-edit-card" onClick={(e) => e.stopPropagation()}>
+              <div className="admin-modal-header">
+                <h3>{rotinaEmEdicao ? "✏️ Editar Rotina Automática" : "➕ Nova Rotina Automática"}</h3>
+                <button className="admin-modal-close" onClick={() => setModalEdicaoRotina(false)}>✕</button>
+              </div>
+
+              <form onSubmit={handleSalvarRotina} className="form-rotina-edit">
+                <div className="form-group-custom">
+                  <label>Título da Rotina</label>
+                  <input
+                    type="text"
+                    value={formRotina.titulo}
+                    onChange={(e) => setFormRotina({ ...formRotina, titulo: e.target.value })}
+                    placeholder="Ex: Alerta de Pedidos Retidos no Financeiro"
+                    required
+                    className="input-custom-text"
+                  />
+                </div>
+
+                <div className="form-group-custom">
+                  <label>Descrição do Objetivo</label>
+                  <input
+                    type="text"
+                    value={formRotina.descricao}
+                    onChange={(e) => setFormRotina({ ...formRotina, descricao: e.target.value })}
+                    placeholder="Ex: Notifica representantes com pedidos que precisam de liberação de alçada."
+                    className="input-custom-text"
+                  />
+                </div>
+
+                <div className="form-row-grid">
+                  <div className="form-group-custom">
+                    <label>Frequência</label>
+                    <select
+                      value={formRotina.frequencia}
+                      onChange={(e) => setFormRotina({ ...formRotina, frequencia: e.target.value })}
+                      className="input-custom-select"
+                    >
+                      <option value="diario">Diário</option>
+                      <option value="semanal">Semanal</option>
+                      <option value="quinzenal">Quinzenal</option>
+                      <option value="mensal">Mensal</option>
+                    </select>
+                  </div>
+
+                  <div className="form-group-custom">
+                    <label>Horário do Disparo</label>
+                    <input
+                      type="time"
+                      value={formRotina.horario}
+                      onChange={(e) => setFormRotina({ ...formRotina, horario: e.target.value })}
+                      className="input-custom-text"
+                    />
+                  </div>
+                </div>
+
+                <div className="form-row-grid">
+                  <div className="form-group-custom">
+                    <label>Canal de Envio</label>
+                    <select
+                      value={formRotina.canal}
+                      onChange={(e) => setFormRotina({ ...formRotina, canal: e.target.value })}
+                      className="input-custom-select"
+                    >
+                      <option value="email">✉️ E-mail</option>
+                      <option value="whatsapp">💬 WhatsApp (Via Deise IA)</option>
+                      <option value="portal">🔔 Notificação no Portal</option>
+                    </select>
+                  </div>
+
+                  <div className="form-group-custom">
+                    <label>Público Alvo</label>
+                    <select
+                      value={formRotina.destinatarios_tipo}
+                      onChange={(e) => setFormRotina({ ...formRotina, destinatarios_tipo: e.target.value })}
+                      className="input-custom-select"
+                    >
+                      <option value="equipe_vendas">👥 Equipe de Vendas (Representantes)</option>
+                      <option value="gestao">👔 Apenas Gestão / Supervisores</option>
+                      <option value="equipe_interna">🏢 Equipe Interna (@designtextecidos.com.br)</option>
+                      <option value="todos">🌐 Todos</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="form-group-custom">
+                  <label>Template da Mensagem / Orientação</label>
+                  <textarea
+                    rows={4}
+                    value={formRotina.mensagem_template}
+                    onChange={(e) => setFormRotina({ ...formRotina, mensagem_template: e.target.value })}
+                    placeholder="Instruções ou corpo padrão da mensagem..."
+                    className="input-custom-textarea"
+                  />
+                </div>
+
+                <div className="modal-actions-bar">
+                  <button type="button" onClick={() => setModalEdicaoRotina(false)} className="btn-cancelar">
+                    Cancelar
+                  </button>
+                  <button type="submit" className="btn-salvar-modal">
+                    Salvar Rotina
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
