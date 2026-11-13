@@ -47,7 +47,8 @@ def gerar_relatorio_ciclo(
             r_res = sb.table("representantes").select("*").eq("codigo", str(rep_codigo).strip()).single().execute()
             if r_res.data:
                 rep_info = r_res.data
-                rep_filtro_nome = f"#{rep_info.get('codigo')} - {rep_info.get('nome')}"
+                rep_nome_exibicao = (rep_info.get("contato") or rep_info.get("nome") or "").strip()
+                rep_filtro_nome = f"#{rep_info.get('codigo')} - {rep_nome_exibicao}"
                 rep_supervisor = rep_info.get("supervisor") or "Geral"
                 rep_meta_metros = float(rep_info.get("meta") or 10000.0)
         except Exception:
@@ -461,7 +462,7 @@ def gerar_relatorio_ciclo(
           {badge_txt}
         </span>
         <h2 style="margin: 0; font-size: 18px; font-weight: 700; color: #ffffff; letter-spacing: -0.3px;">{titulo_oficial}</h2>
-        <p style="margin: 5px 0 0; font-size: 13px; color: #94a3b8;">Designtex Tecidos • Inteligência Comercial CONEXO.dev</p>
+        <p style="margin: 5px 0 0; font-size: 13px; color: #94a3b8;">Inteligência Comercial Designtex</p>
       </div>
 
       <!-- Tag de Identificação do Representante -->
@@ -490,7 +491,7 @@ def gerar_relatorio_ciclo(
 
       <!-- Rodapé -->
       <div style="background: #f8fafc; border-top: 1px solid #e2e8f0; padding: 16px 28px; font-size: 11px; color: #64748b; display: flex; justify-content: space-between; align-items: center;">
-        <span>Processado e auditado automaticamente pela <strong>IA Comercial CONEXO</strong></span>
+        <span>Processado e auditado automaticamente pela <strong>Inteligência Comercial Designtex</strong></span>
         <span>{dia_str} {agora.strftime('%H:%M')}</span>
       </div>
     </div>
@@ -499,7 +500,7 @@ def gerar_relatorio_ciclo(
     metricas = {
         "ciclo": ciclo_tipo,
         "rep_codigo": rep_codigo,
-        "rep_nome": rep_info.get("nome") if rep_info else "Geral",
+        "rep_nome": (rep_info.get("contato") or rep_info.get("nome")) if rep_info else "Geral",
         "supervisor": rep_supervisor,
         "vendido_mes": total_fat_val,
         "atingimento_pct": atingimento_pct,

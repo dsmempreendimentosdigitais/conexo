@@ -613,7 +613,7 @@ EMAILS_INTERNOS_PADRAO = [
     "samuel.mc85@gmail.com"
 ]
 
-EMAIL_REMETENTE_OFICIAL = "CONEXO • Designtex <comercial@designtextecidos.com.br>"
+EMAIL_REMETENTE_OFICIAL = "Inteligência Comercial Designtex <comercial@designtextecidos.com.br>"
 
 class RotinasSaveIn(BaseModel):
     rotinas: list[dict]
