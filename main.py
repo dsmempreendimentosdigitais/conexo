@@ -902,6 +902,182 @@ def disparar_aviso_equipe(body: DispararAvisoIn, ctx: dict = Depends(get_context
         )
     }
 
+class DispararRotinaIn(BaseModel):
+    rotina_id: str
+    titulo: str
+    descricao: str | None = ""
+    mensagem_template: str | None = ""
+    canal: str | None = "email"
+    destinatarios_tipo: str | None = "equipe_vendas"
+
+@app.post("/conexo/rotinas/disparar-agora")
+def disparar_rotina_agora(body: DispararRotinaIn, ctx: dict = Depends(get_contexto)):
+    import httpx
+    from datetime import datetime, timezone
+
+    tenant_id = ctx.get("tenant_id")
+    remetente = ctx.get("email")
+
+    t_res = supabase.table("tenants").select("conectores, nome").eq("id", tenant_id).single().execute()
+    conns = (t_res.data or {}).get("conectores") or {}
+    emails_internos = conns.get("emails_internos") or EMAILS_INTERNOS_PADRAO
+
+    destinatarios = set()
+
+    # 1. Representantes
+    if body.destinatarios_tipo in ("equipe_vendas", "todos"):
+        reps_res = supabase.table("representantes").select("email, ativo").eq("ativo", True).execute()
+        for r in reps_res.data or []:
+            em = (r.get("email") or "").strip().lower()
+            if em and "@" in em and not em.endswith(".internal") and "sem e-mail" not in em:
+                destinatarios.add(em)
+
+    # 2. Equipe Interna / Gestão
+    if body.destinatarios_tipo in ("equipe_interna", "gestao", "todos"):
+        for em in emails_internos:
+            em_clean = em.strip().lower()
+            if em_clean and "@" in em_clean:
+                destinatarios.add(em_clean)
+
+    lista_dest = list(destinatarios)
+    if not lista_dest:
+        lista_dest = [remetente or "samuel.mc85@gmail.com"]
+
+    MODO_HOMOLOGACAO = True
+    EMAIL_TESTE_HOMOLOGACAO = "samuel.mc85@gmail.com"
+    destinatarios_originais = lista_dest
+
+    if MODO_HOMOLOGACAO:
+        lista_dest = [EMAIL_TESTE_HOMOLOGACAO]
+        banner_homologacao = f"""
+        <div style="background: #fef3c7; border: 2px solid #f59e0b; color: #92400e; padding: 14px 18px; border-radius: 8px; margin: 16px 32px 0; font-size: 13px; line-height: 1.5;">
+          <strong>🛡️ DISPARO IMEDIATO EM MODO HOMOLOGAÇÃO / TESTES:</strong><br>
+          Esta rotina foi disparada agora pelo gestor para o público <strong>'{body.destinatarios_tipo}'</strong> ({len(destinatarios_originais)} destinatários na base).<br>
+          <span style="color: #b45309;">Por segurança operacional, <strong>NENHUM representante externo recebeu este e-mail</strong>. O disparo foi entregue exclusivamente para <strong>{EMAIL_TESTE_HOMOLOGACAO}</strong> para conferência de layout e conteúdo.</span>
+        </div>
+        """
+    else:
+        banner_homologacao = ""
+
+    corpo_msg = body.mensagem_template.strip() if (body.mensagem_template and body.mensagem_template.strip()) else (
+        f"Rotina automática: {body.titulo}\n\nObjetivo: {body.descricao or 'Acompanhamento comercial da equipe'}\n\nMensagem gerada pelo CONEXO.dev em tempo real com os dados mais recentes do sistema."
+    )
+
+    html_content = f"""
+    <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 650px; margin: 0 auto; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.06);">
+      <div style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); padding: 24px 32px; color: #ffffff;">
+        <span style="display: inline-block; background: #10b981; color: #ffffff; font-size: 11px; font-weight: 700; text-transform: uppercase; padding: 4px 10px; border-radius: 9999px; letter-spacing: 0.5px; margin-bottom: 8px;">
+          ⚡ ROTINA AUTOMÁTICA — ENVIADA AGORA
+        </span>
+        <h2 style="margin: 0; font-size: 20px; font-weight: 700; color: #ffffff;">{body.titulo}</h2>
+        <p style="margin: 6px 0 0; font-size: 13px; color: #94a3b8;">Designtex Tecidos — Rotina Comercial CONEXO</p>
+      </div>
+      {banner_homologacao}
+      <div style="padding: 32px; color: #334155; font-size: 15px; line-height: 1.6; white-space: pre-line;">
+        {corpo_msg}
+      </div>
+      <div style="background: #f8fafc; border-top: 1px solid #e2e8f0; padding: 18px 32px; font-size: 12px; color: #64748b; display: flex; justify-content: space-between; align-items: center;">
+        <span>Disparado manualmente pelo Gestor via <strong>CONEXO.dev</strong></span>
+        <span>{datetime.now().strftime('%d/%m/%Y %H:%M')}</span>
+      </div>
+    </div>
+    """
+
+    sucesso_resend = False
+    erro_resend = None
+
+    if config.RESEND_API_KEY:
+        try:
+            headers = {
+                "Authorization": f"Bearer {config.RESEND_API_KEY}",
+                "Content-Type": "application/json"
+            }
+            if MODO_HOMOLOGACAO:
+                payload = {
+                    "from": "CONEXO Vendas <onboarding@resend.dev>",
+                    "to": [EMAIL_TESTE_HOMOLOGACAO],
+                    "subject": f"[ROTINA ENVIADA AGORA] {body.titulo}",
+                    "html": html_content
+                }
+                r = httpx.post("https://api.resend.com/emails", json=payload, headers=headers, timeout=10.0)
+                if r.status_code in (200, 201):
+                    sucesso_resend = True
+                else:
+                    erro_resend = r.text
+            else:
+                lote_size = 45
+                for i in range(0, len(lista_dest), lote_size):
+                    lote = lista_dest[i:i + lote_size]
+                    payload = {
+                        "from": "CONEXO Vendas <onboarding@resend.dev>",
+                        "to": ["delivered@resend.dev"],
+                        "bcc": lote,
+                        "subject": f"[ROTINA CONEXO] {body.titulo}",
+                        "html": html_content
+                    }
+                    r = httpx.post("https://api.resend.com/emails", json=payload, headers=headers, timeout=10.0)
+                    if r.status_code not in (200, 201):
+                        erro_resend = r.text
+                sucesso_resend = True
+        except Exception as ex:
+            erro_resend = str(ex)
+
+    agora_iso = datetime.now(timezone.utc).isoformat()
+    try:
+        rotinas = conns.get("rotinas_automaticas") or []
+        for r in rotinas:
+            if r.get("id") == body.rotina_id:
+                r["ultima_execucao"] = agora_iso
+                r["ultimo_envio_modo"] = "manual"
+        conns["rotinas_automaticas"] = rotinas
+        supabase.table("tenants").update({"conectores": conns}).eq("id", tenant_id).execute()
+    except Exception as e_up:
+        print("Erro ao atualizar data da rotina:", e_up)
+
+    try:
+        supabase.table("notificacoes").insert({
+            "titulo": f"⚡ Rotina Enviada: {body.titulo}",
+            "mensagem": f"Disparo sob demanda executado pelo gestor.",
+            "tipo": "info",
+            "lida": False,
+            "created_at": agora_iso
+        }).execute()
+    except Exception:
+        pass
+
+    try:
+        supabase.table("conexo_logs").insert({
+            "usuario": remetente,
+            "pergunta": f"[DISPARO ROTINA AGORA] {body.titulo}",
+            "intent": "disparo_rotina_manual",
+            "parametros": {
+                "rotina_id": body.rotina_id,
+                "titulo": body.titulo,
+                "publico": body.destinatarios_tipo,
+                "total_destinatarios": len(lista_dest),
+                "resend_ok": sucesso_resend,
+                "erro": erro_resend
+            },
+            "sucesso": True
+        }).execute()
+    except Exception:
+        pass
+
+    return {
+        "sucesso": True,
+        "modo_homologacao": MODO_HOMOLOGACAO,
+        "total_enviados": len(lista_dest),
+        "destinatarios": lista_dest,
+        "destinatarios_simulados": len(destinatarios_originais) if MODO_HOMOLOGACAO else 0,
+        "resend_status": "enviado" if sucesso_resend else "simulado",
+        "ultima_execucao": agora_iso,
+        "mensagem": (
+            f"⚡ Rotina '{body.titulo}' enviada com sucesso em Modo Teste exclusivamente para {EMAIL_TESTE_HOMOLOGACAO}!"
+            if MODO_HOMOLOGACAO
+            else f"⚡ Rotina '{body.titulo}' disparada com sucesso para toda a equipe!"
+        )
+    }
+
 
 # ─────────────────────────────────────────────────
 # Webhook da Agente DEISE (WhatsApp / Atendimento a Clientes)

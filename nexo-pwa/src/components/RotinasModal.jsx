@@ -5,6 +5,7 @@ import {
   getEquipeDestinatarios,
   salvarEmailsInternos,
   dispararAvisoEquipe,
+  dispararRotinaAgora,
   atualizarRepresentanteEmail
 } from "../api";
 
@@ -17,6 +18,7 @@ export default function RotinasModal({ token, onClose }) {
   const [stats, setStats] = useState({ total_reps_ativos: 0, reps_com_email: 0, reps_sem_email: 0, total_internos: 0 });
   const [erro, setErro] = useState("");
   const [sucesso, setSucesso] = useState("");
+  const [disparandoRotinaId, setDisparandoRotinaId] = useState(null);
 
   // Estado para Criar/Editar Rotina
   const [modalEdicaoRotina, setModalEdicaoRotina] = useState(false);
@@ -152,6 +154,37 @@ export default function RotinasModal({ token, onClose }) {
       setTimeout(() => setSucesso(""), 3500);
     } catch (e) {
       setErro("Erro ao salvar rotina: " + e.message);
+    }
+  }
+
+  // Disparo Imediato sob Demanda de uma Rotina ("Enviar Agora")
+  async function handleDispararRotinaAgora(rotina) {
+    const publicoNome = rotina.destinatarios_tipo === "equipe_vendas"
+      ? "a Equipe de Vendas (Representantes)"
+      : rotina.destinatarios_tipo === "gestao"
+      ? "a Gestão / Diretoria"
+      : rotina.destinatarios_tipo === "equipe_interna"
+      ? "a Equipe Interna"
+      : "toda a equipe";
+
+    if (!confirm(`Deseja enviar a mensagem da rotina "${rotina.titulo}" AGORA para ${publicoNome}?\n\n(Obs: O sistema está com a Trava de Homologação ativa e o e-mail será direcionado com segurança para samuel.mc85@gmail.com)`)) {
+      return;
+    }
+
+    setDisparandoRotinaId(rotina.id);
+    setErro("");
+    setSucesso("");
+    try {
+      const res = await dispararRotinaAgora(rotina, token);
+      setSucesso(res.mensagem || `Rotina "${rotina.titulo}" enviada agora com sucesso!`);
+      if (res.ultima_execucao) {
+        setRotinas(prev => prev.map(r => r.id === rotina.id ? { ...r, ultima_execucao: res.ultima_execucao } : r));
+      }
+      setTimeout(() => setSucesso(""), 6000);
+    } catch (err) {
+      setErro("Erro ao enviar rotina agora: " + err.message);
+    } finally {
+      setDisparandoRotinaId(null);
     }
   }
 
@@ -471,9 +504,23 @@ export default function RotinasModal({ token, onClose }) {
                             {r.dias_semana && r.dias_semana.length > 0 && (
                               <span> • Dias: <strong>{r.dias_semana.join(", ").toUpperCase()}</strong></span>
                             )}
+                            {r.ultima_execucao && (
+                              <span className="badge-ultimo-disparo" title={`Disparo sob demanda: ${new Date(r.ultima_execucao).toLocaleString('pt-BR')}`}>
+                                ⚡ Enviado: {new Date(r.ultima_execucao).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })} ({new Date(r.ultima_execucao).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })})
+                              </span>
+                            )}
                           </div>
 
                           <div className="rotina-acoes-buttons">
+                            <button
+                              type="button"
+                              className="btn-acao-rotina send-now"
+                              onClick={() => handleDispararRotinaAgora(r)}
+                              disabled={disparandoRotinaId === r.id}
+                              title="Enviar esta rotina agora para a equipe"
+                            >
+                              {disparandoRotinaId === r.id ? "⏳ Enviando..." : "🚀 Enviar Agora"}
+                            </button>
                             <button
                               type="button"
                               className="btn-acao-rotina edit"

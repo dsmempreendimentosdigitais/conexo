@@ -389,3 +389,23 @@ export async function dispararAvisoEquipe(dados, token) {
   if (!r.ok) throw new Error((await r.json()).detail || "Erro ao disparar aviso para a equipe");
   return r.json();
 }
+
+export async function dispararRotinaAgora(rotina, token) {
+  const r = await fetch(`${BASE}/conexo/rotinas/disparar-agora`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({
+      rotina_id: rotina.id,
+      titulo: rotina.titulo,
+      descricao: rotina.descricao || "",
+      mensagem_template: rotina.mensagem_template || "",
+      canal: rotina.canal || "email",
+      destinatarios_tipo: rotina.destinatarios_tipo || "equipe_vendas",
+    }),
+  });
+  if (!r.ok) throw new Error((await r.json()).detail || "Erro ao disparar rotina agora");
+  return r.json();
+}
