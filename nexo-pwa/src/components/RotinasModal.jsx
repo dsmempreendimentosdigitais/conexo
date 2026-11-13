@@ -20,9 +20,11 @@ export default function RotinasModal({ token, onClose }) {
   const [sucesso, setSucesso] = useState("");
   const [disparandoRotinaId, setDisparandoRotinaId] = useState(null);
 
-  // Estado para Seleção de Representante e Supervisor nos Relatórios dos Ciclos
-  const [repSimulacao, setRepSimulacao] = useState("");
+  // Estado para Seleção Múltipla de Representantes e Supervisor nos Relatórios dos Ciclos
+  const [repsSelecionados, setRepsSelecionados] = useState([]);
   const [filtroSupervisor, setFiltroSupervisor] = useState("todos");
+  const [modalSelecaoReps, setModalSelecaoReps] = useState(false);
+  const [buscaModalReps, setBuscaModalReps] = useState("");
 
   // Estado para Criar/Editar Rotina
   const [modalEdicaoRotina, setModalEdicaoRotina] = useState(false);
@@ -171,12 +173,17 @@ export default function RotinasModal({ token, onClose }) {
       ? "a Equipe Interna"
       : "toda a equipe";
 
-    const repAlvoObj = representantes.find(r => String(r.codigo) === String(repSimulacao));
-    const contextoAlvo = repAlvoObj
-      ? `específico para a carteira de #${repAlvoObj.codigo} - ${repAlvoObj.nome} (${repAlvoObj.supervisor ? "Supervisor: " + repAlvoObj.supervisor : "Direto"})`
-      : `consolidado geral (${publicoNome})`;
+    let contextoAlvo = `consolidado geral (${publicoNome})`;
+    if (repsSelecionados.length === 1) {
+      const repAlvoObj = representantes.find(r => String(r.codigo) === String(repsSelecionados[0]));
+      contextoAlvo = repAlvoObj
+        ? `específico para a carteira de #${repAlvoObj.codigo} - ${repAlvoObj.nome}`
+        : `para o representante #${repsSelecionados[0]}`;
+    } else if (repsSelecionados.length > 1) {
+      contextoAlvo = `com ${repsSelecionados.length} relatórios individualizados (1 por representante selecionado)`;
+    }
 
-    if (!confirm(`Deseja processar a IA e enviar a rotina "${rotina.titulo}" AGORA ${contextoAlvo}?\n\n(Obs: O envio está seguro em modo homologação e chegará na sua caixa samuel.mc85@gmail.com com as análises completas das perguntas)`)) {
+    if (!confirm(`Deseja processar a IA e enviar a rotina "${rotina.titulo}" AGORA ${contextoAlvo}?\n\n(Obs: O envio está seguro em modo homologação e chegará na sua caixa samuel.mc85@gmail.com)`)) {
       return;
     }
 
@@ -184,12 +191,16 @@ export default function RotinasModal({ token, onClose }) {
     setErro("");
     setSucesso("");
     try {
-      const res = await dispararRotinaAgora(rotina, repSimulacao || null, token);
+      const res = await dispararRotinaAgora(
+        rotina,
+        repsSelecionados.length > 0 ? repsSelecionados : null,
+        token
+      );
       setSucesso(res.mensagem || `Rotina "${rotina.titulo}" enviada agora com sucesso!`);
       if (res.ultima_execucao) {
         setRotinas(prev => prev.map(r => r.id === rotina.id ? { ...r, ultima_execucao: res.ultima_execucao } : r));
       }
-      setTimeout(() => setSucesso(""), 6000);
+      setTimeout(() => setSucesso(""), 7000);
     } catch (err) {
       setErro("Erro ao enviar rotina agora: " + err.message);
     } finally {
@@ -383,12 +394,41 @@ export default function RotinasModal({ token, onClose }) {
     new Set(representantes.map(r => r.supervisor).filter(Boolean))
   ).sort();
 
-  const repsFiltradosPorSupervisor = representantes.filter(r => {
-    if (filtroSupervisor === "todos") return true;
-    return (r.supervisor || "").toLowerCase() === filtroSupervisor.toLowerCase();
+  const repsModalFiltrados = representantes.filter(r => {
+    if (filtroSupervisor !== "todos") {
+      if ((r.supervisor || "").toLowerCase() !== filtroSupervisor.toLowerCase()) return false;
+    }
+    if (buscaModalReps.trim()) {
+      const term = buscaModalReps.toLowerCase();
+      return (
+        (r.codigo || "").toLowerCase().includes(term) ||
+        (r.nome || "").toLowerCase().includes(term) ||
+        (r.email || "").toLowerCase().includes(term) ||
+        (r.supervisor || "").toLowerCase().includes(term)
+      );
+    }
+    return true;
   });
 
-  const repSelecionadoObj = representantes.find(r => String(r.codigo) === String(repSimulacao));
+  function toggleRepSelecionado(codigo) {
+    const cod = String(codigo);
+    setRepsSelecionados(prev =>
+      prev.includes(cod) ? prev.filter(c => c !== cod) : [...prev, cod]
+    );
+  }
+
+  function selecionarTodosFiltrados() {
+    const codigosVisiveis = repsModalFiltrados.map(r => String(r.codigo));
+    setRepsSelecionados(prev => {
+      const set = new Set(prev);
+      codigosVisiveis.forEach(c => set.add(c));
+      return Array.from(set);
+    });
+  }
+
+  function limparSelecaoReps() {
+    setRepsSelecionados([]);
+  }
 
   const repsFiltrados = representantes.filter(r => {
     if (!buscaRep.trim()) return true;
@@ -481,85 +521,72 @@ export default function RotinasModal({ token, onClose }) {
                     </button>
                   </div>
 
-                  {/* Seletor de Representante & Supervisor para Disparo / Teste Individual */}
+                  {/* Barra de Seleção de Representantes para Teste */}
                   <div className="painel-simulacao-rep">
-                    <div className="painel-simulacao-header">
+                    <div className="painel-simulacao-header" style={{ marginBottom: repsSelecionados.length > 0 ? "12px" : "0" }}>
                       <div className="painel-simulacao-titulo">
                         <span className="icon-target">🎯</span>
                         <div>
-                          <strong>Filtro de Análise por Representante / Supervisor</strong>
+                          <strong>Representantes para Envio / Teste</strong>
                           <p>
-                            Selecione um representante para que a IA analise a carteira específica dele (clientes, metas, pedidos bloqueados, pilotagens e PE) ou deixe em "Geral" para dados consolidados da Designtex.
+                            {repsSelecionados.length === 0
+                              ? "Modo Geral Consolidado (1 e-mail com os números da empresa). Clique em Selecionar Representante para escolher 1, vários ou todos."
+                              : `${repsSelecionados.length} representante(s) selecionado(s) — será gerado 1 relatório individualizado para cada selecionado em samuel.mc85@gmail.com.`}
                           </p>
                         </div>
                       </div>
-                      {repSimulacao && (
+                      <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", alignItems: "center" }}>
                         <button
                           type="button"
-                          className="btn-limpar-simulacao"
-                          onClick={() => setRepSimulacao("")}
-                          title="Voltar para a visão geral consolidada da empresa"
+                          className="btn-abrir-selecao-reps"
+                          onClick={() => setModalSelecaoReps(true)}
                         >
-                          ✕ Limpar Seleção (Ver Geral)
+                          👥 Selecionar Representante
+                          {repsSelecionados.length > 0 && (
+                            <span className="badge-count-reps">{repsSelecionados.length}</span>
+                          )}
                         </button>
-                      )}
-                    </div>
-
-                    <div className="painel-simulacao-filtros">
-                      <div className="filtro-campo">
-                        <label>Filtrar por Supervisor:</label>
-                        <select
-                          className="select-simulacao"
-                          value={filtroSupervisor}
-                          onChange={(e) => {
-                            const novoSup = e.target.value;
-                            setFiltroSupervisor(novoSup);
-                            if (novoSup !== "todos" && repSelecionadoObj && (repSelecionadoObj.supervisor || "").toLowerCase() !== novoSup.toLowerCase()) {
-                              setRepSimulacao("");
-                            }
-                          }}
-                        >
-                          <option value="todos">🌐 Todos os Supervisores ({supervisoresUnicos.length})</option>
-                          {supervisoresUnicos.map((sup) => (
-                            <option key={sup} value={sup}>👔 Supervisor: {sup}</option>
-                          ))}
-                        </select>
-                      </div>
-
-                      <div className="filtro-campo flex-grow">
-                        <label>Selecionar Representante para Análise:</label>
-                        <select
-                          className={`select-simulacao ${repSimulacao ? "select-destaque-rep" : ""}`}
-                          value={repSimulacao}
-                          onChange={(e) => setRepSimulacao(e.target.value)}
-                        >
-                          <option value="">📊 [Visão Geral Consolidada — Toda a Empresa / Designtex]</option>
-                          {repsFiltradosPorSupervisor.map((rep) => (
-                            <option key={rep.codigo} value={rep.codigo}>
-                              #{rep.codigo} • {rep.nome} {rep.supervisor ? `[Sup: ${rep.supervisor}]` : ""} {rep.email ? `• ${rep.email}` : "• (sem e-mail)"}
-                            </option>
-                          ))}
-                        </select>
+                        {repsSelecionados.length > 0 && (
+                          <button
+                            type="button"
+                            className="btn-limpar-simulacao"
+                            onClick={limparSelecaoReps}
+                            title="Limpar seleção e voltar para o relatório geral consolidado"
+                          >
+                            ✕ Limpar
+                          </button>
+                        )}
                       </div>
                     </div>
 
-                    {repSelecionadoObj && (
+                    {repsSelecionados.length > 0 && (
                       <div className="banner-rep-ativo-info">
                         <span className="dot-rep-ativo"></span>
-                        <div className="rep-ativo-conteudo">
-                          <div className="rep-ativo-nome">
-                            Representante Selecionado: <strong>#{repSelecionadoObj.codigo} — {repSelecionadoObj.nome}</strong>
+                        <div className="rep-ativo-conteudo" style={{ width: "100%" }}>
+                          <div className="rep-ativo-nome" style={{ marginBottom: "6px" }}>
+                            Selecionados ({repsSelecionados.length}):
                           </div>
-                          <div className="rep-info-tags">
-                            {repSelecionadoObj.supervisor && (
-                              <span className="tag-sup">👔 Supervisor: {repSelecionadoObj.supervisor}</span>
+                          <div className="rep-chips-selecionados">
+                            {repsSelecionados.slice(0, 8).map(cod => {
+                              const rObj = representantes.find(x => String(x.codigo) === String(cod));
+                              return (
+                                <span key={cod} className="chip-rep-sel">
+                                  #{cod} {rObj ? rObj.nome.split(" ")[0] : ""}
+                                  <button
+                                    type="button"
+                                    onClick={() => toggleRepSelecionado(cod)}
+                                    title="Remover este representante"
+                                  >
+                                    ×
+                                  </button>
+                                </span>
+                              );
+                            })}
+                            {repsSelecionados.length > 8 && (
+                              <span className="chip-rep-sel extra">
+                                +{repsSelecionados.length - 8} outros
+                              </span>
                             )}
-                            {repSelecionadoObj.meta && (
-                              <span className="tag-meta">🎯 Meta: {Number(repSelecionadoObj.meta).toLocaleString('pt-BR')} m</span>
-                            )}
-                            <span className="tag-email">
-                              ✉️ E-mail oficial: {repSelecionadoObj.email || "Não informado"}
-                            </span>
                           </div>
                         </div>
                       </div>
@@ -582,6 +609,18 @@ export default function RotinasModal({ token, onClose }) {
                               <span className="badge-destinatario">
                                 {r.destinatarios_tipo === "equipe_vendas" ? "👥 Equipe de Vendas" : r.destinatarios_tipo === "gestao" ? "👔 Gestão / Diretoria" : "🏢 Todos"}
                               </span>
+                              <button
+                                type="button"
+                                className={`btn-selecionar-rep-card ${repsSelecionados.length > 0 ? "ativo" : ""}`}
+                                onClick={() => setModalSelecaoReps(true)}
+                                title="Abrir lista para selecionar 1, vários ou todos os representantes"
+                              >
+                                👥 {repsSelecionados.length === 0
+                                  ? "Selecionar Representante"
+                                  : repsSelecionados.length === 1
+                                  ? `Rep #${repsSelecionados[0]}`
+                                  : `${repsSelecionados.length} Reps Selecionados`}
+                              </button>
                             </div>
                             <h4 className="rotina-titulo">{r.titulo}</h4>
                           </div>
@@ -622,13 +661,19 @@ export default function RotinasModal({ token, onClose }) {
                               className="btn-acao-rotina send-now"
                               onClick={() => handleDispararRotinaAgora(r)}
                               disabled={disparandoRotinaId === r.id}
-                              title={repSimulacao ? `Gerar relatório com as perguntas da IA para o representante #${repSimulacao} e enviar` : "Enviar relatório consolidado geral agora"}
+                              title={
+                                repsSelecionados.length > 0
+                                  ? `Enviar relatório individualizado para ${repsSelecionados.length} representante(s)`
+                                  : "Enviar relatório consolidado geral agora"
+                              }
                             >
                               {disparandoRotinaId === r.id
                                 ? "⏳ Processando IA..."
-                                : repSimulacao
-                                ? `🚀 Enviar Rep #${repSimulacao}`
-                                : "🚀 Enviar Agora (Geral)"}
+                                : repsSelecionados.length === 0
+                                ? "🚀 Enviar Agora (Geral)"
+                                : repsSelecionados.length === 1
+                                ? `🚀 Enviar Rep #${repsSelecionados[0]}`
+                                : `🚀 Enviar (${repsSelecionados.length} Reps)`}
                             </button>
                             <button
                               type="button"
@@ -1093,6 +1138,121 @@ export default function RotinasModal({ token, onClose }) {
                   </div>
                 </div>
               </form>
+            </div>
+          </div>
+        )}
+
+        {/* ── SUB-MODAL: SELECIONAR 1, VÁRIOS OU TODOS OS REPRESENTANTES ── */}
+        {modalSelecaoReps && (
+          <div className="admin-modal-backdrop sub-modal" onClick={() => setModalSelecaoReps(false)}>
+            <div className="admin-modal-card selecao-reps-modal-card" onClick={(e) => e.stopPropagation()}>
+              <div className="admin-modal-header">
+                <div>
+                  <h3>👥 Selecionar Representante(s)</h3>
+                  <p className="modal-subtitle">
+                    Marque 1, vários ou todos os representantes para testar os relatórios individualizados em <strong>samuel.mc85@gmail.com</strong>
+                  </p>
+                </div>
+                <button className="admin-modal-close" onClick={() => setModalSelecaoReps(false)}>✕</button>
+              </div>
+
+              <div className="selecao-reps-toolbar">
+                <input
+                  type="text"
+                  className="input-custom-text"
+                  placeholder="🔍 Buscar por código, nome, supervisor ou e-mail..."
+                  value={buscaModalReps}
+                  onChange={(e) => setBuscaModalReps(e.target.value)}
+                  style={{ flex: 1, minWidth: "220px" }}
+                />
+                <select
+                  className="select-simulacao"
+                  value={filtroSupervisor}
+                  onChange={(e) => setFiltroSupervisor(e.target.value)}
+                >
+                  <option value="todos">🌐 Todos os Supervisores</option>
+                  {supervisoresUnicos.map((sup) => (
+                    <option key={sup} value={sup}>👔 Sup: {sup}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="selecao-reps-actions-row">
+                <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+                  <button
+                    type="button"
+                    className="btn-selecao-rapida all"
+                    onClick={selecionarTodosFiltrados}
+                  >
+                    ☑️ Selecionar Todos ({repsModalFiltrados.length})
+                  </button>
+                  <button
+                    type="button"
+                    className="btn-selecao-rapida clear"
+                    onClick={limparSelecaoReps}
+                  >
+                    🔲 Desmarcar Todos (Visão Geral)
+                  </button>
+                </div>
+                <span className="selecao-reps-counter">
+                  {repsSelecionados.length === 0
+                    ? "Visão Geral (0 selecionados)"
+                    : `${repsSelecionados.length} selecionado(s)`}
+                </span>
+              </div>
+
+              <div className="selecao-reps-list">
+                {repsModalFiltrados.map((rep) => {
+                  const cod = String(rep.codigo);
+                  const checked = repsSelecionados.includes(cod);
+                  return (
+                    <label key={cod} className={`selecao-rep-item ${checked ? "checked" : ""}`}>
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        onChange={() => toggleRepSelecionado(cod)}
+                      />
+                      <div className="selecao-rep-info">
+                        <div className="selecao-rep-top">
+                          <span className="selecao-rep-cod">#{cod}</span>
+                          <span className="selecao-rep-nome">{rep.nome}</span>
+                          {rep.supervisor && (
+                            <span className="selecao-rep-sup">👔 {rep.supervisor}</span>
+                          )}
+                        </div>
+                        <div className="selecao-rep-sub">
+                          <span>✉️ {rep.email || "Sem e-mail cadastrado"}</span>
+                          {rep.meta ? (
+                            <span> • 🎯 Meta: {Number(rep.meta).toLocaleString("pt-BR")} m</span>
+                          ) : null}
+                        </div>
+                      </div>
+                    </label>
+                  );
+                })}
+                {repsModalFiltrados.length === 0 && (
+                  <div style={{ padding: "30px", textAlign: "center", color: "#94a3b8" }}>
+                    Nenhum representante encontrado com esse filtro.
+                  </div>
+                )}
+              </div>
+
+              <div className="modal-actions-bar" style={{ padding: "14px 24px", borderTop: "1px solid rgba(255,255,255,0.08)", marginTop: 0 }}>
+                <button
+                  type="button"
+                  className="btn-cancelar"
+                  onClick={limparSelecaoReps}
+                >
+                  Limpar (Geral)
+                </button>
+                <button
+                  type="button"
+                  className="btn-salvar-modal"
+                  onClick={() => setModalSelecaoReps(false)}
+                >
+                  ✅ Confirmar ({repsSelecionados.length === 0 ? "Geral" : `${repsSelecionados.length} selecionado(s)`})
+                </button>
+              </div>
             </div>
           </div>
         )}

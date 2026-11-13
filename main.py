@@ -929,10 +929,13 @@ class DispararRotinaIn(BaseModel):
     canal: str | None = "email"
     destinatarios_tipo: str | None = "equipe_vendas"
     representante_codigo: str | None = None
+    representantes_codigos: list[str] | None = None
 
 @app.post("/conexo/rotinas/disparar-agora")
 def disparar_rotina_agora(body: DispararRotinaIn, ctx: dict = Depends(get_contexto)):
     import httpx
+    import time
+    import threading
     from datetime import datetime, timezone
 
     tenant_id = ctx.get("tenant_id")
@@ -941,113 +944,151 @@ def disparar_rotina_agora(body: DispararRotinaIn, ctx: dict = Depends(get_contex
     t_res = supabase.table("tenants").select("conectores, nome").eq("id", tenant_id).single().execute()
     conns = (t_res.data or {}).get("conectores") or {}
     emails_internos = conns.get("emails_internos") or EMAILS_INTERNOS_PADRAO
-
-    # Gerar o relatório inteligente através do Motor Analítico de Ciclos
-    html_content, resumo_curto, metricas = gerar_relatorio_ciclo(
-        rotina_id=body.rotina_id,
-        titulo=body.titulo,
-        rep_codigo=body.representante_codigo,
-        supabase_client=supabase
-    )
-
-    destinatarios = set()
-
-    # Se um representante específico foi escolhido e estamos em produção
-    if body.representante_codigo and str(body.representante_codigo) not in ("todos", ""):
-        r_res = supabase.table("representantes").select("email, ativo").eq("codigo", str(body.representante_codigo)).single().execute()
-        if r_res.data and r_res.data.get("email"):
-            destinatarios.add(r_res.data["email"].strip().lower())
-    else:
-        # 1. Representantes
-        if body.destinatarios_tipo in ("equipe_vendas", "todos"):
-            reps_res = supabase.table("representantes").select("email, ativo").eq("ativo", True).execute()
-            for r in reps_res.data or []:
-                em = (r.get("email") or "").strip().lower()
-                if em and "@" in em and not em.endswith(".internal") and "sem e-mail" not in em:
-                    destinatarios.add(em)
-
-        # 2. Equipe Interna / Gestão
-        if body.destinatarios_tipo in ("equipe_interna", "gestao", "todos"):
-            for em in emails_internos:
-                em_clean = em.strip().lower()
-                if em_clean and "@" in em_clean:
-                    destinatarios.add(em_clean)
-
-    lista_dest = list(destinatarios)
-    if not lista_dest:
-        lista_dest = [remetente or "samuel.mc85@gmail.com"]
+    resend_key = conns.get("resend_api_key") or config.RESEND_API_KEY
 
     MODO_HOMOLOGACAO = True
     EMAIL_TESTE_HOMOLOGACAO = "samuel.mc85@gmail.com"
-    destinatarios_originais = lista_dest
 
-    if MODO_HOMOLOGACAO:
-        lista_dest = [EMAIL_TESTE_HOMOLOGACAO]
+    # Definir lista de alvos: [None] = Geral consolidado, ou lista de códigos de representantes
+    if body.representantes_codigos and len(body.representantes_codigos) > 0:
+        alvos = [str(c).strip() for c in body.representantes_codigos if str(c).strip()]
+    elif body.representante_codigo and str(body.representante_codigo) not in ("todos", ""):
+        alvos = [str(body.representante_codigo).strip()]
+    else:
+        alvos = [None]
 
-    rep_tag = f" — {metricas.get('rep_nome')}" if body.representante_codigo and body.representante_codigo != "todos" else " — Geral"
-    subject_email = f"⚡ [{body.titulo.split('—')[0].strip()}]{rep_tag}"
+    def _enviar_para_alvo(rep_cod):
+        html_content, resumo_curto, metricas = gerar_relatorio_ciclo(
+            rotina_id=body.rotina_id,
+            titulo=body.titulo,
+            rep_codigo=rep_cod,
+            supabase_client=supabase
+        )
 
-    resend_key = conns.get("resend_api_key") or config.RESEND_API_KEY
-    sucesso_resend = False
-    erro_resend = None
-    email_entregue_final = None
+        destinatarios = set()
+        if rep_cod:
+            try:
+                r_res = supabase.table("representantes").select("email, ativo").eq("codigo", str(rep_cod)).single().execute()
+                if r_res.data and r_res.data.get("email"):
+                    em = r_res.data["email"].strip().lower()
+                    if "@" in em and not em.endswith(".internal") and "sem e-mail" not in em:
+                        destinatarios.add(em)
+            except Exception:
+                pass
+        else:
+            if body.destinatarios_tipo in ("equipe_vendas", "todos"):
+                reps_res = supabase.table("representantes").select("email, ativo").eq("ativo", True).execute()
+                for r in reps_res.data or []:
+                    em = (r.get("email") or "").strip().lower()
+                    if em and "@" in em and not em.endswith(".internal") and "sem e-mail" not in em:
+                        destinatarios.add(em)
+            if body.destinatarios_tipo in ("equipe_interna", "gestao", "todos"):
+                for em in emails_internos:
+                    em_clean = em.strip().lower()
+                    if em_clean and "@" in em_clean:
+                        destinatarios.add(em_clean)
 
-    if resend_key:
-        try:
-            headers = {
-                "Authorization": f"Bearer {resend_key}",
-                "Content-Type": "application/json"
-            }
-            if MODO_HOMOLOGACAO:
-                payload = {
-                    "from": EMAIL_REMETENTE_OFICIAL,
-                    "to": [EMAIL_TESTE_HOMOLOGACAO],
-                    "subject": subject_email,
-                    "html": html_content
+        lista_dest = list(destinatarios) or [remetente or EMAIL_TESTE_HOMOLOGACAO]
+        if MODO_HOMOLOGACAO:
+            lista_dest_envio = [EMAIL_TESTE_HOMOLOGACAO]
+        else:
+            lista_dest_envio = lista_dest
+
+        rep_tag = f" — #{rep_cod} {metricas.get('rep_nome')}" if rep_cod else " — Geral"
+        subject_email = f"⚡ [{body.titulo.split('—')[0].strip()}]{rep_tag}"
+
+        ok = False
+        entregue = None
+        err = None
+        if resend_key:
+            try:
+                headers = {
+                    "Authorization": f"Bearer {resend_key}",
+                    "Content-Type": "application/json"
                 }
-                r = httpx.post("https://api.resend.com/emails", json=payload, headers=headers, timeout=12.0)
-                if r.status_code in (200, 201):
-                    sucesso_resend = True
-                    email_entregue_final = EMAIL_TESTE_HOMOLOGACAO
-                elif r.status_code == 403 and "only send testing emails" in r.text:
-                    import re
-                    m = re.search(r"\(([^)]+@gmail\.com)\)", r.text)
-                    owner_email = m.group(1) if m else "design.designtextecidos@gmail.com"
-                    payload["to"] = [owner_email]
-                    r2 = httpx.post("https://api.resend.com/emails", json=payload, headers=headers, timeout=12.0)
-                    if r2.status_code in (200, 201):
-                        sucesso_resend = True
-                        email_entregue_final = owner_email
-                    else:
-                        erro_resend = r2.text
-                else:
-                    erro_resend = r.text
-            else:
-                lote_size = 45
-                for i in range(0, len(lista_dest), lote_size):
-                    lote = lista_dest[i:i + lote_size]
+                if MODO_HOMOLOGACAO:
                     payload = {
                         "from": EMAIL_REMETENTE_OFICIAL,
-                        "to": ["delivered@resend.dev"],
-                        "bcc": lote,
+                        "to": [EMAIL_TESTE_HOMOLOGACAO],
                         "subject": subject_email,
                         "html": html_content
                     }
-                    r = httpx.post("https://api.resend.com/emails", json=payload, headers=headers, timeout=12.0)
-                    if r.status_code not in (200, 201):
-                        erro_resend = r.text
-                sucesso_resend = True
-        except Exception as ex:
-            erro_resend = str(ex)
+                    r = httpx.post("https://api.resend.com/emails", json=payload, headers=headers, timeout=15.0)
+                    if r.status_code in (200, 201):
+                        ok = True
+                        entregue = EMAIL_TESTE_HOMOLOGACAO
+                    else:
+                        err = r.text
+                else:
+                    lote_size = 45
+                    for i in range(0, len(lista_dest_envio), lote_size):
+                        lote = lista_dest_envio[i:i + lote_size]
+                        payload = {
+                            "from": EMAIL_REMETENTE_OFICIAL,
+                            "to": ["delivered@resend.dev"],
+                            "bcc": lote,
+                            "subject": subject_email,
+                            "html": html_content
+                        }
+                        r = httpx.post("https://api.resend.com/emails", json=payload, headers=headers, timeout=15.0)
+                        if r.status_code not in (200, 201):
+                            err = r.text
+                    ok = True
+                    entregue = f"{len(lista_dest_envio)} destinatários"
+            except Exception as ex:
+                err = str(ex)
+        return ok, entregue, err, metricas, resumo_curto, len(lista_dest)
 
     agora_iso = datetime.now(timezone.utc).isoformat()
+    em_background = len(alvos) > 3
+
+    if em_background:
+        def _worker_lote():
+            for idx, cod in enumerate(alvos):
+                try:
+                    _enviar_para_alvo(cod)
+                except Exception as ex_w:
+                    print(f"Erro envio lote rep {cod}:", ex_w)
+                if idx < len(alvos) - 1:
+                    time.sleep(0.55)
+
+        threading.Thread(target=_worker_lote, daemon=True).start()
+        sucesso_resend = True
+        email_entregue_final = EMAIL_TESTE_HOMOLOGACAO
+        erro_resend = None
+        metricas = {"rep_nome": f"{len(alvos)} representantes selecionados"}
+        resumo_curto = f"Disparo em lote para {len(alvos)} representantes."
+        total_orig = len(alvos)
+    else:
+        sucessos = 0
+        ultimo_erro = None
+        metricas = {}
+        resumo_curto = ""
+        email_entregue_final = EMAIL_TESTE_HOMOLOGACAO
+        total_orig = 0
+        for idx, cod in enumerate(alvos):
+            ok, entregue, err, m, r_curto, n_dest = _enviar_para_alvo(cod)
+            if ok:
+                sucessos += 1
+            if err:
+                ultimo_erro = err
+            if entregue:
+                email_entregue_final = entregue
+            metricas = m
+            resumo_curto = r_curto
+            total_orig += n_dest
+            if idx < len(alvos) - 1:
+                time.sleep(0.4)
+        sucesso_resend = sucessos > 0
+        erro_resend = ultimo_erro
+
     try:
         rotinas = conns.get("rotinas_automaticas") or []
         for r in rotinas:
             if r.get("id") == body.rotina_id:
                 r["ultima_execucao"] = agora_iso
                 r["ultimo_envio_modo"] = "manual"
-                r["ultimo_rep_simulado"] = body.representante_codigo
+                r["ultimo_rep_simulado"] = ", ".join(alvos) if alvos != [None] else "Geral"
         conns["rotinas_automaticas"] = rotinas
         supabase.table("tenants").update({"conectores": conns}).eq("id", tenant_id).execute()
     except Exception as e_up:
@@ -1056,7 +1097,7 @@ def disparar_rotina_agora(body: DispararRotinaIn, ctx: dict = Depends(get_contex
     try:
         supabase.table("notificacoes").insert({
             "titulo": f"⚡ Relatório Enviado: {body.titulo}",
-            "mensagem": f"Disparo ({metricas.get('rep_nome')}): {resumo_curto}",
+            "mensagem": f"Disparo ({len(alvos)} alvo(s)): {resumo_curto}",
             "tipo": "info",
             "lida": False,
             "created_at": agora_iso
@@ -1067,14 +1108,13 @@ def disparar_rotina_agora(body: DispararRotinaIn, ctx: dict = Depends(get_contex
     try:
         supabase.table("conexo_logs").insert({
             "usuario": remetente,
-            "pergunta": f"[DISPARO ROTINA AGORA] {body.titulo} (Rep: {body.representante_codigo or 'Geral'})",
+            "pergunta": f"[DISPARO ROTINA AGORA] {body.titulo} (Alvos: {', '.join([str(a or 'Geral') for a in alvos[:10]])})",
             "intent": "disparo_rotina_manual",
             "parametros": {
                 "rotina_id": body.rotina_id,
                 "titulo": body.titulo,
-                "representante_codigo": body.representante_codigo,
-                "representante_nome": metricas.get("rep_nome"),
-                "total_destinatarios": len(lista_dest),
+                "alvos": alvos,
+                "em_background": em_background,
                 "resend_ok": sucesso_resend,
                 "email_entregue": email_entregue_final,
                 "erro": erro_resend
@@ -1084,19 +1124,31 @@ def disparar_rotina_agora(body: DispararRotinaIn, ctx: dict = Depends(get_contex
     except Exception:
         pass
 
-    alvo_desc = f"para {metricas.get('rep_nome')}" if body.representante_codigo and body.representante_codigo != 'todos' else "Consolidado Geral"
-    msg_retorno = (
-        f"⚡ {body.titulo.split('—')[0].strip()} ({alvo_desc}) gerado e entregue com sucesso em {email_entregue_final or EMAIL_TESTE_HOMOLOGACAO}!"
-        if sucesso_resend
-        else f"⚠️ Disparo registrado no sistema (Verifique a configuração do Resend)."
-    )
+    if em_background:
+        msg_retorno = (
+            f"🚀 {len(alvos)} relatórios individualizados de '{body.titulo.split('—')[0].strip()}' "
+            f"estão sendo gerados e enviados um a um para {EMAIL_TESTE_HOMOLOGACAO}!"
+        )
+    elif len(alvos) > 1:
+        msg_retorno = (
+            f"⚡ {len(alvos)} relatórios individualizados de '{body.titulo.split('—')[0].strip()}' "
+            f"entregues com sucesso em {email_entregue_final}!"
+        )
+    else:
+        alvo_desc = f"para #{alvos[0]} ({metricas.get('rep_nome')})" if alvos[0] else "Consolidado Geral"
+        msg_retorno = (
+            f"⚡ {body.titulo.split('—')[0].strip()} ({alvo_desc}) gerado e entregue com sucesso em {email_entregue_final}!"
+            if sucesso_resend
+            else f"⚠️ Disparo registrado no sistema (Verifique a configuração do Resend)."
+        )
 
     return {
         "sucesso": True,
         "modo_homologacao": MODO_HOMOLOGACAO,
-        "total_enviados": len(lista_dest),
-        "destinatarios": lista_dest,
-        "destinatarios_simulados": len(destinatarios_originais) if MODO_HOMOLOGACAO else 0,
+        "total_enviados": len(alvos),
+        "em_background": em_background,
+        "destinatarios": [EMAIL_TESTE_HOMOLOGACAO] if MODO_HOMOLOGACAO else [],
+        "destinatarios_simulados": total_orig if MODO_HOMOLOGACAO else 0,
         "resend_status": "enviado" if sucesso_resend else "simulado",
         "email_entregue": email_entregue_final,
         "representante_analisado": metricas.get("rep_nome"),

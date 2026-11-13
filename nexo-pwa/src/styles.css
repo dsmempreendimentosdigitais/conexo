@@ -1884,6 +1884,220 @@ input:checked + .slider:before {
 .tag-meta { color: #34d399; border-color: rgba(52, 211, 153, 0.3) !important; font-weight: 600; }
 .tag-email { color: #94a3b8; }
 
+.btn-abrir-selecao-reps {
+  background: linear-gradient(135deg, #0284c7, #2563eb);
+  color: #ffffff;
+  border: 1px solid rgba(56, 189, 248, 0.45);
+  border-radius: 8px;
+  padding: 8px 14px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 10px rgba(2, 132, 199, 0.25);
+}
+.btn-abrir-selecao-reps:hover {
+  filter: brightness(1.1);
+  transform: translateY(-1px);
+}
+.badge-count-reps {
+  background: #ffffff;
+  color: #0f172a;
+  border-radius: 999px;
+  padding: 1px 7px;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.btn-selecionar-rep-card {
+  background: rgba(56, 189, 248, 0.14);
+  border: 1px solid rgba(56, 189, 248, 0.45);
+  color: #38bdf8;
+  border-radius: 6px;
+  padding: 2px 10px;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  transition: all 0.2s ease;
+}
+.btn-selecionar-rep-card:hover {
+  background: rgba(56, 189, 248, 0.28);
+  color: #ffffff;
+}
+.btn-selecionar-rep-card.ativo {
+  background: rgba(16, 185, 129, 0.22);
+  border-color: rgba(16, 185, 129, 0.55);
+  color: #34d399;
+}
+
+.rep-chips-selecionados {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.chip-rep-sel {
+  background: rgba(56, 189, 248, 0.16);
+  border: 1px solid rgba(56, 189, 248, 0.35);
+  color: #e0f2fe;
+  border-radius: 999px;
+  padding: 2px 10px;
+  font-size: 11.5px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.chip-rep-sel button {
+  background: none;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1;
+  padding: 0;
+}
+.chip-rep-sel button:hover {
+  color: #f87171;
+}
+.chip-rep-sel.extra {
+  background: rgba(139, 92, 246, 0.2);
+  border-color: rgba(139, 92, 246, 0.4);
+  color: #ddd6fe;
+}
+
+/* Modal Seleção Múltipla de Representantes */
+.selecao-reps-modal-card {
+  max-width: 680px !important;
+  width: 94vw !important;
+  display: flex;
+  flex-direction: column;
+  max-height: 85vh;
+}
+.selecao-reps-toolbar {
+  display: flex;
+  gap: 10px;
+  padding: 14px 24px 10px;
+  flex-wrap: wrap;
+}
+.selecao-reps-actions-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 24px 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  flex-wrap: wrap;
+}
+.btn-selecao-rapida {
+  border-radius: 6px;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.btn-selecao-rapida.all {
+  background: rgba(16, 185, 129, 0.16);
+  border: 1px solid rgba(16, 185, 129, 0.4);
+  color: #34d399;
+}
+.btn-selecao-rapida.all:hover {
+  background: #10b981;
+  color: #ffffff;
+}
+.btn-selecao-rapida.clear {
+  background: rgba(148, 163, 184, 0.12);
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  color: #cbd5e1;
+}
+.btn-selecao-rapida.clear:hover {
+  background: rgba(239, 68, 68, 0.2);
+  border-color: rgba(239, 68, 68, 0.45);
+  color: #f87171;
+}
+.selecao-reps-counter {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #38bdf8;
+}
+.selecao-reps-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 48vh;
+}
+.selecao-rep-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: rgba(30, 41, 59, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.selecao-rep-item:hover {
+  background: rgba(30, 41, 59, 0.85);
+  border-color: rgba(56, 189, 248, 0.35);
+}
+.selecao-rep-item.checked {
+  background: rgba(14, 165, 233, 0.14);
+  border-color: rgba(56, 189, 248, 0.65);
+}
+.selecao-rep-item input[type="checkbox"] {
+  width: 17px;
+  height: 17px;
+  accent-color: #38bdf8;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.selecao-rep-info {
+  flex: 1;
+  min-width: 0;
+}
+.selecao-rep-top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.selecao-rep-cod {
+  background: rgba(56, 189, 248, 0.15);
+  color: #38bdf8;
+  font-size: 11px;
+  font-weight: 800;
+  padding: 2px 7px;
+  border-radius: 5px;
+}
+.selecao-rep-nome {
+  color: #f8fafc;
+  font-size: 13px;
+  font-weight: 700;
+}
+.selecao-rep-sup {
+  background: rgba(167, 139, 250, 0.16);
+  color: #c4b5fd;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 1px 7px;
+  border-radius: 5px;
+}
+.selecao-rep-sub {
+  margin-top: 3px;
+  font-size: 11.5px;
+  color: #94a3b8;
+}
+
 .rotinas-cards-list {
   display: flex;
   flex-direction: column;

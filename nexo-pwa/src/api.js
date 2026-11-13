@@ -390,7 +390,12 @@ export async function dispararAvisoEquipe(dados, token) {
   return r.json();
 }
 
-export async function dispararRotinaAgora(rotina, repCodigo, token) {
+export async function dispararRotinaAgora(rotina, repCodigos, token) {
+  const codigosArray = Array.isArray(repCodigos)
+    ? repCodigos
+    : repCodigos
+    ? [String(repCodigos)]
+    : null;
   const r = await fetch(`${BASE}/conexo/rotinas/disparar-agora`, {
     method: "POST",
     headers: {
@@ -404,7 +409,8 @@ export async function dispararRotinaAgora(rotina, repCodigo, token) {
       mensagem_template: rotina.mensagem_template || "",
       canal: rotina.canal || "email",
       destinatarios_tipo: rotina.destinatarios_tipo || "equipe_vendas",
-      representante_codigo: repCodigo || null,
+      representante_codigo: codigosArray && codigosArray.length === 1 ? codigosArray[0] : null,
+      representantes_codigos: codigosArray && codigosArray.length > 0 ? codigosArray : null,
     }),
   });
   if (!r.ok) throw new Error((await r.json()).detail || "Erro ao disparar rotina agora");
