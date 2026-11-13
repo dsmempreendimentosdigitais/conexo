@@ -613,6 +613,8 @@ EMAILS_INTERNOS_PADRAO = [
     "samuel.mc85@gmail.com"
 ]
 
+EMAIL_REMETENTE_OFICIAL = "CONEXO • Designtex <comercial@designtextecidos.com.br>"
+
 class RotinasSaveIn(BaseModel):
     rotinas: list[dict]
 
@@ -833,7 +835,7 @@ def disparar_aviso_equipe(body: DispararAvisoIn, ctx: dict = Depends(get_context
             }
             if MODO_HOMOLOGACAO:
                 payload = {
-                    "from": "CONEXO Vendas <onboarding@resend.dev>",
+                    "from": EMAIL_REMETENTE_OFICIAL,
                     "to": [EMAIL_TESTE_HOMOLOGACAO],
                     "subject": f"[MODO TESTE] [{'URGENTE' if body.prioridade == 'urgente' else 'COMUNICADO'}] {body.assunto}",
                     "html": html_content
@@ -861,7 +863,7 @@ def disparar_aviso_equipe(body: DispararAvisoIn, ctx: dict = Depends(get_context
                 for i in range(0, len(lista_dest), lote_size):
                     lote = lista_dest[i:i + lote_size]
                     payload = {
-                        "from": "CONEXO Vendas <onboarding@resend.dev>",
+                        "from": EMAIL_REMETENTE_OFICIAL,
                         "to": ["delivered@resend.dev"],
                         "bcc": lote,
                         "subject": f"[{'URGENTE' if body.prioridade == 'urgente' else 'COMUNICADO'}] {body.assunto}",
@@ -1123,7 +1125,7 @@ def disparar_rotina_agora(body: DispararRotinaIn, ctx: dict = Depends(get_contex
             }
             if MODO_HOMOLOGACAO:
                 payload = {
-                    "from": "CONEXO Vendas <onboarding@resend.dev>",
+                    "from": EMAIL_REMETENTE_OFICIAL,
                     "to": [EMAIL_TESTE_HOMOLOGACAO],
                     "subject": f"[ROTINA ENVIADA AGORA] {body.titulo}",
                     "html": html_content
@@ -1133,7 +1135,7 @@ def disparar_rotina_agora(body: DispararRotinaIn, ctx: dict = Depends(get_contex
                     sucesso_resend = True
                     email_entregue_final = EMAIL_TESTE_HOMOLOGACAO
                 elif r.status_code == 403 and "only send testing emails" in r.text:
-                    # Conta gratuita Resend: envia para o e-mail cadastrado na conta (design.designtextecidos@gmail.com)
+                    # Fallback de segurança se o domínio não estivesse ativo
                     import re
                     m = re.search(r"\(([^)]+@gmail\.com)\)", r.text)
                     owner_email = m.group(1) if m else "design.designtextecidos@gmail.com"
@@ -1151,7 +1153,7 @@ def disparar_rotina_agora(body: DispararRotinaIn, ctx: dict = Depends(get_contex
                 for i in range(0, len(lista_dest), lote_size):
                     lote = lista_dest[i:i + lote_size]
                     payload = {
-                        "from": "CONEXO Vendas <onboarding@resend.dev>",
+                        "from": EMAIL_REMETENTE_OFICIAL,
                         "to": ["delivered@resend.dev"],
                         "bcc": lote,
                         "subject": f"[ROTINA CONEXO] {body.titulo}",
