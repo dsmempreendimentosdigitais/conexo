@@ -20,6 +20,10 @@ export default function RotinasModal({ token, onClose }) {
   const [sucesso, setSucesso] = useState("");
   const [disparandoRotinaId, setDisparandoRotinaId] = useState(null);
 
+  // Estado para Seleção de Representante e Supervisor nos Relatórios dos Ciclos
+  const [repSimulacao, setRepSimulacao] = useState("");
+  const [filtroSupervisor, setFiltroSupervisor] = useState("todos");
+
   // Estado para Criar/Editar Rotina
   const [modalEdicaoRotina, setModalEdicaoRotina] = useState(false);
   const [rotinaEmEdicao, setRotinaEmEdicao] = useState(null);
@@ -167,7 +171,12 @@ export default function RotinasModal({ token, onClose }) {
       ? "a Equipe Interna"
       : "toda a equipe";
 
-    if (!confirm(`Deseja enviar a mensagem da rotina "${rotina.titulo}" AGORA para ${publicoNome}?\n\n(Obs: O sistema está com a Trava de Homologação ativa e o e-mail será direcionado com segurança para samuel.mc85@gmail.com)`)) {
+    const repAlvoObj = representantes.find(r => String(r.codigo) === String(repSimulacao));
+    const contextoAlvo = repAlvoObj
+      ? `específico para a carteira de #${repAlvoObj.codigo} - ${repAlvoObj.nome} (${repAlvoObj.supervisor ? "Supervisor: " + repAlvoObj.supervisor : "Direto"})`
+      : `consolidado geral (${publicoNome})`;
+
+    if (!confirm(`Deseja processar a IA e enviar a rotina "${rotina.titulo}" AGORA ${contextoAlvo}?\n\n(Obs: O envio está seguro em modo homologação e chegará na sua caixa samuel.mc85@gmail.com com as análises completas das perguntas)`)) {
       return;
     }
 
@@ -175,7 +184,7 @@ export default function RotinasModal({ token, onClose }) {
     setErro("");
     setSucesso("");
     try {
-      const res = await dispararRotinaAgora(rotina, token);
+      const res = await dispararRotinaAgora(rotina, repSimulacao || null, token);
       setSucesso(res.mensagem || `Rotina "${rotina.titulo}" enviada agora com sucesso!`);
       if (res.ultima_execucao) {
         setRotinas(prev => prev.map(r => r.id === rotina.id ? { ...r, ultima_execucao: res.ultima_execucao } : r));
@@ -370,6 +379,17 @@ export default function RotinasModal({ token, onClose }) {
     }
   }
 
+  const supervisoresUnicos = Array.from(
+    new Set(representantes.map(r => r.supervisor).filter(Boolean))
+  ).sort();
+
+  const repsFiltradosPorSupervisor = representantes.filter(r => {
+    if (filtroSupervisor === "todos") return true;
+    return (r.supervisor || "").toLowerCase() === filtroSupervisor.toLowerCase();
+  });
+
+  const repSelecionadoObj = representantes.find(r => String(r.codigo) === String(repSimulacao));
+
   const repsFiltrados = representantes.filter(r => {
     if (!buscaRep.trim()) return true;
     const term = buscaRep.toLowerCase();
@@ -461,6 +481,91 @@ export default function RotinasModal({ token, onClose }) {
                     </button>
                   </div>
 
+                  {/* Seletor de Representante & Supervisor para Disparo / Teste Individual */}
+                  <div className="painel-simulacao-rep">
+                    <div className="painel-simulacao-header">
+                      <div className="painel-simulacao-titulo">
+                        <span className="icon-target">🎯</span>
+                        <div>
+                          <strong>Filtro de Análise por Representante / Supervisor</strong>
+                          <p>
+                            Selecione um representante para que a IA analise a carteira específica dele (clientes, metas, pedidos bloqueados, pilotagens e PE) ou deixe em "Geral" para dados consolidados da Designtex.
+                          </p>
+                        </div>
+                      </div>
+                      {repSimulacao && (
+                        <button
+                          type="button"
+                          className="btn-limpar-simulacao"
+                          onClick={() => setRepSimulacao("")}
+                          title="Voltar para a visão geral consolidada da empresa"
+                        >
+                          ✕ Limpar Seleção (Ver Geral)
+                        </button>
+                      )}
+                    </div>
+
+                    <div className="painel-simulacao-filtros">
+                      <div className="filtro-campo">
+                        <label>Filtrar por Supervisor:</label>
+                        <select
+                          className="select-simulacao"
+                          value={filtroSupervisor}
+                          onChange={(e) => {
+                            const novoSup = e.target.value;
+                            setFiltroSupervisor(novoSup);
+                            if (novoSup !== "todos" && repSelecionadoObj && (repSelecionadoObj.supervisor || "").toLowerCase() !== novoSup.toLowerCase()) {
+                              setRepSimulacao("");
+                            }
+                          }}
+                        >
+                          <option value="todos">🌐 Todos os Supervisores ({supervisoresUnicos.length})</option>
+                          {supervisoresUnicos.map((sup) => (
+                            <option key={sup} value={sup}>👔 Supervisor: {sup}</option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div className="filtro-campo flex-grow">
+                        <label>Selecionar Representante para Análise:</label>
+                        <select
+                          className={`select-simulacao ${repSimulacao ? "select-destaque-rep" : ""}`}
+                          value={repSimulacao}
+                          onChange={(e) => setRepSimulacao(e.target.value)}
+                        >
+                          <option value="">📊 [Visão Geral Consolidada — Toda a Empresa / Designtex]</option>
+                          {repsFiltradosPorSupervisor.map((rep) => (
+                            <option key={rep.codigo} value={rep.codigo}>
+                              #{rep.codigo} • {rep.nome} {rep.supervisor ? `[Sup: ${rep.supervisor}]` : ""} {rep.email ? `• ${rep.email}` : "• (sem e-mail)"}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+
+                    {repSelecionadoObj && (
+                      <div className="banner-rep-ativo-info">
+                        <span className="dot-rep-ativo"></span>
+                        <div className="rep-ativo-conteudo">
+                          <div className="rep-ativo-nome">
+                            Representante Selecionado: <strong>#{repSelecionadoObj.codigo} — {repSelecionadoObj.nome}</strong>
+                          </div>
+                          <div className="rep-info-tags">
+                            {repSelecionadoObj.supervisor && (
+                              <span className="tag-sup">👔 Supervisor: {repSelecionadoObj.supervisor}</span>
+                            )}
+                            {repSelecionadoObj.meta && (
+                              <span className="tag-meta">🎯 Meta: {Number(repSelecionadoObj.meta).toLocaleString('pt-BR')} m</span>
+                            )}
+                            <span className="tag-email">
+                              ✉️ E-mail oficial: {repSelecionadoObj.email || "Não informado"}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
                   {/* Lista de Rotinas */}
                   <div className="rotinas-cards-list">
                     {rotinas.map((r) => (
@@ -517,9 +622,13 @@ export default function RotinasModal({ token, onClose }) {
                               className="btn-acao-rotina send-now"
                               onClick={() => handleDispararRotinaAgora(r)}
                               disabled={disparandoRotinaId === r.id}
-                              title="Enviar esta rotina agora para a equipe"
+                              title={repSimulacao ? `Gerar relatório com as perguntas da IA para o representante #${repSimulacao} e enviar` : "Enviar relatório consolidado geral agora"}
                             >
-                              {disparandoRotinaId === r.id ? "⏳ Enviando..." : "🚀 Enviar Agora"}
+                              {disparandoRotinaId === r.id
+                                ? "⏳ Processando IA..."
+                                : repSimulacao
+                                ? `🚀 Enviar Rep #${repSimulacao}`
+                                : "🚀 Enviar Agora (Geral)"}
                             </button>
                             <button
                               type="button"
