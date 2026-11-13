@@ -89,7 +89,7 @@ def gerar_relatorio_ciclo(
         clientes_data = []
 
     # Filtrar pedidos do mês corrente (para cálculo exato de Quanto Vendeu no mês)
-    prefixo_mes = hoje.strftime("%Y-%m")
+    prefixo_mes = agora.strftime("%Y-%m")
     pedidos_mes = [p for p in pedidos_data if str(p.get("data_pedido") or "").startswith(prefixo_mes)]
     pedidos_mes_validos = [p for p in pedidos_mes if p.get("status") != "Canceled"]
 
