@@ -1973,11 +1973,16 @@ input:checked + .slider:before {
 
 /* Modal Seleção Múltipla de Representantes */
 .selecao-reps-modal-card {
-  max-width: 680px !important;
+  max-width: 700px !important;
   width: 94vw !important;
+  background: #0f172a !important;
+  border: 1px solid rgba(56, 189, 248, 0.35) !important;
+  border-radius: 14px !important;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.7) !important;
   display: flex;
   flex-direction: column;
-  max-height: 85vh;
+  max-height: 86vh;
+  overflow: hidden;
 }
 .selecao-reps-toolbar {
   display: flex;
@@ -2425,8 +2430,17 @@ input:checked + .slider:before { transform: translateX(18px); }
 }
 .email-pendente { color: #f87171; font-weight: 600; }
 
+.admin-modal-backdrop.sub-modal,
 .sub-modal {
-  z-index: 1050 !important;
+  position: fixed !important;
+  inset: 0 !important;
+  background: rgba(2, 6, 23, 0.78) !important;
+  backdrop-filter: blur(4px);
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  z-index: 9999 !important;
+  padding: 20px !important;
 }
 .rotina-edit-card {
   max-width: 620px !important;

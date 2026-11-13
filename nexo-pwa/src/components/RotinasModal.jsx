@@ -1160,9 +1160,10 @@ export default function RotinasModal({ token, onClose }) {
                 <input
                   type="text"
                   className="input-custom-text"
-                  placeholder="🔍 Buscar por código, nome, supervisor ou e-mail..."
+                  placeholder="🔍 Digite o código, nome, representação ou e-mail..."
                   value={buscaModalReps}
                   onChange={(e) => setBuscaModalReps(e.target.value)}
+                  autoFocus
                   style={{ flex: 1, minWidth: "220px" }}
                 />
                 <select
