@@ -2188,4 +2188,33 @@ input:checked + .slider:before { transform: translateX(18px); }
   color: #ffffff;
 }
 
+/* ── Badges e Banners de Homologação / Segurança ── */
+.badge-homologacao-tag {
+  background: rgba(245, 158, 11, 0.15);
+  color: #fbbf24;
+  border: 1px solid rgba(245, 158, 11, 0.4);
+  padding: 3px 10px;
+  border-radius: 9999px;
+  font-size: 11px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.banner-homologacao-box {
+  background: rgba(245, 158, 11, 0.1);
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  color: #fde68a;
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 12px;
+  line-height: 1.5;
+  margin-top: 10px;
+}
+.banner-homologacao-box strong {
+  color: #fbbf24;
+}
+
+
 

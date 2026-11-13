@@ -777,6 +777,25 @@ def disparar_aviso_equipe(body: DispararAvisoIn, ctx: dict = Depends(get_context
     if not lista_dest:
         raise HTTPException(400, "Nenhum e-mail de destinatário válido encontrado para o público selecionado.")
 
+    # ── MODO DE TESTES / HOMOLOGAÇÃO ESTRITA ──
+    # Por segurança operacional, NENHUM representante recebe e-mails reais durante os testes.
+    # Todos os disparos (avisos, rotinas e alertas) são canalizados exclusivamente para samuel.mc85@gmail.com
+    MODO_HOMOLOGACAO = True
+    EMAIL_TESTE_HOMOLOGACAO = "samuel.mc85@gmail.com"
+    destinatarios_originais = lista_dest
+
+    if MODO_HOMOLOGACAO:
+        lista_dest = [EMAIL_TESTE_HOMOLOGACAO]
+        banner_homologacao = f"""
+        <div style="background: #fef3c7; border: 2px solid #f59e0b; color: #92400e; padding: 14px 18px; border-radius: 8px; margin: 16px 32px 0; font-size: 13px; line-height: 1.5;">
+          <strong>🛡️ MENSAGEM EM MODO HOMOLOGAÇÃO / TESTES:</strong><br>
+          Este comunicado foi configurado para o público <strong>'{body.publico}'</strong> ({len(destinatarios_originais)} destinatários na base).<br>
+          <span style="color: #b45309;">Por segurança, <strong>NENHUM representante externo recebeu este e-mail</strong>. O envio foi entregue exclusivamente para o gestor Samuel (<strong>{EMAIL_TESTE_HOMOLOGACAO}</strong>) para conferência de layout e conteúdo.</span>
+        </div>
+        """
+    else:
+        banner_homologacao = ""
+
     tag_prioridade = "🚨 COMUNICADO URGENTE" if body.prioridade == "urgente" else "📢 COMUNICADO OFICIAL"
     cor_badge = "#ef4444" if body.prioridade == "urgente" else "#38bdf8"
     cor_badge_txt = "#ffffff" if body.prioridade == "urgente" else "#0f172a"
@@ -790,6 +809,7 @@ def disparar_aviso_equipe(body: DispararAvisoIn, ctx: dict = Depends(get_context
         <h2 style="margin: 0; font-size: 20px; font-weight: 700; color: #ffffff;">{body.assunto}</h2>
         <p style="margin: 6px 0 0; font-size: 13px; color: #94a3b8;">Designtex Tecidos — Canal de Comunicação CONEXO</p>
       </div>
+      {banner_homologacao}
       <div style="padding: 32px; color: #334155; font-size: 15px; line-height: 1.6; white-space: pre-line;">
         {body.mensagem}
       </div>
@@ -809,20 +829,33 @@ def disparar_aviso_equipe(body: DispararAvisoIn, ctx: dict = Depends(get_context
                 "Authorization": f"Bearer {config.RESEND_API_KEY}",
                 "Content-Type": "application/json"
             }
-            lote_size = 45
-            for i in range(0, len(lista_dest), lote_size):
-                lote = lista_dest[i:i + lote_size]
+            if MODO_HOMOLOGACAO:
                 payload = {
                     "from": "CONEXO Vendas <onboarding@resend.dev>",
-                    "to": ["delivered@resend.dev"],
-                    "bcc": lote,
-                    "subject": f"[{'URGENTE' if body.prioridade == 'urgente' else 'COMUNICADO'}] {body.assunto}",
+                    "to": [EMAIL_TESTE_HOMOLOGACAO],
+                    "subject": f"[MODO TESTE] [{'URGENTE' if body.prioridade == 'urgente' else 'COMUNICADO'}] {body.assunto}",
                     "html": html_content
                 }
                 r = httpx.post("https://api.resend.com/emails", json=payload, headers=headers, timeout=10.0)
-                if r.status_code not in (200, 201):
+                if r.status_code in (200, 201):
+                    sucesso_resend = True
+                else:
                     erro_resend = r.text
-            sucesso_resend = True
+            else:
+                lote_size = 45
+                for i in range(0, len(lista_dest), lote_size):
+                    lote = lista_dest[i:i + lote_size]
+                    payload = {
+                        "from": "CONEXO Vendas <onboarding@resend.dev>",
+                        "to": ["delivered@resend.dev"],
+                        "bcc": lote,
+                        "subject": f"[{'URGENTE' if body.prioridade == 'urgente' else 'COMUNICADO'}] {body.assunto}",
+                        "html": html_content
+                    }
+                    r = httpx.post("https://api.resend.com/emails", json=payload, headers=headers, timeout=10.0)
+                    if r.status_code not in (200, 201):
+                        erro_resend = r.text
+                sucesso_resend = True
         except Exception as ex:
             erro_resend = str(ex)
 
@@ -857,10 +890,16 @@ def disparar_aviso_equipe(body: DispararAvisoIn, ctx: dict = Depends(get_context
 
     return {
         "sucesso": True,
+        "modo_homologacao": MODO_HOMOLOGACAO,
         "total_enviados": len(lista_dest),
         "destinatarios": lista_dest,
+        "destinatarios_simulados": len(destinatarios_originais) if MODO_HOMOLOGACAO else 0,
         "resend_status": "enviado" if sucesso_resend else "simulado",
-        "mensagem": f"Aviso disparado com sucesso para {len(lista_dest)} destinatários da equipe!"
+        "mensagem": (
+            f"🛡️ Enviado em Modo Teste exclusivamente para {EMAIL_TESTE_HOMOLOGACAO}! Nenhum representante externo foi acionado."
+            if MODO_HOMOLOGACAO
+            else f"Aviso disparado com sucesso para {len(lista_dest)} destinatários da equipe!"
+        )
     }
 
 

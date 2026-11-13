@@ -353,7 +353,12 @@ export default function RotinasModal({ token, onClose }) {
       <div className="admin-modal-card rotinas-modal-card" onClick={(e) => e.stopPropagation()}>
         <div className="admin-modal-header">
           <div>
-            <h3>⏰ Configurar Mensagens Automáticas & Rotinas</h3>
+            <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
+              <h3>⏰ Configurar Mensagens Automáticas & Rotinas</h3>
+              <span className="badge-homologacao-tag">
+                🛡️ Modo Teste: envios travados para samuel.mc85@gmail.com
+              </span>
+            </div>
             <p className="modal-subtitle">
               Gestão de Automações, Alertas Proativos e Avisos para a Equipe de Vendas
             </p>
@@ -503,6 +508,9 @@ export default function RotinasModal({ token, onClose }) {
                         Envie avisos operacionais, mudanças de tabela, incentivos ou alertas de urgência diretamente
                         para a caixa de entrada da equipe de vendas e da equipe interna.
                       </p>
+                      <div className="banner-homologacao-box">
+                        🛡️ <strong>Trava de Segurança Ativa:</strong> O sistema está em Modo Homologação. Qualquer disparo realizado aqui é direcionado exclusivamente para <strong>samuel.mc85@gmail.com</strong>. Fique tranquilo: nenhum representante receberá e-mails reais.
+                      </div>
                     </div>
                   </div>
 
@@ -516,13 +524,13 @@ export default function RotinasModal({ token, onClose }) {
                           className="input-custom-select"
                         >
                           <option value="equipe_vendas">
-                            👥 Toda a Equipe de Vendas ({stats.reps_com_email || 65} representantes)
+                            👥 Equipe de Vendas (🔒 Em Teste: envia p/ samuel.mc85@gmail.com)
                           </option>
                           <option value="equipe_interna">
-                            🏢 Apenas Equipe Interna ({emailsInternos.length} e-mails @designtextecidos.com.br)
+                            🏢 Equipe Interna (🔒 Em Teste: envia p/ samuel.mc85@gmail.com)
                           </option>
                           <option value="todos">
-                            🌐 Todos (Representantes + Equipe Interna)
+                            🌐 Todos (🔒 Em Teste: envia p/ samuel.mc85@gmail.com)
                           </option>
                         </select>
                       </div>
@@ -802,12 +810,16 @@ export default function RotinasModal({ token, onClose }) {
                       onChange={(e) => setFormRotina({ ...formRotina, destinatarios_tipo: e.target.value })}
                       className="input-custom-select"
                     >
-                      <option value="equipe_vendas">👥 Equipe de Vendas (Representantes)</option>
-                      <option value="gestao">👔 Apenas Gestão / Supervisores</option>
-                      <option value="equipe_interna">🏢 Equipe Interna (@designtextecidos.com.br)</option>
-                      <option value="todos">🌐 Todos</option>
+                      <option value="equipe_vendas">👥 Equipe de Vendas (🔒 Em Testes: envia p/ samuel.mc85@gmail.com)</option>
+                      <option value="gestao">👔 Apenas Gestão / Supervisores (🔒 Em Testes: envia p/ samuel.mc85@gmail.com)</option>
+                      <option value="equipe_interna">🏢 Equipe Interna (🔒 Em Testes: envia p/ samuel.mc85@gmail.com)</option>
+                      <option value="todos">🌐 Todos (🔒 Em Testes: envia p/ samuel.mc85@gmail.com)</option>
                     </select>
                   </div>
+                </div>
+
+                <div className="banner-homologacao-box" style={{ margin: "0 0 16px 0" }}>
+                  🛡️ <strong>Trava de Segurança (Modo Homologação Ativo):</strong> As rotinas configuradas são regras salvas no sistema e <u>não realizam disparos automáticos para representantes</u> sem a sua autorização expressa. Qualquer teste disparado é redirecionado exclusivamente para <strong>samuel.mc85@gmail.com</strong>.
                 </div>
 
                 <div className="form-group-custom">
