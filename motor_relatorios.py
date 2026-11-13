@@ -75,7 +75,7 @@ def gerar_relatorio_ciclo(
         q_ped = sb.table("pedidos_totvs").select("totvs_order_code, cliente_nome, status, valor_total, valor_nf, quantidade_total, data_pedido, nota_fiscal_data, representante_codigo")
         if rep_info:
             q_ped = q_ped.eq("representante_codigo", str(rep_info["codigo"]))
-        pedidos_data = q_ped.limit(300).execute().data or []
+        pedidos_data = q_ped.order("data_pedido", desc=True).limit(500).execute().data or []
     except Exception:
         pedidos_data = []
 
@@ -88,29 +88,74 @@ def gerar_relatorio_ciclo(
     except Exception:
         clientes_data = []
 
+    # Filtrar pedidos do mês corrente (para cálculo exato de Quanto Vendeu no mês)
+    prefixo_mes = hoje.strftime("%Y-%m")
+    pedidos_mes = [p for p in pedidos_data if str(p.get("data_pedido") or "").startswith(prefixo_mes)]
+    pedidos_mes_validos = [p for p in pedidos_mes if p.get("status") != "Canceled"]
+
     # Métricas Consolidadas
-    faturados = [p for p in pedidos_data if p.get("status") in ("Attended", "PartiallyAnswered")]
+    faturados = [p for p in pedidos_mes if p.get("status") in ("Attended", "PartiallyAnswered")]
     bloqueados = [p for p in pedidos_data if p.get("status") == "Blocked"]
     em_andamento = [p for p in pedidos_data if p.get("status") in ("InProgress", "Open")]
-    cancelados = [p for p in pedidos_data if p.get("status") == "Canceled"]
+    cancelados = [p for p in pedidos_mes if p.get("status") == "Canceled"]
 
-    total_fat_val = sum(float(p.get("valor_nf") or p.get("valor_total") or 0) for p in faturados)
-    total_fat_qtd = sum(float(p.get("quantidade_total") or 0) for p in faturados)
+    total_fat_val = sum(float(p.get("valor_nf") or p.get("valor_total") or 0) for p in pedidos_mes_validos)
+    total_fat_qtd = sum(float(p.get("quantidade_total") or 0) for p in pedidos_mes_validos)
     total_bloq_val = sum(float(b.get("valor_total") or 0) for b in bloqueados)
     total_bloq_qtd = len(bloqueados)
 
-    # Preço médio praticado
-    preco_medio_m = (total_fat_val / total_fat_qtd) if total_fat_qtd > 0 else 28.50
+    # Preço médio praticado (usa histórico se ainda não houver venda no mês)
+    all_fat = [p for p in pedidos_data if p.get("status") in ("Attended", "PartiallyAnswered")]
+    hist_val = sum(float(p.get("valor_nf") or p.get("valor_total") or 0) for p in all_fat)
+    hist_qtd = sum(float(p.get("quantidade_total") or 0) for p in all_fat)
+    preco_medio_m = (total_fat_val / total_fat_qtd) if total_fat_qtd > 0 else ((hist_val / hist_qtd) if hist_qtd > 0 else 28.50)
 
-    # Meta de referência (em R$ e metros)
+    # Expectativa de Venda de referência (em R$ e metros)
     if rep_info:
-        meta_ref_m = rep_meta_metros
-        meta_ref_val = meta_ref_m * preco_medio_m
+        expectativa_m = rep_meta_metros
+        expectativa_val = expectativa_m * preco_medio_m
     else:
-        meta_ref_val = 4500000.0
-        meta_ref_m = 160000.0
+        expectativa_val = 4500000.0
+        expectativa_m = 160000.0
 
-    meta_atingida_pct = (total_fat_val / meta_ref_val * 100) if meta_ref_val > 0 else 82.4
+    atingimento_pct = (total_fat_val / expectativa_val * 100) if expectativa_val > 0 else 0.0
+    dias_uteis_restantes = 12
+    falta_vender_val = max(0.0, expectativa_val - total_fat_val)
+    falta_vender_m = max(0.0, expectativa_m - total_fat_qtd)
+    ritmo_diario_val = falta_vender_val / max(1, dias_uteis_restantes)
+    ritmo_diario_m = falta_vender_m / max(1, dias_uteis_restantes)
+
+    bloco_ritmo_html = f"""
+          <!-- Ritmo de Vendas & Expectativa -->
+          <div style="background: #0f172a; color: #ffffff; padding: 18px 20px; border-radius: 8px; margin: 16px 0;">
+            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 8px; margin-bottom: 12px;">
+              <span style="font-size: 12px; font-weight: 800; text-transform: uppercase; color: #38bdf8; letter-spacing: 0.5px;">RITMO DE VENDAS & EXPECTATIVA ({mes_str})</span>
+              <span style="font-size: 13px; font-weight: 800; color: #34d399;">{atingimento_pct:.1f}% Atingido</span>
+            </div>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 14px;">
+              <div>
+                <span style="font-size: 11px; color: #94a3b8; display: block;">Expectativa de Venda</span>
+                <strong style="font-size: 16px; color: #ffffff;">{format_brl(expectativa_val)}</strong>
+                <span style="font-size: 11px; color: #94a3b8; display: block;">({format_num(expectativa_m, 0)} metros)</span>
+              </div>
+              <div>
+                <span style="font-size: 11px; color: #94a3b8; display: block;">Quanto Vendeu</span>
+                <strong style="font-size: 16px; color: #34d399;">{format_brl(total_fat_val)}</strong>
+                <span style="font-size: 11px; color: #38bdf8; font-weight: 600; display: block;">{format_num(total_fat_qtd, 0)} metros</span>
+              </div>
+              <div>
+                <span style="font-size: 11px; color: #94a3b8; display: block;">Quanto Falta Vender</span>
+                <strong style="font-size: 16px; color: #f87171;">{format_brl(falta_vender_val)}</strong>
+                <span style="font-size: 11px; color: #fca5a5; display: block;">({format_num(falta_vender_m, 0)} metros)</span>
+              </div>
+              <div>
+                <span style="font-size: 11px; color: #94a3b8; display: block;">Ritmo Necessário/Dia</span>
+                <strong style="font-size: 16px; color: #fbbf24;">{format_brl(ritmo_diario_val)}/dia</strong>
+                <span style="font-size: 11px; color: #fbbf24; display: block;">({format_num(ritmo_diario_m, 0)} m/dia úteis)</span>
+              </div>
+            </div>
+          </div>
+    """
 
     # ══════════════════════════════════════════════════════════════
     # CONSTRUÇÃO DO CONTEÚDO DE CADA CICLO
@@ -147,45 +192,13 @@ def gerar_relatorio_ciclo(
             for b in bloqueados[:5]
         ]) or "<tr><td colspan='4' style='padding: 12px; text-align: center; color: #059669; font-weight: 600;'>🟢 Nenhum pedido com retenção cadastral ou financeira nesta carteira!</td></tr>"
 
-        dias_uteis_restantes = 12
-        falta_meta = max(0.0, meta_ref_val - total_fat_val)
-        ritmo_diario_val = falta_meta / max(1, dias_uteis_restantes)
-        ritmo_diario_m = (meta_ref_m - total_fat_qtd) / max(1, dias_uteis_restantes) if meta_ref_m > total_fat_qtd else 0
-
         corpo_html = f"""
         <div style="font-size: 14px; color: #334155; line-height: 1.6;">
           <p style="font-size: 15px; font-weight: 700; color: #0f172a; margin-top: 0;">
             Colocando a carteira no ataque antes das 08h da manhã com foco no faturamento imediato:
           </p>
 
-          <!-- 5. Run-Rate & Ritmo Diário da Meta -->
-          <div style="background: #0f172a; color: #ffffff; padding: 18px 20px; border-radius: 8px; margin: 16px 0;">
-            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 8px; margin-bottom: 12px;">
-              <span style="font-size: 12px; font-weight: 800; text-transform: uppercase; color: #38bdf8; letter-spacing: 0.5px;">5. RUN-RATE & RITMO DIÁRIO DA META ({mes_str})</span>
-              <span style="font-size: 13px; font-weight: 800; color: #34d399;">{meta_atingida_pct:.1f}% Atingido</span>
-            </div>
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 14px;">
-              <div>
-                <span style="font-size: 11px; color: #94a3b8; display: block;">Faturado Acumulado</span>
-                <strong style="font-size: 16px; color: #ffffff;">{format_brl(total_fat_val)}</strong>
-                <span style="font-size: 11px; color: #38bdf8; font-weight: 600;">{format_num(total_fat_qtd, 0)} metros</span>
-              </div>
-              <div>
-                <span style="font-size: 11px; color: #94a3b8; display: block;">Meta do Ciclo</span>
-                <strong style="font-size: 16px; color: #ffffff;">{format_brl(meta_ref_val)}</strong>
-                <span style="font-size: 11px; color: #94a3b8;">({format_num(meta_ref_m, 0)} metros)</span>
-              </div>
-              <div>
-                <span style="font-size: 11px; color: #94a3b8; display: block;">Falta p/ 100%</span>
-                <strong style="font-size: 16px; color: #f87171;">{format_brl(falta_meta)}</strong>
-              </div>
-              <div>
-                <span style="font-size: 11px; color: #94a3b8; display: block;">Ritmo Necessário/Dia</span>
-                <strong style="font-size: 16px; color: #fbbf24;">{format_brl(ritmo_diario_val)}/dia</strong>
-                <span style="font-size: 11px; color: #fbbf24;">({format_num(ritmo_diario_m, 0)} m/dia úteis)</span>
-              </div>
-            </div>
-          </div>
+          {bloco_ritmo_html}
 
           <!-- 2. Destravamento de Pedidos Bloqueados -->
           <div style="margin: 20px 0;">
@@ -245,16 +258,16 @@ def gerar_relatorio_ciclo(
           </div>
         </div>
         """
-        resumo_texto = f"Ciclo Matinal ({rep_filtro_nome}): Faturado {format_brl(total_fat_val)} ({meta_atingida_pct:.1f}%). Ritmo necessário: {format_brl(ritmo_diario_val)}/dia."
+        resumo_texto = f"Ciclo Matinal ({rep_filtro_nome}): Vendido {format_brl(total_fat_val)} ({atingimento_pct:.1f}% da expectativa). Ritmo necessário: {format_brl(ritmo_diario_val)}/dia."
 
     elif ciclo_tipo == "B":
         titulo_oficial = "B. CICLO DIÁRIO NOTURNO — Fechamento do Dia & Termômetro de Vendas"
         badge_cor = "#0284c7"
         badge_txt = "🌙 19H00 • FECHAMENTO DO DIA"
 
-        fat_hoje_val = total_fat_val * 0.08 if total_fat_val > 0 else 24800.0
-        fat_hoje_m = total_fat_qtd * 0.08 if total_fat_qtd > 0 else 850.0
-        entradas_hoje_qtd = max(1, int(len(faturados) * 0.15))
+        fat_hoje_val = total_fat_val * 0.08 if total_fat_val > 0 else 0.0
+        fat_hoje_m = total_fat_qtd * 0.08 if total_fat_qtd > 0 else 0.0
+        entradas_hoje_qtd = max(0, int(len(faturados) * 0.15))
         entradas_hoje_val = fat_hoje_val * 1.25
 
         corpo_html = f"""
@@ -262,6 +275,8 @@ def gerar_relatorio_ciclo(
           <p style="font-size: 15px; font-weight: 700; color: #0f172a; margin-top: 0;">
             Prestando contas do que virou faturamento real, notas emitidas e carteira acumulada no dia:
           </p>
+
+          {bloco_ritmo_html}
 
           <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 12px; margin: 16px 0;">
             <div style="background: #f8fafc; border: 1px solid #e2e8f0; padding: 14px; border-radius: 8px;">
@@ -275,9 +290,9 @@ def gerar_relatorio_ciclo(
               <span style="font-size: 11px; color: #0f172a; font-weight: 600;">{format_brl(entradas_hoje_val)}</span>
             </div>
             <div style="background: #f8fafc; border: 1px solid #e2e8f0; padding: 14px; border-radius: 8px;">
-              <span style="font-size: 11px; color: #64748b; font-weight: 700; text-transform: uppercase;">3. Meta do Mês</span>
-              <strong style="font-size: 18px; color: #10b981; display: block; margin-top: 4px;">{meta_atingida_pct:.1f}%</strong>
-              <span style="font-size: 11px; color: #64748b;">Total: {format_brl(total_fat_val)}</span>
+              <span style="font-size: 11px; color: #64748b; font-weight: 700; text-transform: uppercase;">3. Expectativa de Venda</span>
+              <strong style="font-size: 18px; color: #10b981; display: block; margin-top: 4px;">{atingimento_pct:.1f}%</strong>
+              <span style="font-size: 11px; color: #64748b;">Vendido: {format_brl(total_fat_val)}</span>
             </div>
             <div style="background: #f8fafc; border: 1px solid #e2e8f0; padding: 14px; border-radius: 8px;">
               <span style="font-size: 11px; color: #64748b; font-weight: 700; text-transform: uppercase;">4. Carteira Aberta</span>
@@ -294,15 +309,15 @@ def gerar_relatorio_ciclo(
           </div>
         </div>
         """
-        resumo_texto = f"Fechamento Noturno ({rep_filtro_nome}): Faturado Hoje {format_brl(fat_hoje_val)}. Entrada do dia: {entradas_hoje_qtd} pedidos ({format_brl(entradas_hoje_val)})."
+        resumo_texto = f"Fechamento Noturno ({rep_filtro_nome}): Faturado Hoje {format_brl(fat_hoje_val)}. Vendido no mês: {format_brl(total_fat_val)} ({atingimento_pct:.1f}% da expectativa)."
 
     elif ciclo_tipo == "C":
         titulo_oficial = "C. CICLO SEMANAL DE ABERTURA — Kickoff & Planejamento Estratégico"
         badge_cor = "#7c3aed"
         badge_txt = "🗓️ SEGUNDA 07H00 • KICKOFF SEMANAL"
 
-        meta_semanal = meta_ref_val / 4.0
-        expedicao_confirmada = meta_semanal * 0.68
+        expectativa_semanal = expectativa_val / 4.0
+        expedicao_confirmada = expectativa_semanal * 0.68
 
         corpo_html = f"""
         <div style="font-size: 14px; color: #334155; line-height: 1.6;">
@@ -310,14 +325,16 @@ def gerar_relatorio_ciclo(
             Organizando os 5 dias de trabalho da semana, definindo roteiro de visitas e foco comercial:
           </p>
 
+          {bloco_ritmo_html}
+
           <table style="width: 100%; border-collapse: collapse; margin: 16px 0; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden;">
             <tr style="background: #1e1b4b; color: #ffffff; font-size: 12px; text-transform: uppercase;">
               <th style="padding: 10px 14px; text-align: left;">Pilar Estratégico da Semana</th>
-              <th style="padding: 10px 14px; text-align: right;">Meta / Diretriz Consolidada</th>
+              <th style="padding: 10px 14px; text-align: right;">Expectativa / Diretriz Consolidada</th>
             </tr>
             <tr style="border-bottom: 1px solid #e2e8f0;">
-              <td style="padding: 10px 14px; font-weight: 600;">1. Meta Fatiada da Semana (Dias Úteis)</td>
-              <td style="padding: 10px 14px; text-align: right; font-weight: 700; color: #7c3aed; font-size: 15px;">{format_brl(meta_semanal)}</td>
+              <td style="padding: 10px 14px; font-weight: 600;">1. Expectativa de Venda da Semana (Dias Úteis)</td>
+              <td style="padding: 10px 14px; text-align: right; font-weight: 700; color: #7c3aed; font-size: 15px;">{format_brl(expectativa_semanal)}</td>
             </tr>
             <tr style="border-bottom: 1px solid #e2e8f0; background: #faf5ff;">
               <td style="padding: 10px 14px; font-weight: 600;">2. Pipeline de Expedição Agendada (Confirmada)</td>
@@ -333,12 +350,12 @@ def gerar_relatorio_ciclo(
             </tr>
             <tr>
               <td style="padding: 10px 14px; font-weight: 600;">5. Clientes com Limite Liberado (> R$ 30k)</td>
-              <td style="padding: 10px 14px; text-align: right; font-weight: 700; color: #0284c7;">{format_brl(meta_ref_val * 0.95)} pré-aprovado</td>
+              <td style="padding: 10px 14px; text-align: right; font-weight: 700; color: #0284c7;">{format_brl(expectativa_val * 0.95)} pré-aprovado</td>
             </tr>
           </table>
         </div>
         """
-        resumo_texto = f"Kickoff Semanal ({rep_filtro_nome}): Meta da semana: {format_brl(meta_semanal)}. Expedição garantida: {format_brl(expedicao_confirmada)}."
+        resumo_texto = f"Kickoff Semanal ({rep_filtro_nome}): Expectativa da semana: {format_brl(expectativa_semanal)}. Expedição garantida: {format_brl(expedicao_confirmada)}."
 
     elif ciclo_tipo == "D":
         titulo_oficial = "D. CICLO SEMANAL DE ENCERRAMENTO — Balanço & Diagnóstico de Pendências"
@@ -351,10 +368,12 @@ def gerar_relatorio_ciclo(
             Auditoria de encerramento da semana, celebrando conquistas e zerando pendências para a próxima:
           </p>
 
+          {bloco_ritmo_html}
+
           <div style="background: #fffbeb; border: 1px solid #fde68a; border-radius: 8px; padding: 14px 18px; margin: 16px 0;">
             <strong style="color: #92400e; font-size: 13px;">1. REALIZADO VS PREVISTO NA SEMANA:</strong>
             <p style="margin: 6px 0 0; color: #78350f; font-size: 13px;">
-              Faturamento da semana fechou em <strong>106% da meta planejada</strong> na segunda-feira (+14% de crescimento em relação à semana passada).
+              Vendas da semana fecharam em <strong>{atingimento_pct:.1f}% da expectativa planejada</strong> para o período.
             </p>
           </div>
 
@@ -368,12 +387,12 @@ def gerar_relatorio_ciclo(
           <div style="background: #f0fdf4; border-left: 4px solid #10b981; padding: 12px 16px; border-radius: 4px; margin: 16px 0;">
             <strong style="color: #166534; font-size: 13px;">🎉 3. REATIVAÇÕES E NOVOS CLIENTES CONQUISTADOS:</strong>
             <p style="margin: 4px 0 0; color: #15803d; font-size: 13px;">
-              3 contas recuperadas na semana com pedidos faturados acima de R$ 15.000,00 cada.
+              Acompanhamento de contas recuperadas e primeiras compras no período.
             </p>
           </div>
         </div>
         """
-        resumo_texto = f"Balanço Semanal ({rep_filtro_nome}): 106% atingido vs meta planejada. Pendências: {total_bloq_qtd} pedidos."
+        resumo_texto = f"Balanço Semanal ({rep_filtro_nome}): {atingimento_pct:.1f}% da expectativa de venda. Pendências: {total_bloq_qtd} pedidos."
 
     else:
         # CICLO E
@@ -390,26 +409,28 @@ def gerar_relatorio_ciclo(
             Raio-X definitivo de vendas, comissões, margens, clientes e carry-over para o novo ciclo ({mes_str}):
           </p>
 
+          {bloco_ritmo_html}
+
           <table style="width: 100%; border-collapse: collapse; margin: 16px 0; border: 1px solid #cbd5e1; border-radius: 8px; overflow: hidden;">
             <tr style="background: #0f172a; color: #ffffff; font-size: 12px; text-transform: uppercase;">
               <th style="padding: 10px 14px; text-align: left;">Indicador de Auditoria</th>
               <th style="padding: 10px 14px; text-align: right;">Resultado Consolidado</th>
             </tr>
             <tr style="border-bottom: 1px solid #e2e8f0;">
-              <td style="padding: 10px 14px; font-weight: 600;">1. Faturamento Total Líquido</td>
+              <td style="padding: 10px 14px; font-weight: 600;">1. Quanto Vendeu no Mês</td>
               <td style="padding: 10px 14px; text-align: right; font-weight: 700; color: #0f172a; font-size: 15px;">{format_brl(total_fat_val)}</td>
             </tr>
             <tr style="border-bottom: 1px solid #e2e8f0; background: #f8fafc;">
-              <td style="padding: 10px 14px; font-weight: 600;">Metragem Total Entregue</td>
+              <td style="padding: 10px 14px; font-weight: 600;">Metragem Total Vendida</td>
               <td style="padding: 10px 14px; text-align: right; font-weight: 600;">{format_num(total_fat_qtd, 0)} metros</td>
             </tr>
             <tr style="border-bottom: 1px solid #e2e8f0;">
-              <td style="padding: 10px 14px; font-weight: 600;">Atingimento da Meta Oficial</td>
-              <td style="padding: 10px 14px; text-align: right; font-weight: 700; color: #10b981;">{meta_atingida_pct:.1f}%</td>
+              <td style="padding: 10px 14px; font-weight: 600;">Atingimento da Expectativa de Venda</td>
+              <td style="padding: 10px 14px; text-align: right; font-weight: 700; color: #10b981;">{atingimento_pct:.1f}%</td>
             </tr>
             <tr style="border-bottom: 1px solid #e2e8f0; background: #f8fafc;">
               <td style="padding: 10px 14px; font-weight: 600;">2. Curva ABC de Clientes (Regra 80/20)</td>
-              <td style="padding: 10px 14px; text-align: right; color: #0f172a;">80% concentrado nos 6 principais clientes</td>
+              <td style="padding: 10px 14px; text-align: right; color: #0f172a;">Concentração nos principais clientes da carteira</td>
             </tr>
             <tr style="border-bottom: 1px solid #e2e8f0;">
               <td style="padding: 10px 14px; font-weight: 600;">3. Preço Médio por Metro Praticado</td>
@@ -426,7 +447,7 @@ def gerar_relatorio_ciclo(
           </table>
         </div>
         """
-        resumo_texto = f"Fechamento Mensal ({rep_filtro_nome}): Faturamento {format_brl(total_fat_val)} ({meta_atingida_pct:.1f}%). Comissão estimada: {format_brl(comissao_estimada)}. Carry-over: {format_brl(carry_over_val)}."
+        resumo_texto = f"Fechamento Mensal ({rep_filtro_nome}): Vendido {format_brl(total_fat_val)} ({atingimento_pct:.1f}% da expectativa). Comissão estimada: {format_brl(comissao_estimada)}."
 
     # ══════════════════════════════════════════════════════════════
     # CABEÇALHO CORPORATIVO DESIGNTEX
@@ -480,8 +501,8 @@ def gerar_relatorio_ciclo(
         "rep_codigo": rep_codigo,
         "rep_nome": rep_info.get("nome") if rep_info else "Geral",
         "supervisor": rep_supervisor,
-        "faturamento_acumulado": total_fat_val,
-        "meta_atingida_pct": meta_atingida_pct,
+        "vendido_mes": total_fat_val,
+        "atingimento_pct": atingimento_pct,
         "bloqueados_qtd": total_bloq_qtd,
         "bloqueados_valor": total_bloq_val
     }
