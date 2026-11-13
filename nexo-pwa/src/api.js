@@ -364,6 +364,19 @@ export async function salvarEmailsInternos(emails, token) {
   return r.json();
 }
 
+export async function atualizarRepresentanteEmail(codigo, email, telefone, token) {
+  const r = await fetch(`${BASE}/conexo/equipe-destinatarios/representante`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ codigo, email, telefone }),
+  });
+  if (!r.ok) throw new Error((await r.json()).detail || "Erro ao atualizar dados do representante");
+  return r.json();
+}
+
 export async function dispararAvisoEquipe(dados, token) {
   const r = await fetch(`${BASE}/conexo/avisos/disparar`, {
     method: "POST",

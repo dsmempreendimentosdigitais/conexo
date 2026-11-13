@@ -4,7 +4,8 @@ import {
   salvarRotinasAutomaticas,
   getEquipeDestinatarios,
   salvarEmailsInternos,
-  dispararAvisoEquipe
+  dispararAvisoEquipe,
+  atualizarRepresentanteEmail
 } from "../api";
 
 export default function RotinasModal({ token, onClose }) {
@@ -44,6 +45,12 @@ export default function RotinasModal({ token, onClose }) {
   // Estado para Gerenciamento de E-mails Internos
   const [novoEmailInterno, setNovoEmailInterno] = useState("");
   const [salvandoInternos, setSalvandoInternos] = useState(false);
+
+  // Estado para Edição de E-mail de Representante
+  const [repEmEdicao, setRepEmEdicao] = useState(null);
+  const [formRepEmail, setFormRepEmail] = useState("");
+  const [formRepTelefone, setFormRepTelefone] = useState("");
+  const [salvandoRep, setSalvandoRep] = useState(false);
 
   // Busca na lista de representantes
   const [buscaRep, setBuscaRep] = useState("");
@@ -232,6 +239,101 @@ export default function RotinasModal({ token, onClose }) {
       setErro("Erro ao salvar: " + e.message);
     } finally {
       setSalvandoInternos(false);
+    }
+  }
+
+  // Edição de Contato do Representante (Alterar, Incluir ou Excluir E-mail)
+  function handleAbrirEditarRep(r) {
+    setRepEmEdicao(r);
+    setFormRepEmail(r.email && !r.email.includes("SEM E-MAIL") ? r.email : "");
+    setFormRepTelefone(r.telefone || "");
+  }
+
+  async function handleSalvarRepEmail(e) {
+    if (e) e.preventDefault();
+    if (!repEmEdicao) return;
+
+    const emailClean = formRepEmail.trim().toLowerCase();
+    if (emailClean && !emailClean.includes("@")) {
+      alert("Por favor, informe um endereço de e-mail válido com '@'.");
+      return;
+    }
+
+    setSalvandoRep(true);
+    try {
+      const res = await atualizarRepresentanteEmail(
+        repEmEdicao.codigo,
+        emailClean,
+        formRepTelefone,
+        token
+      );
+
+      const novosReps = representantes.map((r) =>
+        r.codigo === repEmEdicao.codigo
+          ? { ...r, email: emailClean || null, telefone: formRepTelefone }
+          : r
+      );
+      setRepresentantes(novosReps);
+
+      const comEmail = novosReps.filter(
+        (r) => r.ativo && r.email && r.email.includes("@") && !r.email.endsWith(".internal")
+      ).length;
+      setStats((prev) => ({
+        ...prev,
+        reps_com_email: comEmail,
+        reps_sem_email: novosReps.filter((r) => r.ativo).length - comEmail,
+      }));
+
+      setSucesso(res.mensagem || `E-mail do representante #${repEmEdicao.codigo} salvo com sucesso!`);
+      setRepEmEdicao(null);
+      setTimeout(() => setSucesso(""), 4000);
+    } catch (err) {
+      alert("Erro ao salvar: " + err.message);
+    } finally {
+      setSalvandoRep(false);
+    }
+  }
+
+  async function handleExcluirRepEmail() {
+    if (!repEmEdicao) return;
+    if (
+      !confirm(
+        `Deseja realmente remover/excluir o e-mail do representante ${repEmEdicao.nome} (cód. ${repEmEdicao.codigo})? Ele ficará marcado como 'Sem E-mail'.`
+      )
+    )
+      return;
+
+    setSalvandoRep(true);
+    try {
+      const res = await atualizarRepresentanteEmail(
+        repEmEdicao.codigo,
+        "",
+        formRepTelefone,
+        token
+      );
+      const novosReps = representantes.map((r) =>
+        r.codigo === repEmEdicao.codigo
+          ? { ...r, email: null, telefone: formRepTelefone }
+          : r
+      );
+      setRepresentantes(novosReps);
+
+      const comEmail = novosReps.filter(
+        (r) => r.ativo && r.email && r.email.includes("@") && !r.email.endsWith(".internal")
+      ).length;
+      setStats((prev) => ({
+        ...prev,
+        reps_com_email: comEmail,
+        reps_sem_email: novosReps.filter((r) => r.ativo).length - comEmail,
+      }));
+
+      setSucesso(`E-mail do representante #${repEmEdicao.codigo} removido.`);
+      setRepEmEdicao(null);
+      setTimeout(() => setSucesso(""), 4000);
+    } catch (err) {
+      alert("Erro ao remover: " + err.message);
+    } finally {
+      setSalvandoRep(false);
     }
   }
 
@@ -557,10 +659,11 @@ export default function RotinasModal({ token, onClose }) {
                             <th>Telefone</th>
                             <th>Supervisor</th>
                             <th>Status E-mail</th>
+                            <th style={{ textAlign: "center" }}>Ação</th>
                           </tr>
                         </thead>
                         <tbody>
-                          {repsFiltrados.slice(0, 50).map((r) => {
+                          {repsFiltrados.map((r) => {
                             const temEmail = r.email && r.email.includes("@") && !r.email.includes("SEM E-MAIL");
                             return (
                               <tr key={r.codigo}>
@@ -568,9 +671,23 @@ export default function RotinasModal({ token, onClose }) {
                                 <td className="col-nome font-semibold">{r.nome}</td>
                                 <td className="col-email">
                                   {temEmail ? (
-                                    <span className="email-link">{r.email}</span>
+                                    <button
+                                      type="button"
+                                      className="email-link-btn"
+                                      onClick={() => handleAbrirEditarRep(r)}
+                                      title="Clique para editar este e-mail"
+                                    >
+                                      {r.email}
+                                    </button>
                                   ) : (
-                                    <span className="email-pendente">⚠️ Sem E-mail</span>
+                                    <button
+                                      type="button"
+                                      className="btn-incluir-email"
+                                      onClick={() => handleAbrirEditarRep(r)}
+                                      title="Clique para cadastrar o e-mail deste representante"
+                                    >
+                                      ➕ Incluir E-mail
+                                    </button>
                                   )}
                                 </td>
                                 <td className="col-tel text-muted">{r.telefone || "-"}</td>
@@ -579,8 +696,18 @@ export default function RotinasModal({ token, onClose }) {
                                   {temEmail ? (
                                     <span className="badge-status-ok">Pronto para Envio</span>
                                   ) : (
-                                    <span className="badge-status-warn">Pendente</span>
+                                    <span className="badge-status-warn">⚠️ Sem E-mail</span>
                                   )}
+                                </td>
+                                <td style={{ textAlign: "center" }}>
+                                  <button
+                                    type="button"
+                                    className="btn-rep-edit-action"
+                                    onClick={() => handleAbrirEditarRep(r)}
+                                    title="Editar ou alterar e-mail / contato"
+                                  >
+                                    ✏️ Editar
+                                  </button>
                                 </td>
                               </tr>
                             );
@@ -701,6 +828,101 @@ export default function RotinasModal({ token, onClose }) {
                   <button type="submit" className="btn-salvar-modal">
                     Salvar Rotina
                   </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* ── SUB-MODAL: EDITAR / INCLUIR / EXCLUIR E-MAIL DE REPRESENTANTE ── */}
+        {repEmEdicao && (
+          <div className="admin-modal-backdrop sub-modal" onClick={() => !salvandoRep && setRepEmEdicao(null)}>
+            <div className="admin-modal-card rep-edit-card" onClick={(e) => e.stopPropagation()}>
+              <div className="admin-modal-header">
+                <div>
+                  <h3>✏️ Editar Contato do Representante</h3>
+                  <div className="rep-subheading-cod">
+                    Representante <strong>#{repEmEdicao.codigo}</strong>
+                  </div>
+                </div>
+                <button
+                  className="admin-modal-close"
+                  onClick={() => !salvandoRep && setRepEmEdicao(null)}
+                  disabled={salvandoRep}
+                >
+                  ✕
+                </button>
+              </div>
+
+              <form onSubmit={handleSalvarRepEmail} className="form-rep-edit-body">
+                <div className="rep-detail-box">
+                  <div className="rep-detail-item">
+                    <span className="rep-detail-label">Nome:</span>
+                    <strong className="rep-detail-val">{repEmEdicao.nome}</strong>
+                  </div>
+                  <div className="rep-detail-item">
+                    <span className="rep-detail-label">Supervisor:</span>
+                    <span className="rep-detail-val">{repEmEdicao.supervisor || "Não atribuído"}</span>
+                  </div>
+                </div>
+
+                <div className="form-group-custom">
+                  <label>E-mail Oficial (para Avisos & Mensagens Automáticas)</label>
+                  <input
+                    type="email"
+                    value={formRepEmail}
+                    onChange={(e) => setFormRepEmail(e.target.value)}
+                    placeholder="exemplo@representante.com.br"
+                    className="input-custom-text input-destaque-email"
+                    autoFocus
+                  />
+                  <small className="field-hint">
+                    Deixe em branco ou use o botão "Excluir E-mail" para remover o e-mail do representante.
+                  </small>
+                </div>
+
+                <div className="form-group-custom">
+                  <label>Telefone / WhatsApp</label>
+                  <input
+                    type="text"
+                    value={formRepTelefone}
+                    onChange={(e) => setFormRepTelefone(e.target.value)}
+                    placeholder="(00) 00000-0000"
+                    className="input-custom-text"
+                  />
+                </div>
+
+                <div className="modal-actions-bar rep-modal-actions-bar">
+                  <div>
+                    {repEmEdicao.email && !repEmEdicao.email.includes("SEM E-MAIL") && (
+                      <button
+                        type="button"
+                        onClick={handleExcluirRepEmail}
+                        disabled={salvandoRep}
+                        className="btn-excluir-rep-email"
+                        title="Remover e-mail cadastrado"
+                      >
+                        🗑️ Excluir E-mail
+                      </button>
+                    )}
+                  </div>
+                  <div className="rep-modal-btns-right">
+                    <button
+                      type="button"
+                      onClick={() => setRepEmEdicao(null)}
+                      disabled={salvandoRep}
+                      className="btn-cancelar"
+                    >
+                      Cancelar
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={salvandoRep}
+                      className="btn-salvar-modal"
+                    >
+                      {salvandoRep ? "Salvando..." : "💾 Salvar Alterações"}
+                    </button>
+                  </div>
                 </div>
               </form>
             </div>

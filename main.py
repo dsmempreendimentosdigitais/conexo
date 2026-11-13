@@ -626,6 +626,11 @@ class DispararAvisoIn(BaseModel):
 class EmailsInternosIn(BaseModel):
     emails: list[str]
 
+class RepresentanteEmailIn(BaseModel):
+    codigo: str
+    email: str | None = None
+    telefone: str | None = None
+
 @app.get("/conexo/rotinas-automaticas")
 def get_rotinas_automaticas(ctx: dict = Depends(get_contexto)):
     tenant_id = ctx.get("tenant_id")
@@ -690,6 +695,48 @@ def salvar_emails_internos(body: EmailsInternosIn, ctx: dict = Depends(get_conte
 
     supabase.table("tenants").update({"conectores": conns}).eq("id", tenant_id).execute()
     return {"sucesso": True, "mensagem": "E-mails internos atualizados com sucesso!"}
+
+@app.post("/conexo/equipe-destinatarios/representante")
+def atualizar_representante_email(body: RepresentanteEmailIn, ctx: dict = Depends(get_contexto)):
+    from datetime import datetime, timezone
+
+    email_clean = (body.email or "").strip().lower()
+    if email_clean and "@" not in email_clean:
+        raise HTTPException(400, "Formato de e-mail inválido. Certifique-se de incluir o '@'.")
+
+    update_data = {
+        "email": email_clean if email_clean else None,
+        "updated_at": datetime.now(timezone.utc).isoformat()
+    }
+    if body.telefone is not None:
+        update_data["telefone"] = body.telefone.strip()
+
+    res = (
+        supabase.table("representantes")
+        .update(update_data)
+        .eq("codigo", str(body.codigo).strip())
+        .execute()
+    )
+
+    if not res.data:
+        raise HTTPException(404, f"Representante com código #{body.codigo} não encontrado.")
+
+    try:
+        supabase.table("conexo_logs").insert({
+            "usuario": ctx.get("email"),
+            "pergunta": f"[ATUALIZAR REP {body.codigo}] email={email_clean or 'REMOVIDO'}",
+            "intent": "atualizar_representante_email",
+            "parametros": {"codigo": body.codigo, "email": email_clean},
+            "sucesso": True
+        }).execute()
+    except Exception:
+        pass
+
+    return {
+        "sucesso": True,
+        "mensagem": f"E-mail do representante #{body.codigo} salvo com sucesso!",
+        "representante": res.data[0]
+    }
 
 @app.post("/conexo/avisos/disparar")
 def disparar_aviso_equipe(body: DispararAvisoIn, ctx: dict = Depends(get_contexto)):
