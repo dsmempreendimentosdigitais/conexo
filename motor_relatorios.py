@@ -625,8 +625,6 @@ def gerar_relatorio_ciclo(
             for idx, x in enumerate(lista_ranking[:25], start=1)
         ])
 
-        ticket_medio_ped = (total_fat_val / len(pedidos_mes_validos)) if pedidos_mes_validos else 0.0
-
         corpo_html = f"""
         <div style="font-size: 14px; color: #334155; line-height: 1.6;">
           <p style="font-size: 15px; font-weight: 700; color: #0f172a; margin-top: 0;">
@@ -635,21 +633,13 @@ def gerar_relatorio_ciclo(
 
           {bloco_ritmo_html}
 
-          <!-- Indicadores Executivos Adicionais -->
-          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin: 16px 0;">
-            <div style="background: #f8fafc; border: 1px solid #e2e8f0; padding: 12px 14px; border-radius: 8px;">
-              <span style="font-size: 11px; color: #64748b; font-weight: 700; text-transform: uppercase;">Preço Médio / Metro</span>
-              <strong style="font-size: 17px; color: #0284c7; display: block; margin-top: 4px;">{format_brl(preco_medio_m)}/m</strong>
+          <!-- Pedidos Retidos em Análise de Crédito -->
+          <div style="background: #fff5f5; border: 1px solid #fecaca; padding: 12px 16px; border-radius: 8px; margin: 16px 0; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+            <div>
+              <span style="font-size: 11px; color: #b91c1c; font-weight: 800; text-transform: uppercase; display: block;">🚨 Análise de Crédito (Bloqueados)</span>
+              <span style="font-size: 12px; color: #7f1d1d;">{total_bloq_qtd} pedidos retidos aguardando liberação financeira</span>
             </div>
-            <div style="background: #f8fafc; border: 1px solid #e2e8f0; padding: 12px 14px; border-radius: 8px;">
-              <span style="font-size: 11px; color: #64748b; font-weight: 700; text-transform: uppercase;">Ticket Médio Pedido</span>
-              <strong style="font-size: 17px; color: #0f172a; display: block; margin-top: 4px;">{format_brl(ticket_medio_ped)}</strong>
-            </div>
-            <div style="background: #fff5f5; border: 1px solid #fecaca; padding: 12px 14px; border-radius: 8px;">
-              <span style="font-size: 11px; color: #b91c1c; font-weight: 700; text-transform: uppercase;">Análise de Crédito</span>
-              <strong style="font-size: 17px; color: #b91c1c; display: block; margin-top: 4px;">{format_brl(total_bloq_val)}</strong>
-              <span style="font-size: 11px; color: #7f1d1d;">{total_bloq_qtd} pedidos bloqueados</span>
-            </div>
+            <strong style="font-size: 18px; color: #b91c1c;">{format_brl(total_bloq_val)}</strong>
           </div>
 
           <!-- Consolidado por Supervisor -->
