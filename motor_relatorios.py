@@ -7,7 +7,7 @@ Estrutura reestruturada dos 4 Fluxos Automáticos:
 4. Relatório Executivo da Diretoria Comercial — Gilberto (Dias 15 e último dia útil, 18h00) — Ranking Geral, Supervisores & Indicadores Executivos
 """
 
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Any
 
 
@@ -86,7 +86,7 @@ def gerar_relatorio_ciclo(
     # 3. Buscar Pedidos
     try:
         q_ped = sb.table("pedidos_totvs").select(
-            "totvs_order_code, cliente_nome, status, valor_total, valor_nf, quantidade_total, data_pedido, nota_fiscal_data, representante_codigo"
+            "totvs_order_code, cliente_codigo, cliente_nome, status, valor_total, valor_nf, quantidade_total, data_pedido, nota_fiscal_data, representante_codigo"
         )
         if rep_info and ciclo_tipo in ("A", "B"):
             q_ped = q_ped.eq("representante_codigo", str(rep_info["codigo"]))
@@ -101,7 +101,7 @@ def gerar_relatorio_ciclo(
         q_cli = sb.table("clientes").select("codigo, razao_social, cidade, uf, limite_credito, saldo_disponivel, representante_codigo")
         if rep_info and ciclo_tipo in ("A", "B"):
             q_cli = q_cli.eq("representante_codigo", str(rep_info["codigo"]))
-        clientes_data = q_cli.limit(150).execute().data or []
+        clientes_data = q_cli.limit(1000 if ciclo_tipo == "C" else 150).execute().data or []
     except Exception:
         clientes_data = []
 
@@ -364,6 +364,96 @@ def gerar_relatorio_ciclo(
                 f"</tr>"
             )
 
+        # Bons clientes com baixa venda nos últimos meses (até 5 por representante)
+        data_90d = (agora - timedelta(days=90)).strftime("%Y-%m-%d")
+        cli_por_rep = {}
+        for c in clientes_data:
+            rc = str(c.get("representante_codigo") or "")
+            cli_por_rep.setdefault(rc, []).append(c)
+
+        hist_cli_rep = {}
+        for p in pedidos_data:
+            if p.get("status") == "Canceled":
+                continue
+            rc = str(p.get("representante_codigo") or "")
+            if cods_equipe and rc not in cods_equipe:
+                continue
+            cn = (p.get("cliente_nome") or "").strip()
+            if not cn:
+                continue
+            dt = str(p.get("data_pedido") or "")[:10]
+            val = float(p.get("valor_nf") or p.get("valor_total") or 0)
+            qtd = float(p.get("quantidade_total") or 0)
+            info = hist_cli_rep.setdefault(rc, {}).setdefault(cn, {
+                "nome": cn, "hist_val": 0.0, "hist_m": 0.0,
+                "rec_val": 0.0, "rec_m": 0.0, "ultima_data": "", "limite": 0.0
+            })
+            info["hist_val"] += val
+            info["hist_m"] += qtd
+            if dt >= data_90d:
+                info["rec_val"] += val
+                info["rec_m"] += qtd
+            if dt > info["ultima_data"]:
+                info["ultima_data"] = dt
+
+        for rc, lista_c in cli_por_rep.items():
+            for c in lista_c:
+                cn = (c.get("razao_social") or "").strip()
+                if not cn:
+                    continue
+                lim = float(c.get("limite_credito") or 0)
+                if cn in hist_cli_rep.get(rc, {}):
+                    hist_cli_rep[rc][cn]["limite"] = max(hist_cli_rep[rc][cn]["limite"], lim)
+                elif lim >= 10000:
+                    hist_cli_rep.setdefault(rc, {})[cn] = {
+                        "nome": cn, "hist_val": 0.0, "hist_m": 0.0,
+                        "rec_val": 0.0, "rec_m": 0.0, "ultima_data": "", "limite": lim
+                    }
+
+        blocos_clientes_rep = []
+        for r in reps_ordenados[:15]:
+            cod = str(r.get("codigo"))
+            clientes_rep_dict = hist_cli_rep.get(cod, {})
+            candidatos = [
+                ci for ci in clientes_rep_dict.values()
+                if (ci["hist_val"] >= 5000 or ci["limite"] >= 10000) and ci["rec_val"] <= (ci["hist_val"] * 0.25)
+            ]
+            # Ordenar por maior potencial histórico/crédito e menor compra recente
+            candidatos.sort(key=lambda x: (x["rec_val"] == 0, x["hist_val"] + x["limite"]), reverse=True)
+            top5 = candidatos[:5]
+            if top5:
+                itens_html = "".join([
+                    f"<tr style='border-bottom: 1px solid #f1f5f9; font-size: 12px;'>"
+                    f"<td style='padding: 6px 8px; font-weight: 600; color: #0f172a;'>{ci['nome']}</td>"
+                    f"<td style='padding: 6px 8px; text-align: center; color: #64748b;'>{ci['ultima_data'][8:10] + '/' + ci['ultima_data'][5:7] + '/' + ci['ultima_data'][:4] if len(ci['ultima_data']) == 10 else 'Sem compra recente'}</td>"
+                    f"<td style='padding: 6px 8px; text-align: right; color: #dc2626; font-weight: 700;'>{format_num(ci['rec_m'], 0)} m</td>"
+                    f"<td style='padding: 6px 8px; text-align: right; color: #059669; font-weight: 600;'>{format_brl(ci['hist_val'] if ci['hist_val'] > 0 else ci['limite'])}</td>"
+                    f"</tr>"
+                    for ci in top5
+                ])
+                blocos_clientes_rep.append(
+                    f"<div style='border: 1px solid #e2e8f0; border-radius: 8px; margin-bottom: 12px; overflow: hidden;'>"
+                    f"<div style='background: #f8fafc; padding: 8px 12px; border-bottom: 1px solid #e2e8f0; font-size: 12.5px; font-weight: 800; color: #1e293b;'>"
+                    f"👤 #{cod} {_nome_rep(r)} — <span style='color: #0284c7; font-weight: 600;'>Top {len(top5)} bons clientes p/ reativar</span>"
+                    f"</div>"
+                    f"<table style='width: 100%; border-collapse: collapse;'>"
+                    f"<thead><tr style='background: #f1f5f9; color: #475569; font-size: 10.5px; text-transform: uppercase;'>"
+                    f"<th style='padding: 5px 8px; text-align: left;'>Cliente</th>"
+                    f"<th style='padding: 5px 8px; text-align: center;'>Último Pedido</th>"
+                    f"<th style='padding: 5px 8px; text-align: right;'>Últ. 90d</th>"
+                    f"<th style='padding: 5px 8px; text-align: right;'>Histórico / Limite</th>"
+                    f"</tr></thead><tbody>{itens_html}</tbody></table></div>"
+                )
+
+        secao_bons_clientes_html = (
+            f"<div style='margin: 20px 0;'>"
+            f"<h4 style='margin: 0 0 10px; font-size: 13px; font-weight: 800; color: #0f172a; text-transform: uppercase;'>"
+            f"🎯 BONS CLIENTES COM BAIXA VENDA NOS ÚLTIMOS MESES (ATÉ 5 POR REPRESENTANTE)"
+            f"</h4>"
+            f"{''.join(blocos_clientes_rep)}"
+            f"</div>"
+        ) if blocos_clientes_rep else ""
+
         corpo_html = f"""
         <div style="font-size: 14px; color: #334155; line-height: 1.6;">
           <p style="font-size: 15px; font-weight: 700; color: #0f172a; margin-top: 0;">
@@ -449,6 +539,8 @@ def gerar_relatorio_ciclo(
               <tbody>{''.join(linhas_eq) or "<tr><td colspan='5' style='padding:12px;text-align:center;'>Sem representantes vinculados.</td></tr>"}</tbody>
             </table>
           </div>
+
+          {secao_bons_clientes_html}
 
           <!-- Sugestão de Reunião + Giro de Inativos -->
           <div style="background: #f5f3ff; border-left: 4px solid #7c3aed; padding: 14px 18px; border-radius: 4px; margin: 16px 0;">
