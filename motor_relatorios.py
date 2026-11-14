@@ -85,9 +85,10 @@ def gerar_relatorio_ciclo(
 
     # 3. Buscar Pedidos
     try:
-        q_ped = sb.table("pedidos_totvs").select(
-            "totvs_order_code, cliente_codigo, cliente_nome, status, valor_total, valor_nf, quantidade_total, data_pedido, nota_fiscal_data, representante_codigo"
-        )
+        cols_ped = "totvs_order_code, cliente_codigo, cliente_nome, status, valor_total, valor_nf, quantidade_total, data_pedido, nota_fiscal_data, representante_codigo"
+        if ciclo_tipo == "D":
+            cols_ped += ", lote_pedido, items_json"
+        q_ped = sb.table("pedidos_totvs").select(cols_ped)
         if rep_info and ciclo_tipo in ("A", "B"):
             q_ped = q_ped.eq("representante_codigo", str(rep_info["codigo"]))
             pedidos_data = q_ped.order("data_pedido", desc=True).limit(500).execute().data or []
@@ -625,6 +626,145 @@ def gerar_relatorio_ciclo(
             for idx, x in enumerate(lista_ranking[:25], start=1)
         ])
 
+        # ── Mix por Modalidade no Mês (Programação, Exclusivos, Pronta Entrega, Pilotagens) ──
+        prog_m, prog_qtd = 0.0, 0
+        exc_m, exc_qtd = 0.0, 0
+        pe_m, pe_qtd = 0.0, 0
+        pil_qtd, pil_m = 0, 0.0
+        pil_artigos = {}
+
+        artigos_mes = {}
+        for p in pedidos_mes_validos:
+            lote = str(p.get("lote_pedido") or "").strip().upper()
+            qtd_p = float(p.get("quantidade_total") or 0)
+            itens = p.get("items_json") or []
+
+            if lote == "PIL":
+                pil_qtd += 1
+                pil_m += qtd_p
+                for it in itens:
+                    art_nome = (it.get("referenceName") or it.get("name") or "Artigo não informado").strip()
+                    pil_artigos[art_nome] = pil_artigos.get(art_nome, 0) + 1
+            elif lote == "PE":
+                pe_m += qtd_p
+                pe_qtd += 1
+            elif lote == "EXC":
+                exc_m += qtd_p
+                exc_qtd += 1
+            else:
+                prog_m += qtd_p
+                prog_qtd += 1
+
+            for it in itens:
+                art_nome = (it.get("referenceName") or it.get("name") or "").strip()
+                if not art_nome:
+                    continue
+                q_it = float(it.get("quantity") or 0)
+                v_it = q_it * float(it.get("price") or 0)
+                a = artigos_mes.setdefault(art_nome, {"m": 0.0, "val": 0.0})
+                a["m"] += q_it
+                a["val"] += v_it
+
+        top_artigos_mes = sorted(artigos_mes.items(), key=lambda kv: kv[1]["m"], reverse=True)[:10]
+
+        # ── Artigos Mais Vendidos no Último Trimestre (90 dias) ──
+        data_90d_dir = (agora - timedelta(days=90)).strftime("%Y-%m-%d")
+        artigos_trim = {}
+        for p in pedidos_data:
+            if p.get("status") == "Canceled":
+                continue
+            dt = str(p.get("data_pedido") or "")[:10]
+            if dt < data_90d_dir:
+                continue
+            for it in (p.get("items_json") or []):
+                art_nome = (it.get("referenceName") or it.get("name") or "").strip()
+                if not art_nome:
+                    continue
+                q_it = float(it.get("quantity") or 0)
+                v_it = q_it * float(it.get("price") or 0)
+                a = artigos_trim.setdefault(art_nome, {"m": 0.0, "val": 0.0})
+                a["m"] += q_it
+                a["val"] += v_it
+
+        top_artigos_trim = sorted(artigos_trim.items(), key=lambda kv: kv[1]["m"], reverse=True)[:10]
+
+        # ── Clientes que não compravam há muito tempo (60d+) e compraram neste mês ──
+        data_60d_antes_mes = (agora.replace(day=1) - timedelta(days=60)).strftime("%Y-%m-%d")
+        compras_cli_hist = {}
+        compras_cli_mes = {}
+        for p in pedidos_data:
+            if p.get("status") == "Canceled":
+                continue
+            cn = (p.get("cliente_nome") or "").strip()
+            dt = str(p.get("data_pedido") or "")[:10]
+            if not cn or not dt:
+                continue
+            if dt.startswith(prefixo_mes):
+                cm = compras_cli_mes.setdefault(cn, {"m": 0.0, "val": 0.0, "rep": p.get("representante_codigo")})
+                cm["m"] += float(p.get("quantidade_total") or 0)
+                cm["val"] += float(p.get("valor_nf") or p.get("valor_total") or 0)
+            else:
+                if dt > compras_cli_hist.get(cn, ""):
+                    compras_cli_hist[cn] = dt
+
+        clientes_reativados = []
+        for cn, cm in compras_cli_mes.items():
+            ult = compras_cli_hist.get(cn, "")
+            if ult and ult <= data_60d_antes_mes:
+                clientes_reativados.append({
+                    "nome": cn,
+                    "ultima_antes": ult,
+                    "m": cm["m"],
+                    "val": cm["val"],
+                    "rep": _nome_rep(rep_map.get(str(cm["rep"])))
+                })
+        clientes_reativados.sort(key=lambda x: x["m"], reverse=True)
+
+        # ── Comparativo Mês Anterior (MoM) & Cancelamentos do Mês ──
+        mes_ant_dt = agora.replace(day=1) - timedelta(days=1)
+        prefixo_mes_ant = mes_ant_dt.strftime("%Y-%m")
+        ped_mes_ant = [p for p in pedidos_data if str(p.get("data_pedido") or "").startswith(prefixo_mes_ant) and p.get("status") != "Canceled"]
+        mes_ant_m = sum(float(p.get("quantidade_total") or 0) for p in ped_mes_ant)
+        mes_ant_val = sum(float(p.get("valor_nf") or p.get("valor_total") or 0) for p in ped_mes_ant)
+        var_mom_pct = ((total_fat_qtd - mes_ant_m) / mes_ant_m * 100) if mes_ant_m > 0 else 0.0
+
+        cancelados_mes = [p for p in pedidos_mes if p.get("status") == "Canceled"]
+        canc_qtd = len(cancelados_mes)
+        canc_val = sum(float(p.get("valor_total") or 0) for p in cancelados_mes)
+        canc_m = sum(float(p.get("quantidade_total") or 0) for p in cancelados_mes)
+
+        linhas_art_mes = "".join([
+            f"<tr style='border-bottom: 1px solid #e2e8f0; font-size: 12px;'>"
+            f"<td style='padding: 6px 10px; font-weight: 700; color: #64748b;'>{i}º</td>"
+            f"<td style='padding: 6px 10px; font-weight: 600; color: #0f172a;'>{nome}</td>"
+            f"<td style='padding: 6px 10px; text-align: right; font-weight: 700; color: #059669;'>{format_num(d['m'], 0)} m</td>"
+            f"<td style='padding: 6px 10px; text-align: right; color: #475569;'>{format_brl(d['val'])}</td>"
+            f"</tr>"
+            for i, (nome, d) in enumerate(top_artigos_mes, start=1)
+        ]) or "<tr><td colspan='4' style='padding:10px;text-align:center;color:#64748b;'>Sem itens registrados no mês.</td></tr>"
+
+        linhas_art_trim = "".join([
+            f"<tr style='border-bottom: 1px solid #e2e8f0; font-size: 12px;'>"
+            f"<td style='padding: 6px 10px; font-weight: 700; color: #64748b;'>{i}º</td>"
+            f"<td style='padding: 6px 10px; font-weight: 600; color: #0f172a;'>{nome}</td>"
+            f"<td style='padding: 6px 10px; text-align: right; font-weight: 700; color: #0284c7;'>{format_num(d['m'], 0)} m</td>"
+            f"<td style='padding: 6px 10px; text-align: right; color: #475569;'>{format_brl(d['val'])}</td>"
+            f"</tr>"
+            for i, (nome, d) in enumerate(top_artigos_trim, start=1)
+        ]) or "<tr><td colspan='4' style='padding:10px;text-align:center;color:#64748b;'>Sem itens registrados no trimestre.</td></tr>"
+
+        linhas_reativados = "".join([
+            f"<tr style='border-bottom: 1px solid #e2e8f0; font-size: 12px;'>"
+            f"<td style='padding: 6px 10px; font-weight: 600; color: #0f172a;'>{c['nome']}</td>"
+            f"<td style='padding: 6px 10px; color: #64748b;'>{c['rep']}</td>"
+            f"<td style='padding: 6px 10px; text-align: center; color: #64748b;'>{c['ultima_antes'][8:10]}/{c['ultima_antes'][5:7]}/{c['ultima_antes'][:4]}</td>"
+            f"<td style='padding: 6px 10px; text-align: right; font-weight: 700; color: #059669;'>{format_num(c['m'], 0)} m ({format_brl(c['val'])})</td>"
+            f"</tr>"
+            for c in clientes_reativados[:10]
+        ]) or "<tr><td colspan='4' style='padding:10px;text-align:center;color:#64748b;'>Nenhuma reativação (60d+) registrada neste mês até o momento.</td></tr>"
+
+        lista_pil_artigos_txt = ", ".join([f"{art} ({qtd}x)" for art, qtd in sorted(pil_artigos.items(), key=lambda x: x[1], reverse=True)[:10]]) or "Nenhum artigo de pilotagem registrado no mês."
+
         corpo_html = f"""
         <div style="font-size: 14px; color: #334155; line-height: 1.6;">
           <p style="font-size: 15px; font-weight: 700; color: #0f172a; margin-top: 0;">
@@ -633,13 +773,55 @@ def gerar_relatorio_ciclo(
 
           {bloco_ritmo_html}
 
-          <!-- Pedidos Retidos em Análise de Crédito -->
-          <div style="background: #fff5f5; border: 1px solid #fecaca; padding: 12px 16px; border-radius: 8px; margin: 16px 0; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
-            <div>
-              <span style="font-size: 11px; color: #b91c1c; font-weight: 800; text-transform: uppercase; display: block;">🚨 Análise de Crédito (Bloqueados)</span>
-              <span style="font-size: 12px; color: #7f1d1d;">{total_bloq_qtd} pedidos retidos aguardando liberação financeira</span>
+          <!-- Mix de Vendas por Modalidade no Mês -->
+          <div style="margin: 18px 0;">
+            <h4 style="margin: 0 0 8px; font-size: 13px; font-weight: 800; color: #0f172a; text-transform: uppercase;">
+              📦 MIX DE VENDAS NO MÊS POR MODALIDADE
+            </h4>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(135px, 1fr)); gap: 10px;">
+              <div style="background: #f8fafc; border: 1px solid #cbd5e1; padding: 12px; border-radius: 8px;">
+                <span style="font-size: 11px; color: #64748b; font-weight: 700; text-transform: uppercase;">Programação</span>
+                <strong style="font-size: 18px; color: #0f172a; display: block; margin-top: 3px;">{format_num(prog_m, 0)} m</strong>
+                <span style="font-size: 11px; color: #64748b;">{prog_qtd} pedidos</span>
+              </div>
+              <div style="background: #f0fdf4; border: 1px solid #bbf7d0; padding: 12px; border-radius: 8px;">
+                <span style="font-size: 11px; color: #166534; font-weight: 700; text-transform: uppercase;">Pronta Entrega (PE)</span>
+                <strong style="font-size: 18px; color: #059669; display: block; margin-top: 3px;">{format_num(pe_m, 0)} m</strong>
+                <span style="font-size: 11px; color: #15803d;">{pe_qtd} pedidos</span>
+              </div>
+              <div style="background: #eff6ff; border: 1px solid #bfdbfe; padding: 12px; border-radius: 8px;">
+                <span style="font-size: 11px; color: #1e40af; font-weight: 700; text-transform: uppercase;">Exclusivos (EXC)</span>
+                <strong style="font-size: 18px; color: #0284c7; display: block; margin-top: 3px;">{format_num(exc_m, 0)} m</strong>
+                <span style="font-size: 11px; color: #1d4ed8;">{exc_qtd} pedidos</span>
+              </div>
+              <div style="background: #faf5ff; border: 1px solid #e9d5ff; padding: 12px; border-radius: 8px;">
+                <span style="font-size: 11px; color: #6b21a8; font-weight: 700; text-transform: uppercase;">Pilotagens (PIL)</span>
+                <strong style="font-size: 18px; color: #7c3aed; display: block; margin-top: 3px;">{pil_qtd} pedidos</strong>
+                <span style="font-size: 11px; color: #6b21a8;">{format_num(pil_m, 0)} metros</span>
+              </div>
             </div>
-            <strong style="font-size: 18px; color: #b91c1c;">{format_brl(total_bloq_val)}</strong>
+            <div style="background: #faf5ff; border-left: 4px solid #7c3aed; padding: 8px 12px; border-radius: 4px; margin-top: 8px; font-size: 12px; color: #4c1d95;">
+              <strong>Artigos em Pilotagem no Mês:</strong> {lista_pil_artigos_txt}
+            </div>
+          </div>
+
+          <!-- Comparativo Mês Anterior, Cancelamentos e Análise de Crédito -->
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; margin: 16px 0;">
+            <div style="background: #f8fafc; border: 1px solid #e2e8f0; padding: 12px 14px; border-radius: 8px;">
+              <span style="font-size: 11px; color: #64748b; font-weight: 700; text-transform: uppercase;">Comparativo vs Mês Anterior</span>
+              <strong style="font-size: 17px; color: {'#059669' if var_mom_pct >= 0 else '#dc2626'}; display: block; margin-top: 3px;">{'+' if var_mom_pct >= 0 else ''}{var_mom_pct:.1f}%</strong>
+              <span style="font-size: 11px; color: #64748b;">Mês ant.: {format_num(mes_ant_m, 0)} m ({format_brl(mes_ant_val)})</span>
+            </div>
+            <div style="background: #fff5f5; border: 1px solid #fecaca; padding: 12px 14px; border-radius: 8px;">
+              <span style="font-size: 11px; color: #b91c1c; font-weight: 700; text-transform: uppercase;">Análise de Crédito (Bloqueados)</span>
+              <strong style="font-size: 17px; color: #b91c1c; display: block; margin-top: 3px;">{format_brl(total_bloq_val)}</strong>
+              <span style="font-size: 11px; color: #7f1d1d;">{total_bloq_qtd} pedidos bloqueados</span>
+            </div>
+            <div style="background: #fffbeb; border: 1px solid #fde68a; padding: 12px 14px; border-radius: 8px;">
+              <span style="font-size: 11px; color: #92400e; font-weight: 700; text-transform: uppercase;">Cancelamentos no Mês</span>
+              <strong style="font-size: 17px; color: #b45309; display: block; margin-top: 3px;">{canc_qtd} pedidos ({format_num(canc_m, 0)} m)</strong>
+              <span style="font-size: 11px; color: #92400e;">{format_brl(canc_val)}</span>
+            </div>
           </div>
 
           <!-- Consolidado por Supervisor -->
@@ -679,6 +861,60 @@ def gerar_relatorio_ciclo(
                 </tr>
               </thead>
               <tbody>{linhas_ranking}</tbody>
+            </table>
+          </div>
+
+          <!-- Clientes que Não Compravam Há Muito Tempo e Compraram Neste Mês -->
+          <div style="margin: 20px 0;">
+            <h4 style="margin: 0 0 8px; font-size: 13px; font-weight: 800; color: #059669; text-transform: uppercase;">
+              🔄 CLIENTES REATIVADOS NO MÊS (60+ DIAS SEM COMPRAR QUE VOLTARAM A COMPRAR) — {len(clientes_reativados)} clientes
+            </h4>
+            <table style="width: 100%; border-collapse: collapse; border: 1px solid #cbd5e1; border-radius: 6px; overflow: hidden;">
+              <thead>
+                <tr style="background: #065f46; color: #ffffff; font-size: 11px; text-transform: uppercase;">
+                  <th style="padding: 8px 10px; text-align: left;">Cliente</th>
+                  <th style="padding: 8px 10px; text-align: left;">Representante</th>
+                  <th style="padding: 8px 10px; text-align: center;">Compra Anterior</th>
+                  <th style="padding: 8px 10px; text-align: right;">Comprou no Mês</th>
+                </tr>
+              </thead>
+              <tbody>{linhas_reativados}</tbody>
+            </table>
+          </div>
+
+          <!-- Top 10 Artigos Mais Vendidos no Mês -->
+          <div style="margin: 20px 0;">
+            <h4 style="margin: 0 0 8px; font-size: 13px; font-weight: 800; color: #0f172a; text-transform: uppercase;">
+              🧵 TOP 10 ARTIGOS MAIS VENDIDOS DO MÊS ({mes_str})
+            </h4>
+            <table style="width: 100%; border-collapse: collapse; border: 1px solid #cbd5e1; border-radius: 6px; overflow: hidden;">
+              <thead>
+                <tr style="background: #1e293b; color: #ffffff; font-size: 11px; text-transform: uppercase;">
+                  <th style="padding: 7px 10px; text-align: left;">#</th>
+                  <th style="padding: 7px 10px; text-align: left;">Artigo</th>
+                  <th style="padding: 7px 10px; text-align: right;">Metragem</th>
+                  <th style="padding: 7px 10px; text-align: right;">Valor</th>
+                </tr>
+              </thead>
+              <tbody>{linhas_art_mes}</tbody>
+            </table>
+          </div>
+
+          <!-- Top 10 Artigos Mais Vendidos no Último Trimestre -->
+          <div style="margin: 20px 0;">
+            <h4 style="margin: 0 0 8px; font-size: 13px; font-weight: 800; color: #0284c7; text-transform: uppercase;">
+              📈 TOP 10 ARTIGOS MAIS VENDIDOS NO ÚLTIMO TRIMESTRE (90 DIAS)
+            </h4>
+            <table style="width: 100%; border-collapse: collapse; border: 1px solid #cbd5e1; border-radius: 6px; overflow: hidden;">
+              <thead>
+                <tr style="background: #0369a1; color: #ffffff; font-size: 11px; text-transform: uppercase;">
+                  <th style="padding: 7px 10px; text-align: left;">#</th>
+                  <th style="padding: 7px 10px; text-align: left;">Artigo</th>
+                  <th style="padding: 7px 10px; text-align: right;">Metragem</th>
+                  <th style="padding: 7px 10px; text-align: right;">Valor</th>
+                </tr>
+              </thead>
+              <tbody>{linhas_art_trim}</tbody>
             </table>
           </div>
         </div>
