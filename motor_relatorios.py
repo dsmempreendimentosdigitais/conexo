@@ -87,7 +87,7 @@ def gerar_relatorio_ciclo(
     try:
         cols_ped = "totvs_order_code, cliente_codigo, cliente_nome, status, valor_total, valor_nf, quantidade_total, data_pedido, nota_fiscal_data, representante_codigo"
         if ciclo_tipo == "D":
-            cols_ped += ", lote_pedido, items_json"
+            cols_ped += ", lote_pedido, items_json, previsao_faturamento, data_entrega_prev"
         q_ped = sb.table("pedidos_totvs").select(cols_ped)
         if rep_info and ciclo_tipo in ("A", "B"):
             q_ped = q_ped.eq("representante_codigo", str(rep_info["codigo"]))
@@ -102,7 +102,7 @@ def gerar_relatorio_ciclo(
         q_cli = sb.table("clientes").select("codigo, razao_social, cidade, uf, limite_credito, saldo_disponivel, representante_codigo")
         if rep_info and ciclo_tipo in ("A", "B"):
             q_cli = q_cli.eq("representante_codigo", str(rep_info["codigo"]))
-        clientes_data = q_cli.limit(1000 if ciclo_tipo == "C" else 150).execute().data or []
+        clientes_data = q_cli.limit(3000 if ciclo_tipo == "D" else (1000 if ciclo_tipo == "C" else 150)).execute().data or []
     except Exception:
         clientes_data = []
 
@@ -765,6 +765,110 @@ def gerar_relatorio_ciclo(
 
         lista_pil_artigos_txt = ", ".join([f"{art} ({qtd}x)" for art, qtd in sorted(pil_artigos.items(), key=lambda x: x[1], reverse=True)[:10]]) or "Nenhum artigo de pilotagem registrado no mês."
 
+        # ── 1. Taxa de Conversão de Pilotagens (PIL 90d -> Pedido Comercial) ──
+        pils_90d = [
+            p for p in pedidos_data
+            if p.get("status") != "Canceled"
+            and str(p.get("lote_pedido") or "").strip().upper() == "PIL"
+            and str(p.get("data_pedido") or "")[:10] >= data_90d_dir
+            and not str(p.get("data_pedido") or "").startswith(prefixo_mes)
+        ]
+        pil_convertidas = 0
+        for pil_p in pils_90d:
+            cn_pil = (pil_p.get("cliente_nome") or "").strip()
+            dt_pil = str(pil_p.get("data_pedido") or "")[:10]
+            converteu = any(
+                (p.get("cliente_nome") or "").strip() == cn_pil
+                and str(p.get("lote_pedido") or "").strip().upper() != "PIL"
+                and str(p.get("data_pedido") or "")[:10] > dt_pil
+                and p.get("status") != "Canceled"
+                for p in pedidos_data
+            )
+            if converteu:
+                pil_convertidas += 1
+        pil_ant_qtd = len(pils_90d)
+        conv_pil_pct = (pil_convertidas / pil_ant_qtd * 100) if pil_ant_qtd > 0 else 0.0
+
+        # ── 2. Concentração de Carteira (Top 10 Clientes no Mês) ──
+        cli_mes_m = {}
+        for p in pedidos_mes_validos:
+            cn = (p.get("cliente_nome") or "").strip()
+            if cn:
+                cli_mes_m[cn] = cli_mes_m.get(cn, 0.0) + float(p.get("quantidade_total") or 0)
+        top10_cli_m = sum(sorted(cli_mes_m.values(), reverse=True)[:10])
+        top10_cli_pct = (top10_cli_m / total_fat_qtd * 100) if total_fat_qtd > 0 else 0.0
+
+        # ── 3. Vendas por Região / Estado (UF) no Mês ──
+        uf_por_cli = {}
+        for c in clientes_data:
+            if c.get("uf"):
+                if c.get("codigo"):
+                    uf_por_cli[str(c.get("codigo"))] = c.get("uf").strip().upper()
+                if c.get("razao_social"):
+                    uf_por_cli[c.get("razao_social").strip().upper()] = c.get("uf").strip().upper()
+        vendas_uf = {}
+        for p in pedidos_mes_validos:
+            uf = uf_por_cli.get(str(p.get("cliente_codigo") or "")) or uf_por_cli.get((p.get("cliente_nome") or "").strip().upper()) or "OUTROS"
+            u = vendas_uf.setdefault(uf, {"m": 0.0, "val": 0.0, "qtd": 0})
+            u["m"] += float(p.get("quantidade_total") or 0)
+            u["val"] += float(p.get("valor_nf") or p.get("valor_total") or 0)
+            u["qtd"] += 1
+        linhas_uf = "".join([
+            f"<tr style='border-bottom: 1px solid #e2e8f0; font-size: 12px;'>"
+            f"<td style='padding: 6px 10px; font-weight: 700; color: #0f172a;'>{uf}</td>"
+            f"<td style='padding: 6px 10px; text-align: right; color: #64748b;'>{d['qtd']}</td>"
+            f"<td style='padding: 6px 10px; text-align: right; font-weight: 700; color: #0284c7;'>{format_num(d['m'], 0)} m</td>"
+            f"<td style='padding: 6px 10px; text-align: right; color: #475569;'>{format_brl(d['val'])}</td>"
+            f"</tr>"
+            for uf, d in sorted(vendas_uf.items(), key=lambda kv: kv[1]["m"], reverse=True)[:8]
+        ]) or "<tr><td colspan='4' style='padding:10px;text-align:center;color:#64748b;'>Sem dados de UF no mês.</td></tr>"
+
+        # ── 4. Representantes com Queda Brusca vs Média do Trimestre Anterior ──
+        vendas_trim_rep = {}
+        for p in pedidos_data:
+            if p.get("status") == "Canceled":
+                continue
+            dt = str(p.get("data_pedido") or "")[:10]
+            if data_90d_dir <= dt and not dt.startswith(prefixo_mes):
+                rc = str(p.get("representante_codigo") or "")
+                vendas_trim_rep[rc] = vendas_trim_rep.get(rc, 0.0) + float(p.get("quantidade_total") or 0)
+
+        quedas_rep = []
+        for item in lista_ranking:
+            media_trim_m = vendas_trim_rep.get(item["codigo"], 0.0) / 3.0
+            if media_trim_m >= 1000.0 and item["vend_m"] < media_trim_m * 0.7:
+                queda_pct = ((item["vend_m"] - media_trim_m) / media_trim_m) * 100
+                quedas_rep.append({
+                    "codigo": item["codigo"],
+                    "nome": item["nome"],
+                    "supervisor": item["supervisor"],
+                    "media_trim": media_trim_m,
+                    "atual": item["vend_m"],
+                    "queda_pct": queda_pct,
+                })
+        quedas_rep.sort(key=lambda x: x["queda_pct"])
+        linhas_queda_reps = "".join([
+            f"<tr style='border-bottom: 1px solid #fee2e2; font-size: 12px; background: #fff5f5;'>"
+            f"<td style='padding: 6px 10px; font-weight: 700; color: #0f172a;'>#{q['codigo']} {q['nome']}</td>"
+            f"<td style='padding: 6px 10px; color: #64748b;'>{q['supervisor']}</td>"
+            f"<td style='padding: 6px 10px; text-align: right; color: #64748b;'>{format_num(q['media_trim'], 0)} m/mês</td>"
+            f"<td style='padding: 6px 10px; text-align: right; font-weight: 700; color: #dc2626;'>{format_num(q['atual'], 0)} m ({q['queda_pct']:.0f}%)</td>"
+            f"</tr>"
+            for q in quedas_rep[:5]
+        ]) or "<tr><td colspan='4' style='padding:10px;text-align:center;color:#059669;'>🟢 Nenhum representante com queda brusca relevante no mês.</td></tr>"
+
+        # ── 5. Pedidos em Atraso de Entrega (Fábrica vs Previsão) ──
+        hoje_iso = agora.strftime("%Y-%m-%d")
+        atrasados_fab = [
+            p for p in pedidos_data
+            if p.get("status") in ("InProgress", "Open")
+            and (str(p.get("previsao_faturamento") or p.get("data_entrega_prev") or "")[:10] not in ("", "None"))
+            and str(p.get("previsao_faturamento") or p.get("data_entrega_prev") or "")[:10] < hoje_iso
+        ]
+        atraso_qtd = len(atrasados_fab)
+        atraso_m = sum(float(p.get("quantidade_total") or 0) for p in atrasados_fab)
+        atraso_val = sum(float(p.get("valor_total") or 0) for p in atrasados_fab)
+
         corpo_html = f"""
         <div style="font-size: 14px; color: #334155; line-height: 1.6;">
           <p style="font-size: 15px; font-weight: 700; color: #0f172a; margin-top: 0;">
@@ -821,6 +925,21 @@ def gerar_relatorio_ciclo(
               <span style="font-size: 11px; color: #92400e; font-weight: 700; text-transform: uppercase;">Cancelamentos no Mês</span>
               <strong style="font-size: 17px; color: #b45309; display: block; margin-top: 3px;">{canc_qtd} pedidos ({format_num(canc_m, 0)} m)</strong>
               <span style="font-size: 11px; color: #92400e;">{format_brl(canc_val)}</span>
+            </div>
+            <div style="background: #faf5ff; border: 1px solid #e9d5ff; padding: 12px 14px; border-radius: 8px;">
+              <span style="font-size: 11px; color: #6b21a8; font-weight: 700; text-transform: uppercase;">Conversão Pilotagens (90d)</span>
+              <strong style="font-size: 17px; color: #7c3aed; display: block; margin-top: 3px;">{conv_pil_pct:.1f}%</strong>
+              <span style="font-size: 11px; color: #6b21a8;">{pil_convertidas} de {pil_ant_qtd} viraram pedido</span>
+            </div>
+            <div style="background: #f0f9ff; border: 1px solid #bae6fd; padding: 12px 14px; border-radius: 8px;">
+              <span style="font-size: 11px; color: #0369a1; font-weight: 700; text-transform: uppercase;">Concentração Top 10 Clientes</span>
+              <strong style="font-size: 17px; color: #0284c7; display: block; margin-top: 3px;">{top10_cli_pct:.1f}%</strong>
+              <span style="font-size: 11px; color: #0369a1;">{format_num(top10_cli_m, 0)} m nos 10 maiores</span>
+            </div>
+            <div style="background: #fff7ed; border: 1px solid #fed7aa; padding: 12px 14px; border-radius: 8px;">
+              <span style="font-size: 11px; color: #9a3412; font-weight: 700; text-transform: uppercase;">Atrasos Entrega (Fábrica)</span>
+              <strong style="font-size: 17px; color: #c2410c; display: block; margin-top: 3px;">{atraso_qtd} pedidos ({format_num(atraso_m, 0)} m)</strong>
+              <span style="font-size: 11px; color: #9a3412;">{format_brl(atraso_val)} pendente</span>
             </div>
           </div>
 
@@ -915,6 +1034,42 @@ def gerar_relatorio_ciclo(
                 </tr>
               </thead>
               <tbody>{linhas_art_trim}</tbody>
+            </table>
+          </div>
+
+          <!-- Vendas por Região / Estado (UF) -->
+          <div style="margin: 20px 0;">
+            <h4 style="margin: 0 0 8px; font-size: 13px; font-weight: 800; color: #0f172a; text-transform: uppercase;">
+              🗺️ VENDAS POR REGIÃO / ESTADO (UF) NO MÊS
+            </h4>
+            <table style="width: 100%; border-collapse: collapse; border: 1px solid #cbd5e1; border-radius: 6px; overflow: hidden;">
+              <thead>
+                <tr style="background: #1e293b; color: #ffffff; font-size: 11px; text-transform: uppercase;">
+                  <th style="padding: 7px 10px; text-align: left;">UF</th>
+                  <th style="padding: 7px 10px; text-align: right;">Pedidos</th>
+                  <th style="padding: 7px 10px; text-align: right;">Metragem</th>
+                  <th style="padding: 7px 10px; text-align: right;">Valor</th>
+                </tr>
+              </thead>
+              <tbody>{linhas_uf}</tbody>
+            </table>
+          </div>
+
+          <!-- Alerta: Representantes com Queda Brusca vs Trimestre Anterior -->
+          <div style="margin: 20px 0;">
+            <h4 style="margin: 0 0 8px; font-size: 13px; font-weight: 800; color: #b91c1c; text-transform: uppercase;">
+              ⚠️ ALERTA PREVENTIVO: REPRESENTANTES COM QUEDA VS MÉDIA DO TRIMESTRE ANTERIOR
+            </h4>
+            <table style="width: 100%; border-collapse: collapse; border: 1px solid #fecaca; border-radius: 6px; overflow: hidden;">
+              <thead>
+                <tr style="background: #b91c1c; color: #ffffff; font-size: 11px; text-transform: uppercase;">
+                  <th style="padding: 7px 10px; text-align: left;">Representante</th>
+                  <th style="padding: 7px 10px; text-align: left;">Supervisor</th>
+                  <th style="padding: 7px 10px; text-align: right;">Média Trim.</th>
+                  <th style="padding: 7px 10px; text-align: right;">Mês Atual / Queda</th>
+                </tr>
+              </thead>
+              <tbody>{linhas_queda_reps}</tbody>
             </table>
           </div>
         </div>
