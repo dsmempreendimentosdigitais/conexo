@@ -130,6 +130,7 @@ class DeiseService:
         sql = f"""
         SELECT 
             COALESCE(pt.totvs_order_code, p.numero) as pedido,
+            p.id::text as local_id,
             CASE
                 WHEN COALESCE(pt.status, p.status) IN ('InProgress', 'Em andamento', 'open', 'aberto', '1') THEN 'Em andamento'
                 WHEN COALESCE(pt.status, p.status) IN ('Blocked', 'Bloqueado', '5') THEN 'Bloqueado'
@@ -143,7 +144,8 @@ class DeiseService:
             COALESCE(pt.previsao_faturamento::date, p.data_previsao_faturamento::date) as previsao_faturamento,
             COALESCE(pt.valor_total, p.valor_total, 0) as valor_total,
             COALESCE(pt.quantidade_total, 0) as metros,
-            COALESCE(pt.nota_fiscal_numero, '') as nf
+            COALESCE(pt.nota_fiscal_numero, '') as nf,
+            COALESCE(pt.items_json, p.payload_totvs->'items', '[]'::jsonb) as items_json
         FROM pedidos p
         LEFT JOIN clientes c ON c.id = p.cliente_id
         LEFT JOIN pedidos_totvs pt ON (
@@ -826,19 +828,53 @@ class DeiseService:
         cliente = cls.validar_cliente(cliente_cod)
         nome = cliente.get("nome_fantasia") or "Cliente" if cliente else "Cliente"
 
+        def _fmt_data_br(val: Any) -> str:
+            if not val:
+                return "A definir"
+            s = str(val).strip()[:10]
+            if len(s) == 10 and s[4] == "-" and s[7] == "-":
+                return f"{s[8:10]}/{s[5:7]}/{s[:4]}"
+            return s
+
         linhas = [f"📦 *Acompanhamento de Pedidos — {nome} (Cód: {cliente_cod}):*\n"]
         for p in pedidos:
             ped_num = p.get("pedido")
+            ped_link = ped_num or p.get("local_id")
             status = p.get("status") or "Em processamento"
             metros = float(p.get("metros") or 0)
+            metros_fmt = f"{metros:,.1f}".replace(",", "X").replace(".", ",").replace("X", ".")
             nf = p.get("nf") or "Aguardando faturamento"
-            prev = p.get("previsao_faturamento") or "A definir"
+            prev = _fmt_data_br(p.get("previsao_faturamento"))
+
+            itens = p.get("items_json") or []
+            if isinstance(itens, str):
+                import json
+                try:
+                    itens = json.loads(itens)
+                except Exception:
+                    itens = []
+
+            bloco_itens = []
+            for it in itens[:6]:
+                raw_art = it.get("referenceName") or it.get("name") or "Artigo"
+                raw_cor = it.get("colorName") or ""
+                art = limpar_nome_artigo(raw_art)
+                cor = limpar_nome_cor(raw_cor) if raw_cor else ""
+                qtd_it = float(it.get("quantity") or 0)
+                qtd_it_fmt = f"{qtd_it:,.1f}".replace(",", "X").replace(".", ",").replace("X", ".")
+                cor_txt = f" — {cor}" if cor else ""
+                bloco_itens.append(f"   • {art}{cor_txt} (*{qtd_it_fmt} m*)")
+            if len(itens) > 6:
+                bloco_itens.append(f"   • _... e mais {len(itens) - 6} item(ns)_")
+
+            itens_str = ("\n   *Itens:*\n" + "\n".join(bloco_itens)) if bloco_itens else ""
+
             linhas.append(
-                f"🔹 *Pedido: {ped_num}*\n"
+                f"🔹 *Pedido:* [{ped_num}](https://vendas.designtex.com.br/meus-pedidos/{ped_link})\n"
                 f"   Status: *{status}*\n"
-                f"   Volume: *{metros:,.1f} m*\n"
+                f"   Volume: *{metros_fmt} m*\n"
                 f"   Nota Fiscal: *{nf}*\n"
-                f"   Previsão: {prev}\n"
+                f"   Previsão: *{prev}*{itens_str}\n"
             )
 
         linhas.append("Digite *5* para falar diretamente com o seu representante comercial sobre seus pedidos.")
